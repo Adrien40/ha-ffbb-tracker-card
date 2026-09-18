@@ -11,7 +11,7 @@ Une **carte Lovelace moderne et interactive** pour Home Assistant, conçue spéc
 *Inspirée du design sportif officiel et optimisée pour une consultation rapide sur mobile comme sur tableau de bord mural.*
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Adrien40/ha-ffbb-tracker-card/refs/heads/main/docs/screenshots/card_preview.gif" width="485" alt="FFBB Tracker Card preview">
+  <img src="https://raw.githubusercontent.com/Adrien40/ha-ffbb-tracker-card/refs/heads/main/docs/screenshots/card_preview.gif" width="485" alt="Aperçu FFBB Tracker Card">
 </p>
 
 Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
@@ -27,7 +27,8 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 * ⏱️ **Affichage adaptatif de la rencontre :**
   * **Avant-match :** jour, date et heure du coup d'envoi.
   * **Après-match :** score final grand format et badge de résultat plein à fort contraste (**Victoire**, **Défaite** ou **Nul**).
-  * **Direct :** badge « En direct » pulsant avec affichage de l'heure du match en cours.
+  * **Direct :** badge « En direct » avec point blanc pulsant et affichage de l'heure du match en cours.
+* 🥇 **Badges de classement podium :** mise en valeur visuelle automatique du Top 3 (or, argent, bronze) avec style au choix : bordure lumineuse (par défaut), plein métallique biseauté, ou neutre sans podium.
 * 🎨 **Couleur d'accentuation personnalisable :** appliquez l'orange basket officiel par défaut, la couleur primaire de votre thème Home Assistant, ou n'importe quel code couleur hexadécimal (HEX) pour calquer la carte sur les couleurs réelles de votre club.
 * 🗺️ **Guidage GPS direct :** un clic sur le gymnase lance immédiatement l'itinéraire dans Google Maps.
 * 📅 **Ajout au calendrier :** un clic sur la date génère un événement Google Agenda prérempli avec l'horaire, les équipes et l'adresse de la salle.
@@ -99,6 +100,7 @@ title: Prochain match
 icon: mdi:basketball
 show_header: true
 show_rank: true
+rank_badge_style: outline
 show_form: true
 show_venue: true
 show_watermark: true
@@ -122,6 +124,7 @@ show_watermark: true
 | `icon` | `string` | `mdi:basketball` | Icône affichée à côté du titre. |
 | `show_header` | `boolean` | `true` | Affiche l'en-tête avec la compétition, la poule et la journée interactive. |
 | `show_rank` | `boolean` | `true` | Affiche la pastille interactive du classement de chaque équipe. |
+| `rank_badge_style` | `string` | `outline` | Style visuel des badges de classement : `outline` (bordure or/argent/bronze par défaut), `solid` (plein métallique) ou `none` (neutre sans podium). |
 | `show_form` | `boolean` | `true` | Affiche la pastille de forme récente (5 derniers matchs joués). |
 | `show_venue` | `boolean` | `true` | Affiche l'adresse de la salle avec le lien de navigation GPS en pied de carte. |
 | `show_watermark` | `boolean` | `true` | Affiche les logos des clubs en filigrane en arrière-plan. |
