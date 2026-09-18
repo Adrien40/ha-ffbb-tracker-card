@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DEFAULT_FALLBACK_LOGO } from "./pure.js";
 import "./ha-ffbb-tracker-card.js";
 
 function makeCard(config = { entity: "sensor.my_team_next_match" }) {
@@ -97,7 +98,7 @@ describe("full render image fallback", () => {
     document.body.innerHTML = "";
   });
 
-  it("falls back to the SVG data URI and avoids infinite error loops", async () => {
+  it("falls back to the default brand logo and avoids infinite error loops", async () => {
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
     el.setConfig({ entity: "sensor.test_match" });
@@ -116,6 +117,6 @@ describe("full render image fallback", () => {
     expect(img).not.toBeNull();
 
     img.dispatchEvent(new Event("error"));
-    expect(img.src).toContain("data:image/svg+xml");
+    expect(img.src).toBe(DEFAULT_FALLBACK_LOGO);
   });
 });
