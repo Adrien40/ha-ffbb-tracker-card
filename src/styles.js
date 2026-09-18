@@ -369,7 +369,37 @@ export const cardStyles = css`
   .badge-live {
     background-color: var(--error-color, #db4437);
     color: #ffffff;
-    animation: pulse 2s infinite;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    box-shadow: 0 0 10px rgba(219, 68, 55, 0.45);
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    display: inline-block;
+    animation: live-pulse 1.4s infinite ease-in-out;
+  }
+  @keyframes live-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(0.75);
+    }
+  }
+  .live-clock {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--secondary-text-color);
+    margin-top: 5px;
+    text-align: center;
+    letter-spacing: 0.2px;
   }
   .badge-gameday {
     background-color: rgba(255, 107, 0, 0.12);
@@ -415,11 +445,6 @@ export const cardStyles = css`
     transform: translateX(-50%);
     margin-top: 8px;
     white-space: nowrap;
-  }
-  @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.6; }
-    100% { opacity: 1; }
   }
   .footer-form {
     margin: 10px 0 12px;
