@@ -540,7 +540,13 @@ export function computeViewModel({
 
   const showTitle = config.show_title !== false;
   const configuredTitle = config.title?.trim();
-  const titleText = configuredTitle || t("card.default_title", "Next match");
+  let defaultTitle = t("card.default_title", "Next match");
+  if (isLive) {
+    defaultTitle = t("card.live_title", "Live match");
+  } else if (isPostMatch) {
+    defaultTitle = t("card.last_title", "Last match");
+  }
+  const titleText = configuredTitle || defaultTitle;
   const titleIcon = config.icon !== undefined ? config.icon : "mdi:basketball";
   const logoSizeClass = `logo-box-${config.logo_size || "medium"}`;
 
