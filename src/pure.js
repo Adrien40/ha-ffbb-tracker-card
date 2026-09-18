@@ -5,7 +5,8 @@
 // exercised indirectly through render(). Anything that needs `this.hass` or
 // `this._config` takes it as an explicit argument instead.
 
-export const DEFAULT_FALLBACK_LOGO = "/local/community/ha-ffbb-tracker-card/brand/icon.png";
+export const DEFAULT_FALLBACK_LOGO =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23ff6b00'/><circle cx='50' cy='50' r='46' stroke='%23ffffff' stroke-width='4' fill='none'/><line x1='50' y1='4' x2='50' y2='96' stroke='%23ffffff' stroke-width='4'/><line x1='4' y1='50' x2='96' y2='50' stroke='%23ffffff' stroke-width='4'/><path d='M17,17 Q50,50 17,83' stroke='%23ffffff' stroke-width='4' fill='none'/><path d='M83,17 Q50,50 83,83' stroke='%23ffffff' stroke-width='4' fill='none'/></svg>";
 
 /** Normalize a string for fuzzy team-name matching: lowercase, diacritics removed, letters/digits only. */
 export function cleanForMatch(s) {
@@ -64,8 +65,9 @@ export function resolveEntities(selected, states) {
 }
 
 /**
- * Find an opponent's position in a standings table by fuzzy name match.
- * Returns null if there's no name, no standings array, or no match.
+ * Find an opponent's position in a standings table.
+ * Strictly prioritizes an exact match before falling back to substring inclusion.
+ * Returns null if there's no name, no standings array, or no valid match.
  */
 export function findOpponentRank(opponentName, standings) {
   if (!opponentName || !Array.isArray(standings)) {
@@ -75,17 +77,25 @@ export function findOpponentRank(opponentName, standings) {
   if (!oppClean) {
     return null;
   }
-  const found = standings.find((item) => {
-    if (!item) {
-      return false;
-    }
+
+  // 1. Strict exact equality pass
+  let found = standings.find((item) => {
+    if (!item) return false;
     const team = item.team_name || item.name;
-    if (!team) {
-      return false;
-    }
     const itemClean = cleanForMatch(team);
-    return itemClean === oppClean || itemClean.includes(oppClean) || oppClean.includes(itemClean);
+    return Boolean(itemClean && itemClean === oppClean);
   });
+
+  // 2. Substring fallback pass
+  if (!found) {
+    found = standings.find((item) => {
+      if (!item) return false;
+      const team = item.team_name || item.name;
+      const itemClean = cleanForMatch(team);
+      return Boolean(itemClean && (itemClean.includes(oppClean) || oppClean.includes(itemClean)));
+    });
+  }
+
   return found ? found.position : null;
 }
 
@@ -125,7 +135,8 @@ export function formatRank(rank, lang) {
 /**
  * Find a team's url-ish attribute by fuzzy name match against a standings
  * array, trying each key in `urlKeys` in order on the matched row.
- * Returns null if there's no standings array, no fuzzy match, or none of
+ * Strictly prioritizes exact match before substring inclusion.
+ * Returns null if there's no standings array, no match, or none of
  * urlKeys resolves to a safe URL (see sanitizeUrl).
  */
 export function findUrlInStandings(teamName, standings, urlKeys) {
@@ -136,13 +147,25 @@ export function findUrlInStandings(teamName, standings, urlKeys) {
   if (!targetClean) {
     return null;
   }
-  const match = standings.find((item) => {
+
+  // 1. Strict exact equality pass
+  let match = standings.find((item) => {
     const itemClean = cleanForMatch(item?.team_name || item?.name || "");
-    return itemClean && (itemClean.includes(targetClean) || targetClean.includes(itemClean));
+    return Boolean(itemClean && itemClean === targetClean);
   });
+
+  // 2. Substring fallback pass
+  if (!match) {
+    match = standings.find((item) => {
+      const itemClean = cleanForMatch(item?.team_name || item?.name || "");
+      return Boolean(itemClean && (itemClean.includes(targetClean) || targetClean.includes(itemClean)));
+    });
+  }
+
   if (!match) {
     return null;
   }
+
   for (const key of urlKeys) {
     if (match[key]) {
       const url = sanitizeUrl(match[key]);

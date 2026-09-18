@@ -39,8 +39,8 @@ class FFBBCardEditor extends LitElement {
     };
   }
 
-  updated(changedProperties) {
-    super.updated(changedProperties);
+  willUpdate(changedProperties) {
+    super.willUpdate(changedProperties);
     if (changedProperties.has("hass") && this.hass) {
       const lang = resolveLang(this.hass);
       if (lang !== this._translationsLang) {
@@ -122,49 +122,34 @@ class FFBBCardEditor extends LitElement {
         selector: { boolean: {} },
       },
       {
-        name: "logo",
-        type: "expandable",
-        flatten: true,
-        title: this._t("editor.logo_section", "Logo"),
-        icon: "mdi:basketball",
-        schema: [
-          {
-            name: "logo_size",
-            label: this._t("editor.logo_size", "Team crest size"),
-            default: "medium",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "small", label: this._t("editor.logo_size_small", "Small") },
-                  { value: "medium", label: this._t("editor.logo_size_medium", "Medium (default)") },
-                  { value: "large", label: this._t("editor.logo_size_large", "Large") },
-                ],
-              },
-            },
+        name: "logo_size",
+        label: this._t("editor.logo_size", "Team crest size"),
+        default: "medium",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "small", label: this._t("editor.logo_size_small", "Small") },
+              { value: "medium", label: this._t("editor.logo_size_medium", "Medium (default)") },
+              { value: "large", label: this._t("editor.logo_size_large", "Large") },
+            ],
           },
-          {
-            name: "logo_click_action",
-            label: this._t("editor.logo_click_action", "Action on logo click"),
-            default: "team_url",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "none", label: this._t("editor.logo_action_none", "No action") },
-                  { value: "team_url", label: this._t("editor.logo_action_team_url", "Official FFBB team page") },
-                  { value: "more-info", label: this._t("editor.logo_action_more_info", "Detailed view (more-info)") },
-                ],
-              },
-            },
+        },
+      },
+      {
+        name: "logo_click_action",
+        label: this._t("editor.logo_click_action", "Action on logo click"),
+        default: "team_url",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "none", label: this._t("editor.logo_action_none", "No action") },
+              { value: "team_url", label: this._t("editor.logo_action_team_url", "Official FFBB team page") },
+              { value: "more-info", label: this._t("editor.logo_action_more_info", "Detailed view (more-info)") },
+            ],
           },
-          {
-            name: "show_watermark",
-            label: this._t("editor.show_watermark", "Transparent background logos"),
-            default: true,
-            selector: { boolean: {} },
-          },
-        ],
+        },
       },
       {
         name: "default_match_view",
@@ -213,39 +198,27 @@ class FFBBCardEditor extends LitElement {
           ]
         : []),
       {
-        name: "ranking",
-        type: "expandable",
-        flatten: true,
-        title: this._t("editor.ranking_section", "Ranking"),
-        icon: "mdi:podium",
-        schema: [
-          {
-            name: "show_rank",
-            label: this._t("editor.show_rank", "Show team ranking"),
-            default: true,
-            selector: { boolean: {} },
-          },
-          ...(this._config.show_rank !== false
-            ? [
-                {
-                  name: "rank_badge_style",
-                  label: this._t("editor.rank_badge_style", "Rank badge style"),
-                  default: "outline",
-                  selector: {
-                    select: {
-                      mode: "dropdown",
-                      options: [
-                        { value: "none", label: this._t("editor.rank_badge_style_none", "Neutral (no color)") },
-                        { value: "outline", label: this._t("editor.rank_badge_style_outline", "Colored outline (gold, silver, bronze)") },
-                        { value: "solid", label: this._t("editor.rank_badge_style_solid", "Solid color (gold, silver, bronze)") },
-                      ],
-                    },
-                  },
-                },
-              ]
-            : []),
-        ],
+        name: "show_rank",
+        label: this._t("editor.show_rank", "Show team ranking"),
+        default: true,
+        selector: { boolean: {} },
       },
+      ...(this._config.show_rank !== false
+        ? [
+            {
+              name: "disable_podium_colors",
+              label: this._t("editor.disable_podium_colors", "Disable podium colors (gold, silver, bronze)"),
+              default: false,
+              selector: { boolean: {} },
+            },
+            {
+              name: "solid_rank_badges",
+              label: this._t("editor.solid_rank_badges", "Solid rank badges"),
+              default: false,
+              selector: { boolean: {} },
+            },
+          ]
+        : []),
       {
         name: "show_form",
         label: this._t("editor.show_form", "Show recent form"),
@@ -255,6 +228,12 @@ class FFBBCardEditor extends LitElement {
       {
         name: "show_venue",
         label: this._t("editor.show_venue", "Show venue"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_watermark",
+        label: this._t("editor.show_watermark", "Transparent background logos"),
         default: true,
         selector: { boolean: {} },
       },
@@ -274,4 +253,6 @@ class FFBBCardEditor extends LitElement {
   }
 }
 
-customElements.define("ffbb-tracker-card-editor", FFBBCardEditor);
+if (!customElements.get("ffbb-tracker-card-editor")) {
+  customElements.define("ffbb-tracker-card-editor", FFBBCardEditor);
+}

@@ -57,8 +57,8 @@ class FFBBCard extends LitElement {
     };
   }
 
-  updated(changedProperties) {
-    super.updated(changedProperties);
+  willUpdate(changedProperties) {
+    super.willUpdate(changedProperties);
     if (changedProperties.has("hass") && this.hass) {
       const lang = resolveLang(this.hass);
       if (lang !== this._translationsLang) {
@@ -78,7 +78,7 @@ class FFBBCard extends LitElement {
 
   _getRankClass(rank) {
     if (!rank) return "";
-    if (this._config?.rank_badge_style === "none") return "";
+    if (this._config?.disable_podium_colors) return "";
     const match = String(rank).trim().match(/^(\d+)/);
     if (!match) return "";
     const pos = parseInt(match[1], 10);
@@ -227,10 +227,10 @@ class FFBBCard extends LitElement {
                           const teamClean = cleanForMatch(teamName);
                           const oppClean = cleanForMatch(opponentName);
                           const isHomeHighlight = Boolean(
-                            teamClean && (itemClean.includes(teamClean) || teamClean.includes(itemClean))
+                            itemClean && teamClean && (itemClean === teamClean || itemClean.includes(teamClean) || teamClean.includes(itemClean))
                           );
                           const isOppHighlight = Boolean(
-                            oppClean && (itemClean.includes(oppClean) || oppClean.includes(itemClean))
+                            itemClean && oppClean && (itemClean === oppClean || itemClean.includes(oppClean) || oppClean.includes(itemClean))
                           );
                           const isRowHighlighted = isHomeHighlight || isOppHighlight;
 
@@ -375,8 +375,8 @@ class FFBBCard extends LitElement {
                         const homeClean = cleanForMatch(home);
                         const awayClean = cleanForMatch(away);
                         const teamClean = cleanForMatch(teamName);
-                        const isHomeMyTeam = Boolean(teamClean && (homeClean.includes(teamClean) || teamClean.includes(homeClean)));
-                        const isAwayMyTeam = Boolean(teamClean && (awayClean.includes(teamClean) || teamClean.includes(awayClean)));
+                        const isHomeMyTeam = Boolean(homeClean && teamClean && (homeClean === teamClean || homeClean.includes(teamClean) || teamClean.includes(homeClean)));
+                        const isAwayMyTeam = Boolean(awayClean && teamClean && (awayClean === teamClean || awayClean.includes(teamClean) || teamClean.includes(awayClean)));
                         const isMyTeamInvolved = isHomeMyTeam || isAwayMyTeam;
 
                         return html`
@@ -487,11 +487,15 @@ class FFBBCard extends LitElement {
             <img
               class="watermark watermark-left"
               src=${leftLogo}
+              alt=""
+              aria-hidden="true"
               @error=${(e) => (e.target.style.display = "none")}
             />
             <img
               class="watermark watermark-right"
               src=${rightLogo}
+              alt=""
+              aria-hidden="true"
               @error=${(e) => (e.target.style.display = "none")}
             />
           `
@@ -558,7 +562,7 @@ class FFBBCard extends LitElement {
       hasStandingsData,
     } = vm;
 
-    const solidRankClass = this._config?.rank_badge_style === "solid" ? "rank-solid" : "";
+    const solidRankClass = this._config?.solid_rank_badges ? "rank-solid" : "";
 
     return html`
       <div class="match-area">
@@ -574,7 +578,12 @@ class FFBBCard extends LitElement {
             <img
               class="logo"
               src=${leftLogo}
-              @error=${(e) => (e.target.src = DEFAULT_FALLBACK_LOGO)}
+              alt=""
+              @error=${(e) => {
+                if (e.target.src !== DEFAULT_FALLBACK_LOGO) {
+                  e.target.src = DEFAULT_FALLBACK_LOGO;
+                }
+              }}
             />
           </div>
         </div>
@@ -670,7 +679,12 @@ class FFBBCard extends LitElement {
             <img
               class="logo"
               src=${rightLogo}
-              @error=${(e) => (e.target.src = DEFAULT_FALLBACK_LOGO)}
+              alt=""
+              @error=${(e) => {
+                if (e.target.src !== DEFAULT_FALLBACK_LOGO) {
+                  e.target.src = DEFAULT_FALLBACK_LOGO;
+                }
+              }}
             />
           </div>
         </div>
@@ -749,7 +763,8 @@ class FFBBCard extends LitElement {
               title=${this._t("card.view_form_details", "View form details")}
             >
               <span class="form-label">${this._t("card.form", "Form")}${this._colon()}</span>
-              <span class="form-sequence">${displayFormSequence}</span>${displayFormStreak ? html`<span class="form-streak">(${displayFormStreak})</span>` : ""}${!hasValidForm && isPreview
+              <span class="form-sequence">${displayFormSequence}</span>${displayFormStreak ? html`<span class="form-streak">(${displayFormStreak})</span>` : ""}
+              ${!hasValidForm && isPreview
                 ? html`<span class="form-preview-tag">(${this._t("card.preview_example", "example")})</span>`
                 : ""}
             </div>
@@ -782,7 +797,9 @@ class FFBBCard extends LitElement {
   }
 }
 
-customElements.define("ffbb-tracker-card", FFBBCard);
+if (!customElements.get("ffbb-tracker-card")) {
+  customElements.define("ffbb-tracker-card", FFBBCard);
+}
 
 console.info(
   `%c FFBB Tracker Card %c v${CARD_VERSION} `,
