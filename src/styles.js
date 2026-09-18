@@ -254,19 +254,19 @@ export const cardStyles = css`
     color: #ffffff;
   }
   .rank-badge.rank-solid.rank-gold {
-    background: #f1b815;
+    background: linear-gradient(135deg, #ffd753 0%, #d49809 50%, #f5c430 100%);
     color: #1a1a1a;
-    box-shadow: 0 2px 6px rgba(241, 184, 21, 0.4);
+    box-shadow: 0 2px 6px rgba(212, 152, 9, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.5);
   }
   .rank-badge.rank-solid.rank-silver {
-    background: #c0c7d0;
+    background: linear-gradient(135deg, #f0f3f6 0%, #9aa6b2 50%, #dce2e8 100%);
     color: #1a1a1a;
-    box-shadow: 0 2px 6px rgba(192, 199, 208, 0.35);
+    box-shadow: 0 2px 6px rgba(154, 166, 178, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.6);
   }
   .rank-badge.rank-solid.rank-bronze {
-    background: #cd7f32;
+    background: linear-gradient(135deg, #e89b5c 0%, #a8581a 50%, #d98642 100%);
     color: #ffffff;
-    box-shadow: 0 2px 6px rgba(205, 127, 50, 0.35);
+    box-shadow: 0 2px 6px rgba(168, 88, 26, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.35);
   }
   .rank-badge.clickable-badge {
     cursor: pointer;
@@ -372,8 +372,10 @@ export const cardStyles = css`
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 12px;
+    padding: 6px 14px;
+    line-height: 1.1;
     box-shadow: 0 0 10px rgba(219, 68, 55, 0.45);
+    animation: pulse 2s infinite;
   }
   .live-dot {
     width: 7px;
@@ -445,6 +447,11 @@ export const cardStyles = css`
     transform: translateX(-50%);
     margin-top: 8px;
     white-space: nowrap;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
   }
   .footer-form {
     margin: 10px 0 12px;
