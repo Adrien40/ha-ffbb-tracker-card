@@ -23,7 +23,6 @@ Thumbs.db
 
 # Node & package managers
 node_modules/
-package-lock.json
 yarn.lock
 .npm/
 npm-debug.log*
@@ -35,5 +34,4 @@ yarn-error.log*
 *.log
 .temp/
 .cache/
-dist/
 build/
