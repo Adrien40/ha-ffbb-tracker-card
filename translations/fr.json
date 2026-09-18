@@ -70,9 +70,9 @@
     "ranking_section": "Classement",
     "show_rank": "Afficher le classement des équipes",
     "rank_badge_style": "Style des badges de classement",
-    "rank_badge_none": "Aucun",
-    "rank_badge_outline": "Bordure (or, argent, bronze)",
-    "rank_badge_solid": "Plein (or, argent, bronze)",
+    "rank_badge_none": "Neutre (sans podium)",
+    "rank_badge_outline": "Bordure (or, argent, bronze) — défaut",
+    "rank_badge_solid": "Plein métallique (or, argent, bronze)",
     "show_form": "Afficher la forme récente",
     "show_venue": "Afficher la salle",
     "show_watermark": "Logos en transparence en arrière-plan"
