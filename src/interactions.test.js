@@ -233,7 +233,10 @@ describe("match view navigation (chevrons)", () => {
   it("toggles between upcoming match and last match score via chevrons", async () => {
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
-    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      default_match_view: "next",
+    });
     el.hass = {
       language: "fr",
       locale: { language: "fr" },
@@ -241,7 +244,7 @@ describe("match view navigation (chevrons)", () => {
         "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
         "sensor.basket_landes_prochain_match_date": { state: "2026-09-25T20:00:00" },
         "sensor.basket_landes_dernier_match_adversaire": { state: "Mont-de-Marsan" },
-        "sensor.basket_landes_dernier_match_date": { state: "2026-09-18T20:00:00" },
+        "sensor.basket_landes_dernier_match_date": { state: "2025-01-10T20:00:00" },
         "sensor.basket_landes_dernier_match_score": { state: "78 - 65" },
         "sensor.basket_landes_dernier_match_resultat": { state: "win" },
       },
