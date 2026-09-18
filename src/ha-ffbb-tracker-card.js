@@ -582,7 +582,7 @@ class FFBBCard extends LitElement {
               src=${leftLogo}
               alt=""
               @error=${(e) => {
-                if (e.target.src !== DEFAULT_FALLBACK_LOGO) {
+                if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
                   e.target.src = DEFAULT_FALLBACK_LOGO;
                 }
               }}
@@ -688,7 +688,7 @@ class FFBBCard extends LitElement {
               src=${rightLogo}
               alt=""
               @error=${(e) => {
-                if (e.target.src !== DEFAULT_FALLBACK_LOGO) {
+                if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
                   e.target.src = DEFAULT_FALLBACK_LOGO;
                 }
               }}
