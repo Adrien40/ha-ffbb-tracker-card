@@ -34,7 +34,10 @@
     "table_draws": "N",
     "no_standings": "Aucune donnée de classement disponible.",
     "no_calendar": "Aucun calendrier de rencontres disponible.",
-    "no_form": "Aucune forme récente disponible."
+    "no_form": "Aucune forme récente disponible.",
+    "live_title": "Match en direct",
+    "last_title": "Dernier match",
+    "kickoff": "Coup d'envoi"
   },
   "editor": {
     "entity": "Équipe FFBB (capteur)",
