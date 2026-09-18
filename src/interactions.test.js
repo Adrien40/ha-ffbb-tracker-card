@@ -224,3 +224,165 @@ describe("full render image fallback", () => {
     expect(img.src).toContain(DEFAULT_FALLBACK_LOGO);
   });
 });
+
+describe("match view navigation (chevrons)", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("toggles between upcoming match and last match score via chevrons", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+        "sensor.basket_landes_prochain_match_date": { state: "2026-09-25T20:00:00" },
+        "sensor.basket_landes_dernier_match_adversaire": { state: "Mont-de-Marsan" },
+        "sensor.basket_landes_dernier_match_date": { state: "2026-09-18T20:00:00" },
+        "sensor.basket_landes_dernier_match_score": { state: "78 - 65" },
+        "sensor.basket_landes_dernier_match_resultat": { state: "win" },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    // Default upcoming view: time displayed, no score
+    expect(el.shadowRoot.querySelector(".score-display")).toBeNull();
+
+    // Click left chevron -> switches to last match
+    const leftChevron = el.shadowRoot.querySelector(".nav-chevron-left");
+    expect(leftChevron).not.toBeNull();
+    leftChevron.click();
+    await el.updateComplete;
+
+    const score = el.shadowRoot.querySelector(".score-display");
+    expect(score).not.toBeNull();
+    expect(score.textContent).toContain("78 - 65");
+
+    // Click right chevron -> returns to upcoming match
+    const rightChevron = el.shadowRoot.querySelector(".nav-chevron-right");
+    expect(rightChevron).not.toBeNull();
+    rightChevron.click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot.querySelector(".score-display")).toBeNull();
+  });
+});
+
+describe("modal interactions (open & close)", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("opens standings modal and closes on Escape key", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+        "sensor.basket_landes_classement": {
+          state: "1",
+          attributes: {
+            standings: [
+              { position: 1, team_name: "Basket Landes", points: 20 },
+              { position: 2, team_name: "Dax", points: 18 },
+            ],
+          },
+        },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const rankBadge = el.shadowRoot.querySelector(".clickable-badge");
+    expect(rankBadge).not.toBeNull();
+    rankBadge.click();
+    await el.updateComplete;
+
+    // Modal is rendered in DOM
+    const modalBackdrop = el.shadowRoot.querySelector(".modal-backdrop");
+    expect(modalBackdrop).not.toBeNull();
+    expect(el.shadowRoot.querySelector(".standings-table")).not.toBeNull();
+
+    // Press Escape -> modal closes
+    modalBackdrop.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot.querySelector(".modal-backdrop")).toBeNull();
+  });
+});
+
+describe("logo click actions", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("dispatches hass-more-info event when logo_click_action is 'more-info'", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      logo_click_action: "more-info",
+    });
+    el.hass = {
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const moreInfoSpy = vi.fn();
+    el.addEventListener("hass-more-info", moreInfoSpy);
+
+    const logoBox = el.shadowRoot.querySelector(".logo-box");
+    expect(logoBox).not.toBeNull();
+    logoBox.click();
+
+    expect(moreInfoSpy).toHaveBeenCalledTimes(1);
+    expect(moreInfoSpy.mock.calls[0][0].detail.entityId).toBe("sensor.basket_landes_prochain_match_adversaire");
+  });
+});
+
+describe("venue maps link", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.restoreAllMocks();
+  });
+
+  it("opens Google Maps query with venue name and city", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      show_venue: true,
+    });
+    el.hass = {
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": {
+          state: "Dax",
+          attributes: { gym_name: "Salle Maurice Boyau", gym_city: "Dax" },
+        },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+
+    const venue = el.shadowRoot.querySelector(".footer-venue");
+    expect(venue).not.toBeNull();
+    venue.click();
+
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy.mock.calls[0][0]).toBe(
+      "https://www.google.com/maps/search/?api=1&query=Salle%20Maurice%20Boyau%20Dax"
+    );
+  });
+});
