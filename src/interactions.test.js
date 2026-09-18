@@ -249,10 +249,8 @@ describe("match view navigation (chevrons)", () => {
     document.body.appendChild(el);
     await el.updateComplete;
 
-    // Default upcoming view: time displayed, no score
     expect(el.shadowRoot.querySelector(".score-display")).toBeNull();
 
-    // Click left chevron -> switches to last match
     const leftChevron = el.shadowRoot.querySelector(".nav-chevron-left");
     expect(leftChevron).not.toBeNull();
     leftChevron.click();
@@ -262,7 +260,6 @@ describe("match view navigation (chevrons)", () => {
     expect(score).not.toBeNull();
     expect(score.textContent).toContain("78 - 65");
 
-    // Click right chevron -> returns to upcoming match
     const rightChevron = el.shadowRoot.querySelector(".nav-chevron-right");
     expect(rightChevron).not.toBeNull();
     rightChevron.click();
@@ -305,12 +302,10 @@ describe("modal interactions (open & close)", () => {
     rankBadge.click();
     await el.updateComplete;
 
-    // Modal is rendered in DOM
     const modalBackdrop = el.shadowRoot.querySelector(".modal-backdrop");
     expect(modalBackdrop).not.toBeNull();
     expect(el.shadowRoot.querySelector(".standings-table")).not.toBeNull();
 
-    // Press Escape -> modal closes
     modalBackdrop.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await el.updateComplete;
 
@@ -332,7 +327,10 @@ describe("logo click actions", () => {
     });
     el.hass = {
       states: {
-        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+        "sensor.basket_landes_prochain_match_adversaire": {
+          state: "Dax",
+          attributes: { is_home: true },
+        },
       },
     };
     document.body.appendChild(el);
