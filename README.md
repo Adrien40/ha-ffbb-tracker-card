@@ -27,7 +27,8 @@ If you find this project useful, you can support its development 🙏
 * ⏱️ **Adaptive Match Display:**
   * **Pre-match:** Day, date, and tip-off time.
   * **Post-match:** Large final score display and high-contrast solid outcome badge (**Win**, **Loss**, or **Draw**).
-  * **Live:** Pulsing "Live" badge with game clock display.
+  * **Live:** "Live" badge with pulsing white dot and kickoff time display.
+* 🥇 **Podium Rank Badges:** Automatic visual highlight for Top 3 rankings (gold, silver, bronze) with customizable styles: subtle glowing outline (default), beveled metallic solid, or neutral without podium colors.
 * 🎨 **Configurable Accent Color:** Use default basketball orange, your active Home Assistant theme primary color, or any custom HEX code to match your club's jersey colors.
 * 🗺️ **Direct GPS Navigation:** Tap the venue to launch direct turn-by-turn routing in Google Maps.
 * 📅 **Add to Calendar:** Tap the date to create a prefilled Google Calendar event with tip-off time, teams, and gym address.
@@ -99,6 +100,7 @@ title: Next match
 icon: mdi:basketball
 show_header: true
 show_rank: true
+rank_badge_style: outline
 show_form: true
 show_venue: true
 show_watermark: true
@@ -122,6 +124,7 @@ show_watermark: true
 | `icon` | `string` | `mdi:basketball` | Icon displayed beside the title. |
 | `show_header` | `boolean` | `true` | Displays competition, pool name, and clickable round header. |
 | `show_rank` | `boolean` | `true` | Displays interactive rank badges for each team. |
+| `rank_badge_style` | `string` | `outline` | Rank badge visual style: `outline` (gold/silver/bronze border by default), `solid` (metallic fill), or `none` (neutral without podium colors). |
 | `show_form` | `boolean` | `true` | Displays recent form streak indicator (last 5 games). |
 | `show_venue` | `boolean` | `true` | Displays venue details with GPS navigation link in footer. |
 | `show_watermark` | `boolean` | `true` | Shows faded team crest watermarks in background. |
