@@ -5,8 +5,7 @@
 // exercised indirectly through render(). Anything that needs `this.hass` or
 // `this._config` takes it as an explicit argument instead.
 
-export const DEFAULT_FALLBACK_LOGO =
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23ff6b00'/><circle cx='50' cy='50' r='46' stroke='%23ffffff' stroke-width='4' fill='none'/><line x1='50' y1='4' x2='50' y2='96' stroke='%23ffffff' stroke-width='4'/><line x1='4' y1='50' x2='96' y2='50' stroke='%23ffffff' stroke-width='4'/><path d='M17,17 Q50,50 17,83' stroke='%23ffffff' stroke-width='4' fill='none'/><path d='M83,17 Q50,50 83,83' stroke='%23ffffff' stroke-width='4' fill='none'/></svg>";
+export const DEFAULT_FALLBACK_LOGO = "/local/community/ha-ffbb-tracker-card/brand/icon.png";
 
 /** Normalize a string for fuzzy team-name matching: lowercase, diacritics removed, letters/digits only. */
 export function cleanForMatch(s) {
