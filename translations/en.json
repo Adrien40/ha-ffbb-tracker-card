@@ -71,7 +71,7 @@
     "show_rank": "Show team ranking",
     "rank_badge_style": "Rank badge style",
     "rank_badge_none": "Neutral (no podium)",
-    "rank_badge_outline": "Outline (gold, silver, bronze) — default",
+    "rank_badge_outline": "Outline (gold, silver, bronze) — (default)",
     "rank_badge_solid": "Solid metallic (gold, silver, bronze)",
     "show_form": "Show recent form",
     "show_venue": "Show venue",
