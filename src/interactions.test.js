@@ -49,6 +49,11 @@ describe("_getRankClass()", () => {
     const elDisabled = makeCard({ entity: "sensor.x", disable_podium_colors: true });
     expect(elDisabled._getRankClass("1")).toBe("");
   });
+
+  it("returns \"\" when rank_badge_style is 'none'", () => {
+    const elNone = makeCard({ entity: "sensor.x", rank_badge_style: "none" });
+    expect(elNone._getRankClass("1")).toBe("");
+  });
 });
 
 describe("_onKeyActivate()", () => {
@@ -90,6 +95,105 @@ describe("card-editor.js _valueChanged()", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0][0].detail.config.show_rank).toBe(false);
+  });
+});
+
+describe("rank_badge_style DOM rendering", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  const baseHass = {
+    language: "fr",
+    locale: { language: "fr" },
+    states: {
+      "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+      "sensor.basket_landes_classement": { state: "1" },
+    },
+  };
+
+  it("renders solid metallic badge class when rank_badge_style is 'solid'", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      rank_badge_style: "solid",
+    });
+    el.hass = baseHass;
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const badge = el.shadowRoot.querySelector(".rank-badge");
+    expect(badge).not.toBeNull();
+    expect(badge.classList.contains("rank-solid")).toBe(true);
+    expect(badge.classList.contains("rank-gold")).toBe(true);
+  });
+
+  it("omits podium medal colors when rank_badge_style is 'none'", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      rank_badge_style: "none",
+    });
+    el.hass = baseHass;
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const badge = el.shadowRoot.querySelector(".rank-badge");
+    expect(badge).not.toBeNull();
+    expect(badge.classList.contains("rank-solid")).toBe(false);
+    expect(badge.classList.contains("rank-gold")).toBe(false);
+  });
+
+  it("renders outline podium badge by default or when set to 'outline'", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      rank_badge_style: "outline",
+    });
+    el.hass = baseHass;
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const badge = el.shadowRoot.querySelector(".rank-badge");
+    expect(badge).not.toBeNull();
+    expect(badge.classList.contains("rank-solid")).toBe(false);
+    expect(badge.classList.contains("rank-gold")).toBe(true);
+  });
+});
+
+describe("live match DOM rendering", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("renders live badge, pulsing dot, and kickoff time when match is in progress", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+        "sensor.basket_landes_prochain_match_date": { state: "2026-09-19T20:00:00" },
+        "binary_sensor.basket_landes_match_en_cours": { state: "on" },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const liveBadge = el.shadowRoot.querySelector(".badge-live");
+    expect(liveBadge).not.toBeNull();
+
+    const liveDot = el.shadowRoot.querySelector(".live-dot");
+    expect(liveDot).not.toBeNull();
+
+    const liveClock = el.shadowRoot.querySelector(".live-clock");
+    expect(liveClock).not.toBeNull();
+    expect(liveClock.textContent).toContain("20:00");
   });
 });
 
