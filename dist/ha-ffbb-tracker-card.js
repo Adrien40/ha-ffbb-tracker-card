@@ -375,7 +375,6 @@ var ne=globalThis,re=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
     padding: 6px 14px;
     line-height: 1.1;
     box-shadow: 0 0 10px rgba(219, 68, 55, 0.45);
-    animation: pulse 2s infinite;
   }
   .live-dot {
     width: 7px;
