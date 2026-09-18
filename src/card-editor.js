@@ -27,8 +27,8 @@ class FFBBCardEditor extends LitElement {
 
   constructor() {
     super();
-    this._translationsLang = "en";
-    this._translations = getTranslations("en");
+    this._translationsLang = "fr";
+    this._translations = getTranslations("fr");
   }
 
   setConfig(config) {
@@ -39,8 +39,8 @@ class FFBBCardEditor extends LitElement {
     };
   }
 
-  willUpdate(changedProperties) {
-    super.willUpdate(changedProperties);
+  updated(changedProperties) {
+    super.updated(changedProperties);
     if (changedProperties.has("hass") && this.hass) {
       const lang = resolveLang(this.hass);
       if (lang !== this._translationsLang) {
@@ -124,7 +124,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "logo",
         type: "expandable",
-        title: this._t("editor.logo", "Team crests"),
+        title: this._t("editor.logo", "Logo"),
         icon: "mdi:shield-account",
         flatten: true,
         schema: [
@@ -215,7 +215,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "ranking",
         type: "expandable",
-        title: this._t("editor.ranking", "Ranking"),
+        title: this._t("editor.ranking", "Classement"),
         icon: "mdi:format-list-numbered",
         flatten: true,
         schema: [
@@ -228,16 +228,19 @@ class FFBBCardEditor extends LitElement {
           ...(this._config.show_rank !== false
             ? [
                 {
-                  name: "disable_podium_colors",
-                  label: this._t("editor.disable_podium_colors", "Disable podium colors (gold, silver, bronze)"),
-                  default: false,
-                  selector: { boolean: {} },
-                },
-                {
-                  name: "solid_rank_badges",
-                  label: this._t("editor.solid_rank_badges", "Solid rank badges"),
-                  default: false,
-                  selector: { boolean: {} },
+                  name: "rank_badge_style",
+                  label: this._t("editor.rank_badge_style", "Rank badge style"),
+                  default: "outline",
+                  selector: {
+                    select: {
+                      mode: "dropdown",
+                      options: [
+                        { value: "none", label: this._t("editor.rank_badge_none", "None") },
+                        { value: "outline", label: this._t("editor.rank_badge_outline", "Outline (podium colors)") },
+                        { value: "solid", label: this._t("editor.rank_badge_solid", "Solid") },
+                      ],
+                    },
+                  },
                 },
               ]
             : []),
