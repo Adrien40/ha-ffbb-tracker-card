@@ -1,0 +1,279 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  syntax-check:
+    name: JS syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Check every .js file parses
+        run: |
+          set -e
+          for f in $(find . -name "*.js" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./dist/*"); do
+            echo "Checking $f"
+            node --check "$f"
+          done
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint
+        run: npm run lint
+
+  unit-tests:
+    name: Unit tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  build:
+    name: Bundle builds cleanly (esbuild)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      # This is the check that would have caught the bare `from "lit"`
+      # import regression: the bundle failing to build silently left
+      # dist/ never committed, with no other signal anything was wrong.
+      - name: Run build
+        run: npm run build
+
+  json-validate:
+    name: Translation JSON validity + parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # Reads the source translations/ directory, not dist/translations/ --
+      # this must pass on every push/PR regardless of whether dist/ has
+      # been rebuilt yet, since dist/ is only committed by build-dist.yml
+      # on pushes to main.
+      - name: Validate JSON and compare en/fr keys
+        run: |
+          python3 - <<'EOF'
+          import json
+          import sys
+
+          def flatten(d, prefix=""):
+              out = {}
+              for k, v in d.items():
+                  key = f"{prefix}.{k}" if prefix else k
+                  if isinstance(v, dict):
+                      out.update(flatten(v, key))
+                  else:
+                      out[key] = v
+              return out
+
+          try:
+              en = json.load(open("translations/en.json"))
+              fr = json.load(open("translations/fr.json"))
+          except json.JSONDecodeError as e:
+              print(f"::error::Malformed translation JSON: {e}")
+              sys.exit(1)
+
+          en_keys = set(flatten(en))
+          fr_keys = set(flatten(fr))
+
+          missing_in_fr = en_keys - fr_keys
+          missing_in_en = fr_keys - en_keys
+
+          if missing_in_fr:
+              print(f"::error::Keys in en.json missing from fr.json: {sorted(missing_in_fr)}")
+          if missing_in_en:
+              print(f"::error::Keys in fr.json missing from en.json: {sorted(missing_in_en)}")
+          if missing_in_fr or missing_in_en:
+              sys.exit(1)
+
+          print(f"OK: {len(en_keys)} keys, en/fr in sync.")
+          EOF
+
+  version-consistency:
+    name: CARD_VERSION consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # card-editor.js must import CARD_VERSION from version.js, not
+      # redeclare its own copy -- this is exactly the regression that
+      # slipped through before this workflow existed.
+      #
+      # No job- or step-level `working-directory` here: a step's
+      # `working-directory` replaces the job default entirely and is
+      # resolved from $GITHUB_WORKSPACE, not from the previous step's
+      # directory -- `working-directory: ..` under a job default of `src`
+      # does NOT mean "one level above src", it means "one level above the
+      # whole checkout". `cd` inside each script avoids that trap.
+      - name: card-editor.js must not hardcode its own CARD_VERSION
+        run: |
+          set -e
+          cd src
+          if grep -qE '^\s*const CARD_VERSION\s*=' card-editor.js; then
+            echo "::error file=src/card-editor.js::card-editor.js must import CARD_VERSION from version.js, not declare its own constant."
+            exit 1
+          fi
+          if ! grep -q 'import { CARD_VERSION } from "./version.js"' card-editor.js; then
+            echo "::error file=src/card-editor.js::card-editor.js must import CARD_VERSION from version.js."
+            exit 1
+          fi
+
+      # card-editor.js is now loaded via a *static* import and bundled
+      # together with ha-ffbb-tracker-card.js into a single dist file by
+      # esbuild (see build.mjs) -- there is no separate cache-busting
+      # concern for it, only for the translation JSON files fetched at
+      # runtime. Fail the build if someone reverts this to a dynamic
+      # import with a hand-rolled ?v= string, which esbuild's bundler
+      # cannot follow across a template-literal specifier anyway.
+      - name: card-editor.js must be a static import (bundled by esbuild)
+        run: |
+          set -e
+          cd src
+          if ! grep -qE '^\s*import\s+"\./card-editor\.js";?\s*$' ha-ffbb-tracker-card.js; then
+            echo "::error file=src/ha-ffbb-tracker-card.js::Expected a static import \"./card-editor.js\"; so esbuild bundles it into the single dist file. Do not switch this back to a dynamic import(\`...?v=\${CARD_VERSION}\`) -- that pattern predates the esbuild bundle and no longer applies."
+            exit 1
+          fi
+
+      # `lit` is now a real, tracked npm dependency (see package.json) that
+      # esbuild resolves from node_modules and bundles in, exactly as it
+      # bundles card-editor.js -- there is no more vendored src/lit.js to
+      # fall back to. Fail the build if someone reintroduces a "./lit.js"
+      # import: that file no longer exists, so it would break resolution
+      # (caught more directly by the `build` job above, but checking it
+      # here too keeps the failure message specific to the actual cause).
+      - name: Lit must be imported from the npm package, not a vendored file
+        run: |
+          set -e
+          cd src
+          for f in ha-ffbb-tracker-card.js card-editor.js styles.js; do
+            if grep -qE 'from\s+"\./lit\.js"' "$f"; then
+              echo "::error file=src/$f::Import Lit from the npm package (\"lit\"), not a vendored \"./lit.js\" -- lit is a declared dependency in package.json and no vendored file exists in this repo anymore."
+              exit 1
+            fi
+          done
+          if [ -f lit.js ]; then
+            echo "::error file=src/lit.js::A vendored lit.js reappeared in src/ -- lit is meant to be a real npm dependency now (see package.json), not a hand-vendored file."
+            exit 1
+          fi
+
+      # The manual-install instructions must match what the build actually
+      # produces: one bundled dist/ha-ffbb-tracker-card.js (translations
+      # included -- see translations.js), plus the brand/ directory copied
+      # as a static asset. A README still listing the pre-bundle
+      # individual module files (card-editor.js, lit.js,
+      # config-defaults.js, pure.js, translations.js as separate
+      # downloads) sends anyone following it literally looking for files
+      # that no longer exist in the build output.
+      #
+      # No `cd` here: README.md and README.fr.md live at the repo root,
+      # which is already the default working directory for this step.
+      - name: README manual-install instructions match the bundled output
+        run: |
+          set -e
+          for readme in README.md README.fr.md; do
+            for token in "ha-ffbb-tracker-card.js" "brand"; do
+              if ! grep -q -- "$token" "$readme"; then
+                echo "::error file=$readme::Manual installation instructions don't mention $token."
+                exit 1
+              fi
+            done
+            # Matches only a markdown bullet naming the file in code-span
+            # form (how it appeared in the old "files to verify" list), not
+            # any incidental prose mention of the same filename elsewhere
+            # in the README (e.g. a feature bullet describing the bundle).
+            for stale in "card-editor.js" "lit.js" "version.js" "config-defaults.js" "pure.js" "translations.js"; do
+              if grep -qE "^\s*\*\s*\`$stale\`" "$readme"; then
+                echo "::error file=$readme::Manual installation instructions still list '$stale' as a separate download. The build now bundles it into ha-ffbb-tracker-card.js; update the instructions instead of listing individual pre-bundle module files."
+                exit 1
+              fi
+            done
+          done
+
+  accessibility-regression-check:
+    name: Accessibility attributes present
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # These are minimum counts, not exact matches: the goal is to catch a
+      # future edit that silently drops keyboard/screen-reader support from
+      # an interactive element, not to block adding more accessible
+      # elements later.
+      #
+      # Checked against src/ (not dist/) so this job never depends on a
+      # build having already run, and grep -o (occurrence count) is used
+      # instead of grep -c (line count) so it stays correct even if the
+      # file's formatting changes -- grep -c would silently undercount
+      # multiple matches landing on the same line.
+      #
+      # Baselines: 1 header-round + 2 logo-box + 2 nav-chevron +
+      # 1 center-meta + 2 rank-badge + 1 footer-form + 1 footer-venue +
+      # 3 modal-close-btn = 13 role= attributes; :focus-visible rules live
+      # in styles.js, not ha-ffbb-tracker-card.js.
+      - name: Every clickable element still has its keyboard/ARIA companions
+        run: |
+          set -e
+          FILE="ha-ffbb-tracker-card.js"
+
+          check_min() {
+            local label="$1" pattern="$2" min="$3" target="$4"
+            local count
+            count=$(grep -vE '^\s*//' "$target" | grep -oE "$pattern" | wc -l)
+            echo "$label: $count (minimum: $min)"
+            if [ "$count" -lt "$min" ]; then
+              echo "::error file=src/$target::$label dropped to $count (expected at least $min). A clickable element may have lost its accessibility attributes."
+              exit 1
+            fi
+          }
+
+          check_min 'role="button"/role=${...} attributes' 'role="button"|role=\$\{' 13 "$FILE"
+          check_min '@keydown= handlers'                    '@keydown='               16 "$FILE"
+          check_min 'Escape-key modal handling'              'e\.key === "Escape"'     3  "$FILE"
+          check_min '_onKeyActivate helper usages'           '_onKeyActivate'          14 "$FILE"
+          check_min ':focus-visible styles'                  ':focus-visible'          1  "styles.js"
