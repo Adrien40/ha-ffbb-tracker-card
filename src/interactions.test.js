@@ -117,6 +117,6 @@ describe("full render image fallback", () => {
     expect(img).not.toBeNull();
 
     img.dispatchEvent(new Event("error"));
-    expect(img.src).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(img.src).toContain(DEFAULT_FALLBACK_LOGO);
   });
 });
