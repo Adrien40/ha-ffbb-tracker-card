@@ -99,7 +99,7 @@ class FFBBCard extends LitElement {
   }
 
   _openMaps(gymName, gymCity) {
-    const query = encodeURIComponent(`${gymName}${gymCity}`.trim());
+    const query = encodeURIComponent(`${gymName} ${gymCity}`.trim());
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank", "noreferrer");
   }
 
