@@ -78,7 +78,8 @@ class FFBBCard extends LitElement {
 
   _getRankClass(rank) {
     if (!rank) return "";
-    if (this._config?.disable_podium_colors) return "";
+    const style = this._config?.rank_badge_style;
+    if (style === "none" || this._config?.disable_podium_colors) return "";
     const match = String(rank).trim().match(/^(\d+)/);
     if (!match) return "";
     const pos = parseInt(match[1], 10);
@@ -562,7 +563,8 @@ class FFBBCard extends LitElement {
       hasStandingsData,
     } = vm;
 
-    const solidRankClass = this._config?.solid_rank_badges ? "rank-solid" : "";
+    const isSolid = this._config?.rank_badge_style === "solid" || Boolean(this._config?.solid_rank_badges);
+    const solidRankClass = isSolid ? "rank-solid" : "";
 
     return html`
       <div class="match-area">
