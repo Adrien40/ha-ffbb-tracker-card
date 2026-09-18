@@ -11,4 +11,4 @@
 // separate cache-busting concern for card-editor.js, or for the
 // translation JSON files (also statically imported and inlined into the
 // same bundle by translations.js).
-export const CARD_VERSION = "0.1.2";
+export const CARD_VERSION = "0.1.3";
