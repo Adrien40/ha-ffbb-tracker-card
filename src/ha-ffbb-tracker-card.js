@@ -113,9 +113,9 @@ class FFBBCard extends LitElement {
     }
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     const toGCalIso = (d) => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
-    const title = `${homeTeam} vs${awayTeam}`;
-    const location = `${gymName}${gymCity}`.trim();
-    const details = `FFBB match: ${homeTeam} vs${awayTeam}`;
+    const title = `${homeTeam} vs ${awayTeam}`;
+    const location = `${gymName} ${gymCity}`.trim();
+    const details = `FFBB match: ${homeTeam} vs ${awayTeam}`;
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${toGCalIso(start)}/${toGCalIso(end)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
     window.open(url, "_blank", "noreferrer");
   }
@@ -371,7 +371,7 @@ class FFBBCard extends LitElement {
                       ${matches.map((m) => {
                         const home = m.home_team || m.equipe_domicile || "-";
                         const away = m.away_team || m.equipe_exterieur || "-";
-                        const score = m.score || (m.home_score !== undefined ? `${m.home_score} -${m.away_score}` : "");
+                        const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const homeClean = cleanForMatch(home);
                         const awayClean = cleanForMatch(away);
