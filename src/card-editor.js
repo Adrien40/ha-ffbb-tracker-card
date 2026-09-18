@@ -27,8 +27,8 @@ class FFBBCardEditor extends LitElement {
 
   constructor() {
     super();
-    this._translationsLang = "fr";
-    this._translations = getTranslations("fr");
+    this._translationsLang = "en";
+    this._translations = getTranslations("en");
   }
 
   setConfig(config) {
@@ -122,34 +122,49 @@ class FFBBCardEditor extends LitElement {
         selector: { boolean: {} },
       },
       {
-        name: "logo_size",
-        label: this._t("editor.logo_size", "Team crest size"),
-        default: "medium",
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: [
-              { value: "small", label: this._t("editor.logo_size_small", "Small") },
-              { value: "medium", label: this._t("editor.logo_size_medium", "Medium (default)") },
-              { value: "large", label: this._t("editor.logo_size_large", "Large") },
-            ],
+        name: "logo",
+        type: "expandable",
+        title: this._t("editor.logo", "Team crests"),
+        icon: "mdi:shield-account",
+        flatten: true,
+        schema: [
+          {
+            name: "logo_size",
+            label: this._t("editor.logo_size", "Team crest size"),
+            default: "medium",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "small", label: this._t("editor.logo_size_small", "Small") },
+                  { value: "medium", label: this._t("editor.logo_size_medium", "Medium (default)") },
+                  { value: "large", label: this._t("editor.logo_size_large", "Large") },
+                ],
+              },
+            },
           },
-        },
-      },
-      {
-        name: "logo_click_action",
-        label: this._t("editor.logo_click_action", "Action on logo click"),
-        default: "team_url",
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: [
-              { value: "none", label: this._t("editor.logo_action_none", "No action") },
-              { value: "team_url", label: this._t("editor.logo_action_team_url", "Official FFBB team page") },
-              { value: "more-info", label: this._t("editor.logo_action_more_info", "Detailed view (more-info)") },
-            ],
+          {
+            name: "logo_click_action",
+            label: this._t("editor.logo_click_action", "Action on logo click"),
+            default: "team_url",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: this._t("editor.logo_action_none", "No action") },
+                  { value: "team_url", label: this._t("editor.logo_action_team_url", "Official FFBB team page") },
+                  { value: "more-info", label: this._t("editor.logo_action_more_info", "Detailed view (more-info)") },
+                ],
+              },
+            },
           },
-        },
+          {
+            name: "show_watermark",
+            label: this._t("editor.show_watermark", "Transparent background logos"),
+            default: true,
+            selector: { boolean: {} },
+          },
+        ],
       },
       {
         name: "default_match_view",
@@ -198,27 +213,36 @@ class FFBBCardEditor extends LitElement {
           ]
         : []),
       {
-        name: "show_rank",
-        label: this._t("editor.show_rank", "Show team ranking"),
-        default: true,
-        selector: { boolean: {} },
+        name: "ranking",
+        type: "expandable",
+        title: this._t("editor.ranking", "Ranking"),
+        icon: "mdi:format-list-numbered",
+        flatten: true,
+        schema: [
+          {
+            name: "show_rank",
+            label: this._t("editor.show_rank", "Show team ranking"),
+            default: true,
+            selector: { boolean: {} },
+          },
+          ...(this._config.show_rank !== false
+            ? [
+                {
+                  name: "disable_podium_colors",
+                  label: this._t("editor.disable_podium_colors", "Disable podium colors (gold, silver, bronze)"),
+                  default: false,
+                  selector: { boolean: {} },
+                },
+                {
+                  name: "solid_rank_badges",
+                  label: this._t("editor.solid_rank_badges", "Solid rank badges"),
+                  default: false,
+                  selector: { boolean: {} },
+                },
+              ]
+            : []),
+        ],
       },
-      ...(this._config.show_rank !== false
-        ? [
-            {
-              name: "disable_podium_colors",
-              label: this._t("editor.disable_podium_colors", "Disable podium colors (gold, silver, bronze)"),
-              default: false,
-              selector: { boolean: {} },
-            },
-            {
-              name: "solid_rank_badges",
-              label: this._t("editor.solid_rank_badges", "Solid rank badges"),
-              default: false,
-              selector: { boolean: {} },
-            },
-          ]
-        : []),
       {
         name: "show_form",
         label: this._t("editor.show_form", "Show recent form"),
@@ -231,12 +255,6 @@ class FFBBCardEditor extends LitElement {
         default: true,
         selector: { boolean: {} },
       },
-      {
-        name: "show_watermark",
-        label: this._t("editor.show_watermark", "Transparent background logos"),
-        default: true,
-        selector: { boolean: {} },
-      },
     ];
 
     return html`
@@ -244,7 +262,7 @@ class FFBBCardEditor extends LitElement {
         .hass=${this.hass}
         .data=${this._config}
         .schema=${schema}
-        .computeLabel=${(s) => s.label}
+        .computeLabel=${(s) => s.label || s.title}
         .computeHelper=${(s) => s.helper}
         @value-changed=${this._valueChanged}
       ></ha-form>
