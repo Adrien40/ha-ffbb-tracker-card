@@ -35,9 +35,9 @@
     "no_standings": "No standings data available.",
     "no_calendar": "No schedule available.",
     "no_form": "No recent form data available.",
-    "live_title": "Match en direct",
-    "last_title": "Dernier match",
-    "kickoff": "Coup d'envoi"
+    "live_title": "Live match",
+    "last_title": "Last match",
+    "kickoff": "Kick-off"
   },
   "editor": {
     "entity": "FFBB team (sensor)",
