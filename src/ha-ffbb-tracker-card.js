@@ -7,6 +7,7 @@ import {
   sortStandings,
   formatDate,
   resolveHour12,
+  isValidCssColor,
   computeViewModel,
   DEFAULT_FALLBACK_LOGO,
   createTeamMatcher,
@@ -72,6 +73,24 @@ class FFBBCard extends LitElement {
       ...DEFAULT_CONFIG,
       ...config,
     };
+    this._warnIfInvalidAccentColor();
+  }
+
+  // An invalid custom color silently falls back to the default orange (see
+  // resolveAccentColor). Tell YAML users why, once per distinct bad value: the
+  // visual editor shows a warning under the field, but YAML has no such UI.
+  _warnIfInvalidAccentColor() {
+    const { accent_color: mode, custom_accent_color: color } = this._config;
+    const value = String(color ?? "").trim();
+    if (mode !== "custom" || !value || isValidCssColor(value)) {
+      return;
+    }
+    if (this._warnedAccentColor !== value) {
+      this._warnedAccentColor = value;
+      console.warn(
+        `[FFBB Tracker Card] custom_accent_color "${value}" is not a valid CSS color (use e.g. #1e88e5 or "blue"): the default orange is used.`
+      );
+    }
   }
 
   willUpdate(changedProperties) {

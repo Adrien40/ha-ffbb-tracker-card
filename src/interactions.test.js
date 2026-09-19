@@ -1625,3 +1625,71 @@ describe("standings table reads the attribute names really sent by the integrati
     ]);
   });
 });
+
+describe("feedback when the custom accent color is not a valid color", () => {
+  // happy-dom's CSS.supports() answers "yes" to everything: emulate a real browser.
+  const stubBrowserColors = () =>
+    vi.stubGlobal("CSS", { supports: (prop, value) => prop === "color" && /^(#[0-9a-f]{6}|blue|red)$/i.test(value) });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.innerHTML = "";
+  });
+
+  async function colorFieldHelper(language, config) {
+    stubBrowserColors();
+    const Editor = customElements.get("ffbb-tracker-card-editor");
+    const el = new Editor();
+    el.hass = { language, locale: { language } };
+    el.setConfig({ entity: "sensor.x", ...config });
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const field = el.shadowRoot.querySelector("ha-form").schema.find((f) => f.name === "custom_accent_color");
+    return field?.helper;
+  }
+
+  it("editor: warns under the field for an invalid color (English)", async () => {
+    const helper = await colorFieldHelper("en", { accent_color: "custom", custom_accent_color: "bleu" });
+    expect(helper).toContain("⚠");
+    expect(helper).toContain("Not a valid color: the default orange is used.");
+    expect(helper).toContain("Example: #1e88e5"); // the example stays visible
+  });
+
+  it("editor: the warning is translated (French) and hints that color names are English", async () => {
+    const helper = await colorFieldHelper("fr", { accent_color: "custom", custom_accent_color: "bleu" });
+    expect(helper).toContain("⚠");
+    expect(helper).toContain("blue");
+    expect(helper).toContain("Exemple");
+  });
+
+  it.each([["#1e88e5"], ["blue"], [""], ["   "]])("editor: no warning for %j", async (color) => {
+    const helper = await colorFieldHelper("en", { accent_color: "custom", custom_accent_color: color });
+    expect(helper).toBe("Example: #1e88e5 or #ff6b00");
+  });
+
+  it("card: logs a console warning once for an invalid custom color (YAML users)", () => {
+    stubBrowserColors();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const el = makeCard({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "bleu" });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('"bleu"');
+
+    el.setConfig({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "bleu" }); // same value again
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    el.setConfig({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "vert" }); // a different bad value
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["a valid color", { accent_color: "custom", custom_accent_color: "#1e88e5" }],
+    ["an empty color", { accent_color: "custom", custom_accent_color: "" }],
+    ["a bad value while the mode is not custom", { accent_color: "default", custom_accent_color: "bleu" }],
+  ])("card: no console warning for %s", (_label, extra) => {
+    stubBrowserColors();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    makeCard({ entity: "sensor.x", ...extra });
+    expect(warn).not.toHaveBeenCalled();
+  });
+});

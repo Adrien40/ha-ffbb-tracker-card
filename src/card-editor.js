@@ -2,6 +2,7 @@ import { LitElement, html, css } from "lit";
 import { CARD_VERSION } from "./version.js";
 import { DEFAULT_CONFIG } from "./config-defaults.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
+import { isValidCssColor } from "./pure.js";
 
 class FFBBCardEditor extends LitElement {
   static get properties() {
@@ -52,6 +53,19 @@ class FFBBCardEditor extends LitElement {
 
   _t(key, fallback = "") {
     return translate(this._translations, key, fallback);
+  }
+
+  // Helper text under the custom color field. When the typed value is not a
+  // valid CSS color the card silently uses the default orange, so say so here
+  // instead of leaving the user wondering why nothing changed.
+  _customColorHelper() {
+    const example = this._t("editor.custom_accent_color_helper", "Example: #1e88e5 or #ff6b00");
+    const value = String(this._config?.custom_accent_color ?? "").trim();
+    if (value && !isValidCssColor(value)) {
+      const warning = this._t("editor.custom_accent_color_invalid", "Not a valid color: the default orange is used.");
+      return `⚠ ${warning} ${example}`;
+    }
+    return example;
   }
 
   _valueChanged(ev) {
@@ -207,7 +221,7 @@ class FFBBCardEditor extends LitElement {
             {
               name: "custom_accent_color",
               label: this._t("editor.custom_accent_color", "Custom color code (HEX)"),
-              helper: this._t("editor.custom_accent_color_helper", "Example: #1e88e5 or #ff6b00"),
+              helper: this._customColorHelper(),
               selector: { text: {} },
             },
           ]
