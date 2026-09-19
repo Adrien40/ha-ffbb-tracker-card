@@ -387,7 +387,7 @@ function browserCssSupports(property, value) {
 }
 
 const COLOR_PATTERN =
-  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[\d.]+\%?(deg)?\s*[,\s]\s*[\d.]+\%?\s*[,\s]\s*[\d.]+\%?(\s*[,/]\s*[\d.]+\%?)?\s*\))$/i;
+  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[\d.]+%?(deg)?\s*[,\s]\s*[\d.]+%?\s*[,\s]\s*[\d.]+%?(\s*[,/]\s*[\d.]+%?)?\s*\))$/i;
 
 /**
  * Whether `value` is a usable CSS color (hex, rgb(), hsl(), a named color,
