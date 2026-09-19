@@ -519,7 +519,8 @@ export const cardStyles = css`
   .rank-badge:focus-visible,
   .footer-form:focus-visible,
   .footer-venue:focus-visible,
-  .modal-close-btn:focus-visible {
+  .modal-close-btn:focus-visible,
+  .modal-body:focus-visible {
     outline: 2px solid var(--ffbb-accent-color, #ff6b00);
     outline-offset: 2px;
   }
@@ -565,6 +566,11 @@ export const cardStyles = css`
     display: flex;
     flex-direction: column;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+  /* Focused programmatically when the dialog opens (tabindex="-1"); the
+     dialog container itself is not an interactive control, so no ring. */
+  .modal-card:focus {
+    outline: none;
   }
   .modal-header {
     display: flex;

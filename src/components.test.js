@@ -99,13 +99,13 @@ describe("card-editor.js", () => {
     expect(el._t("card.round", "MISSING")).toBe("Journée");
   });
 
-  it("updated() switches translations when hass reports a different language", () => {
+  it("willUpdate() switches translations when hass reports a different language", () => {
     const Editor = customElements.get("ffbb-tracker-card-editor");
     const el = new Editor();
     expect(el._t("card.round")).toBe("Journée");
 
     el.hass = { locale: { language: "en-US" } };
-    el.updated(new Map([["hass", undefined]]));
+    el.willUpdate(new Map([["hass", undefined]]));
 
     expect(el._t("card.round")).toBe("Round");
   });

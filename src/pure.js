@@ -5,6 +5,18 @@
 // exercised indirectly through render(). Anything that needs `this.hass` or
 // `this._config` takes it as an explicit argument instead.
 
+// Crest shown when a team logo fails to load.
+//
+// This path is intentional and correct -- it is NOT a missing asset. Do not
+// replace it with an inline data URI or flag it as fragile:
+//   - build.mjs copies brand/ to dist/brand/ (see copyStaticAssets there);
+//   - HACS ships that folder next to the JS bundle, and Home Assistant serves
+//     /config/www/community/<repository-name>/ as /local/community/<repository-name>/.
+//     Verified by the maintainer on a real HACS install.
+//   - "ha-ffbb-tracker-card" is the GitHub repository name (HACS uses it as the
+//     folder name). If the repository is ever renamed, update it here too.
+// The <img> error handler only swaps to this URL once (it checks the current
+// src first), so even if the file were missing there is no infinite error loop.
 export const DEFAULT_FALLBACK_LOGO = "/local/community/ha-ffbb-tracker-card/brand/icon.png";
 
 /** Normalize a string for fuzzy team-name matching: lowercase, diacritics removed, letters/digits only. */
@@ -60,6 +72,38 @@ export function resolveEntities(selected, states) {
     rankEvolution: findState([`${prefix}classement_evolution`, `${prefix}rank_evolution`]),
     form: findState([`${prefix}forme_recente`, `${prefix}form`]),
     matchInProgress: findState([`${binPrefix}match_en_cours`, `${binPrefix}match_in_progress`]),
+  };
+}
+
+/**
+ * Build a predicate telling whether a team name refers to `targetName`,
+ * given every name that appears in the same list (a standings table, a
+ * calendar...).
+ *
+ * If at least one name in the list matches the target EXACTLY (ignoring case,
+ * accents and punctuation), only exact matches count. That is what stops
+ * "US Dax" from also highlighting "US Dax 2". Only when nothing matches
+ * exactly does it fall back to substring matching, in either direction.
+ * Empty / "-" names never match.
+ */
+export function createTeamMatcher(names, targetName) {
+  const targetClean = cleanForMatch(targetName || "");
+  if (!targetClean) {
+    return () => false;
+  }
+  const hasExact = (Array.isArray(names) ? names : []).some((n) => {
+    const c = cleanForMatch(n || "");
+    return Boolean(c) && c === targetClean;
+  });
+  return (name) => {
+    const c = cleanForMatch(name || "");
+    if (!c) {
+      return false;
+    }
+    if (hasExact) {
+      return c === targetClean;
+    }
+    return c.includes(targetClean) || targetClean.includes(c);
   };
 }
 
@@ -335,24 +379,95 @@ export function sortStandings(standings) {
   });
 }
 
+function browserCssSupports(property, value) {
+  if (typeof CSS !== "undefined" && typeof CSS.supports === "function") {
+    return CSS.supports(property, value);
+  }
+  return null; // no CSS engine available (e.g. plain Node): caller falls back to a pattern
+}
+
+const COLOR_PATTERN =
+  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[\d.]+%?(deg)?\s*[,\s]\s*[\d.]+%?\s*[,\s]\s*[\d.]+%?(\s*[,/]\s*[\d.]+%?)?\s*\))$/i;
+
 /**
- * Resolve theme, custom HEX, or default basketball accent color from configuration.
+ * Whether `value` is a usable CSS color (hex, rgb(), hsl(), a named color,
+ * var(--x)...). The browser's own CSS parser decides when available; anything
+ * that could break out of the style declaration is always rejected.
+ * `supports` is injectable so the logic can be tested without a browser.
+ */
+export function isValidCssColor(value, supports = browserCssSupports) {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const v = value.trim();
+  if (!v || /[;{}<>\\"']/.test(v)) {
+    return false;
+  }
+  const verdict = supports("color", v);
+  if (typeof verdict === "boolean") {
+    return verdict;
+  }
+  return COLOR_PATTERN.test(v);
+}
+
+/**
+ * Resolve theme, custom color, or default basketball accent color from configuration.
+ * An invalid custom color (e.g. "bleu" instead of "#1e88e5") falls back to the
+ * default orange instead of silently producing no accent at all.
  */
 export function resolveAccentColor(config) {
   const mode = config?.accent_color || "default";
   if (mode === "theme") {
     return "var(--primary-color)";
   }
-  if (mode === "custom" && config?.custom_accent_color?.trim()) {
+  if (mode === "custom" && isValidCssColor(config?.custom_accent_color)) {
     return config.custom_accent_color.trim();
   }
   return "#ff6b00";
 }
 
 /**
- * Format a match date string into weekday, day/month, and 24h time parts.
+ * Decide whether times should be shown in 12-hour (AM/PM) or 24-hour format,
+ * following the same rules as Home Assistant's own frontend.
+ *
+ * `timeFormat` is the user's profile setting, `hass.locale.time_format`:
+ *   - "12"     -> always 12-hour   ("am_pm" is accepted as an alias)
+ *   - "24"     -> always 24-hour   ("twenty_four" is accepted as an alias)
+ *   - "language" (default) -> whatever `language` uses by convention
+ *     (en-US -> 12-hour, en-GB / fr -> 24-hour)
+ *   - "system" -> whatever the browser / operating system prefers
+ * Anything unknown behaves like "language". Never throws; returns a boolean
+ * (true = 12-hour).
  */
-export function formatDate(dateStr, lang = "en-US") {
+export function resolveHour12(timeFormat, language) {
+  if (timeFormat === "12" || timeFormat === "am_pm") {
+    return true;
+  }
+  if (timeFormat === "24" || timeFormat === "twenty_four") {
+    return false;
+  }
+  const locale = timeFormat === "system" ? undefined : language;
+  try {
+    const resolved = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions();
+    if (typeof resolved.hour12 === "boolean") {
+      return resolved.hour12;
+    }
+    return resolved.hourCycle === "h12" || resolved.hourCycle === "h11";
+  } catch {
+    // Invalid language tag: fall back to 24-hour, the least ambiguous format.
+    return false;
+  }
+}
+
+/**
+ * Format a match date string into weekday, day/month and time parts.
+ *
+ * `options.hour12` (see resolveHour12) forces 12-hour (true) or 24-hour
+ * (false) time. It is applied through `hourCycle` ("h12" / "h23") rather than
+ * the `hour12` flag, because `hour12: false` makes some browsers print
+ * midnight as "24:00". When omitted, the locale's own default is used.
+ */
+export function formatDate(dateStr, lang = "en-US", { hour12 } = {}) {
   if (!dateStr || dateStr === "unknown" || dateStr === "unavailable") {
     return null;
   }
@@ -363,7 +478,11 @@ export function formatDate(dateStr, lang = "en-US") {
 
   const weekday = d.toLocaleDateString(lang, { weekday: "short" });
   const day = d.toLocaleDateString(lang, { day: "numeric", month: "short" });
-  const time = d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+  const timeOptions =
+    typeof hour12 === "boolean"
+      ? { hour: hour12 ? "numeric" : "2-digit", minute: "2-digit", hourCycle: hour12 ? "h12" : "h23" }
+      : { hour: "2-digit", minute: "2-digit" };
+  const time = d.toLocaleTimeString(lang, timeOptions);
 
   return { weekday, day, time };
 }
@@ -441,6 +560,10 @@ export function computeViewModel({
   manualView = null,
   states = {},
   lang = "fr",
+  // Full locale (e.g. "en-GB") and 12/24h choice used ONLY for dates and times;
+  // `lang` (2 letters) keeps driving translations and ordinals.
+  locale = null,
+  hour12 = undefined,
   t = (k, fallback = "") => fallback,
   isPreview = false,
   now = new Date(),
@@ -528,11 +651,12 @@ export function computeViewModel({
   const gymCity = entities.nextLocation?.attributes?.gym_city || entities.nextOpponent?.attributes?.gym_city || "";
 
   const targetDateStr = isPostMatch ? entities.lastDate?.state : entities.nextDate?.state;
-  const dateFormatted = formatDate(targetDateStr, lang);
+  const dateFormatted = formatDate(targetDateStr, locale || lang, { hour12 });
   const formStreak = entities.form?.attributes?.current_streak || "";
   const formSequence = entities.form?.state;
   const hasValidForm = isValidState(formSequence);
 
+  // Form letters are always French (V = win, D = loss, N = draw), see the form modal.
   const displayFormSequence = hasValidForm ? formSequence : (isPreview ? "V-V-D-V-N" : "");
   const displayFormStreak = hasValidForm ? formStreak : (isPreview ? "2V" : "");
   const showFormBlock = config.show_form && (hasValidForm || isPreview);

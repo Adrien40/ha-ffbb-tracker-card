@@ -35,6 +35,9 @@ const buildOptions = {
   legalComments: "none",
 };
 
+// brand/ (icon.png, used as the fallback team logo, see DEFAULT_FALLBACK_LOGO in
+// src/pure.js) is copied next to the bundle. HACS ships dist/brand/ to users, so
+// the URL /local/community/ha-ffbb-tracker-card/brand/icon.png works after install.
 async function copyStaticAssets() {
   if (existsSync("brand")) {
     await cp("brand", "dist/brand", { recursive: true });

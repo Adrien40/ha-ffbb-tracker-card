@@ -39,8 +39,8 @@ class FFBBCardEditor extends LitElement {
     };
   }
 
-  updated(changedProperties) {
-    super.updated(changedProperties);
+  willUpdate(changedProperties) {
+    super.willUpdate(changedProperties);
     if (changedProperties.has("hass") && this.hass) {
       const lang = resolveLang(this.hass);
       if (lang !== this._translationsLang) {
@@ -124,7 +124,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "logo",
         type: "expandable",
-        title: this._t("editor.logo", "Logo"),
+        title: this._t("editor.logo_section", "Logo"),
         icon: "mdi:shield-account",
         flatten: true,
         schema: [
@@ -215,7 +215,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "ranking",
         type: "expandable",
-        title: this._t("editor.ranking", "Classement"),
+        title: this._t("editor.ranking_section", "Ranking"),
         icon: "mdi:format-list-numbered",
         flatten: true,
         schema: [

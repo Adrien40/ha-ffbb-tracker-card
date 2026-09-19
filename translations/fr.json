@@ -5,6 +5,7 @@
     "unknown_team": "Mon équipe",
     "unknown_opponent": "Adversaire",
     "round": "Journée",
+    "round_short": "J",
     "live": "En direct",
     "gameday": "Jour de match",
     "postponed": "Reporté",

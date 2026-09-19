@@ -6,9 +6,10 @@ import {
   resolveEntities,
   sortStandings,
   formatDate,
+  resolveHour12,
   computeViewModel,
   DEFAULT_FALLBACK_LOGO,
-  cleanForMatch,
+  createTeamMatcher,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
@@ -30,6 +31,7 @@ class FFBBCard extends LitElement {
     this._translations = getTranslations("en");
     this._activeModal = null;
     this._manualView = null;
+    this._modalTrigger = null;
   }
 
   static async getConfigElement() {
@@ -45,6 +47,21 @@ class FFBBCard extends LitElement {
 
   getCardSize() {
     return 3;
+  }
+
+  // Sizing rules for the "Sections" dashboard view (12-column grid).
+  //   - columns: 12 -> full section width by default.
+  //   - min_columns: 9 -> the layout (two team logos of up to 72px, a 100px
+  //     centre block and the card padding) needs roughly 280px; below 9 columns
+  //     it gets squeezed. Home Assistant recommends multiples of 3.
+  //   - `rows` is deliberately NOT defined: per the Home Assistant docs the card
+  //     then ignores the grid rows, so its height follows its content (header,
+  //     footer, and the score / venue / form blocks all change the height).
+  getGridOptions() {
+    return {
+      columns: 12,
+      min_columns: 9,
+    };
   }
 
   setConfig(config) {
@@ -93,9 +110,17 @@ class FFBBCard extends LitElement {
     return resolveEntities(this._config.entity, this.hass?.states);
   }
 
+  // Full Home Assistant locale (e.g. "en-GB") plus the user's 12/24h profile
+  // setting. Used for every date and time shown by the card, so the main view
+  // and the calendar modal always agree.
+  _localeInfo() {
+    const language = this.hass?.locale?.language || this.hass?.language || "en-US";
+    return { language, hour12: resolveHour12(this.hass?.locale?.time_format, language) };
+  }
+
   _formatDate(dateStr) {
-    const lang = this.hass?.locale?.language || this.hass?.language || "en-US";
-    return formatDate(dateStr, lang);
+    const { language, hour12 } = this._localeInfo();
+    return formatDate(dateStr, language, { hour12 });
   }
 
   _openMaps(gymName, gymCity) {
@@ -146,11 +171,66 @@ class FFBBCard extends LitElement {
   }
 
   _openModal(type) {
+    // Remember what had focus so it can be given back when the dialog closes.
+    this._modalTrigger = this.shadowRoot?.activeElement ?? null;
     this._activeModal = type;
   }
 
   _closeModal() {
     this._activeModal = null;
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    if (!changedProperties.has("_activeModal")) {
+      return;
+    }
+    const previous = changedProperties.get("_activeModal");
+    if (this._activeModal && !previous) {
+      // Dialog just opened: move keyboard focus into it so Escape / Tab work
+      // and screen readers announce it.
+      this.shadowRoot?.querySelector(".modal-card")?.focus();
+    } else if (!this._activeModal && previous) {
+      // Dialog just closed: give focus back to whatever opened it.
+      const trigger = this._modalTrigger;
+      this._modalTrigger = null;
+      if (trigger && trigger.isConnected && typeof trigger.focus === "function") {
+        trigger.focus();
+      }
+    }
+  }
+
+  // Keyboard handling shared by the three dialogs, attached to the backdrop:
+  // Escape closes, Tab / Shift+Tab stay inside the dialog (focus trap).
+  _onModalKeydown(e) {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      this._closeModal();
+      return;
+    }
+    if (e.key !== "Tab") {
+      return;
+    }
+    const card = e.currentTarget.querySelector(".modal-card");
+    if (!card) {
+      return;
+    }
+    const focusables = [...card.querySelectorAll('[tabindex]:not([tabindex="-1"])')];
+    if (focusables.length === 0) {
+      e.preventDefault();
+      card.focus();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = this.shadowRoot?.activeElement;
+    if (e.shiftKey && (active === first || active === card)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   _setManualView(view) {
@@ -181,18 +261,26 @@ class FFBBCard extends LitElement {
       const standings = sortStandings(rawStandings);
       const competition = entities.poule?.attributes?.competition || "";
       const poule = entities.poule?.state || "";
+      const standingNames = standings.map((item) => item.team_name || item.name || "");
+      const isMyTeamRow = createTeamMatcher(standingNames, teamName);
+      const isOpponentRow = createTeamMatcher(standingNames, opponentName);
 
       return html`
         <div
           class="modal-backdrop"
           @click=${this._closeModal}
-          @keydown=${(e) => {
-            if (e.key === "Escape") this._closeModal();
-          }}
+          @keydown=${this._onModalKeydown}
         >
-          <div class="modal-card" @click=${(e) => e.stopPropagation()}>
+          <div
+            class="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ffbb-modal-title"
+            tabindex="-1"
+            @click=${(e) => e.stopPropagation()}
+          >
             <div class="modal-header">
-              <div class="modal-title">
+              <div class="modal-title" id="ffbb-modal-title">
                 <ha-icon icon="mdi:format-list-numbered"></ha-icon>
                 <span>${this._t("card.standings_title", "Standings")} ${poule ? `• ${poule}` : ""}</span>
               </div>
@@ -207,7 +295,7 @@ class FFBBCard extends LitElement {
               ></ha-icon>
             </div>
             ${competition ? html`<div class="modal-subtitle">${competition}</div>` : ""}
-            <div class="modal-body">
+            <div class="modal-body" tabindex="0">
               ${standings.length > 0
                 ? html`
                     <table class="standings-table">
@@ -224,16 +312,8 @@ class FFBBCard extends LitElement {
                       </thead>
                       <tbody>
                         ${standings.map((item) => {
-                          const itemClean = cleanForMatch(item.team_name || item.name || "");
-                          const teamClean = cleanForMatch(teamName);
-                          const oppClean = cleanForMatch(opponentName);
-                          const isHomeHighlight = Boolean(
-                            itemClean && teamClean && (itemClean === teamClean || itemClean.includes(teamClean) || teamClean.includes(itemClean))
-                          );
-                          const isOppHighlight = Boolean(
-                            itemClean && oppClean && (itemClean === oppClean || itemClean.includes(oppClean) || oppClean.includes(itemClean))
-                          );
-                          const isRowHighlighted = isHomeHighlight || isOppHighlight;
+                          const rowName = item.team_name || item.name || "";
+                          const isRowHighlighted = isMyTeamRow(rowName) || isOpponentRow(rowName);
 
                           return html`
                             <tr class=${isRowHighlighted ? "highlight-row" : ""}>
@@ -243,7 +323,7 @@ class FFBBCard extends LitElement {
                               <td>${item.played ?? item.joues ?? "-"}</td>
                               <td>${item.wins ?? item.gagnes ?? "-"}</td>
                               <td>${item.losses ?? item.perdus ?? "-"}</td>
-                              <td>${item.draws ?? item.nuls ?? item.nul ?? item.n ?? "0"}</td>
+                              <td>${item.draws ?? item.nuls ?? item.nul ?? item.n ?? "-"}</td>
                             </tr>
                           `;
                         })}
@@ -272,13 +352,18 @@ class FFBBCard extends LitElement {
         <div
           class="modal-backdrop"
           @click=${this._closeModal}
-          @keydown=${(e) => {
-            if (e.key === "Escape") this._closeModal();
-          }}
+          @keydown=${this._onModalKeydown}
         >
-          <div class="modal-card" @click=${(e) => e.stopPropagation()}>
+          <div
+            class="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ffbb-modal-title"
+            tabindex="-1"
+            @click=${(e) => e.stopPropagation()}
+          >
             <div class="modal-header">
-              <div class="modal-title">
+              <div class="modal-title" id="ffbb-modal-title">
                 <ha-icon icon="mdi:chart-timeline-variant"></ha-icon>
                 <span>${this._t("card.form_title", "Recent form details")}</span>
               </div>
@@ -292,11 +377,18 @@ class FFBBCard extends LitElement {
                 aria-label=${this._t("card.close", "Close")}
               ></ha-icon>
             </div>
-            <div class="modal-body form-modal-content">
+            <div class="modal-body form-modal-content" tabindex="0">
               ${tokens.length > 0
                 ? html`
                     <div class="form-badges-container">
                       ${tokens.map((char) => {
+                        // The form string comes from the FFBB Tracker integration and is
+                        // ALWAYS in French, whatever the Home Assistant language:
+                        //   V = Victoire (win), D = Défaite (loss), N = Nul (draw).
+                        // So "D" means LOSS here -- not "Draw" as it would in English.
+                        // W / L are also accepted, only as a defensive fallback.
+                        // Do not "fix" D to mean draw: the badge label is translated
+                        // separately (card.win / card.loss / card.draw) from this letter.
                         let badgeClass = "badge-draw";
                         let label = this._t("card.draw", "Draw");
                         if (char === "V" || char === "W") {
@@ -338,18 +430,28 @@ class FFBBCard extends LitElement {
       const matches = this._extractCalendarMatches(entities);
       const competition = entities.poule?.attributes?.competition || "";
       const poule = entities.poule?.state || "";
+      const calendarNames = matches.flatMap((m) => [
+        m.home_team || m.equipe_domicile || "",
+        m.away_team || m.equipe_exterieur || "",
+      ]);
+      const isMyCalendarTeam = createTeamMatcher(calendarNames, teamName);
 
       return html`
         <div
           class="modal-backdrop"
           @click=${this._closeModal}
-          @keydown=${(e) => {
-            if (e.key === "Escape") this._closeModal();
-          }}
+          @keydown=${this._onModalKeydown}
         >
-          <div class="modal-card" @click=${(e) => e.stopPropagation()}>
+          <div
+            class="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ffbb-modal-title"
+            tabindex="-1"
+            @click=${(e) => e.stopPropagation()}
+          >
             <div class="modal-header">
-              <div class="modal-title">
+              <div class="modal-title" id="ffbb-modal-title">
                 <ha-icon icon="mdi:calendar-month-outline"></ha-icon>
                 <span>${this._t("card.calendar_title", "Season schedule")} ${poule ? `• ${poule}` : ""}</span>
               </div>
@@ -364,7 +466,7 @@ class FFBBCard extends LitElement {
               ></ha-icon>
             </div>
             ${competition ? html`<div class="modal-subtitle">${competition}</div>` : ""}
-            <div class="modal-body">
+            <div class="modal-body" tabindex="0">
               ${matches.length > 0
                 ? html`
                     <div class="calendar-list">
@@ -373,17 +475,14 @@ class FFBBCard extends LitElement {
                         const away = m.away_team || m.equipe_exterieur || "-";
                         const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
-                        const homeClean = cleanForMatch(home);
-                        const awayClean = cleanForMatch(away);
-                        const teamClean = cleanForMatch(teamName);
-                        const isHomeMyTeam = Boolean(homeClean && teamClean && (homeClean === teamClean || homeClean.includes(teamClean) || teamClean.includes(homeClean)));
-                        const isAwayMyTeam = Boolean(awayClean && teamClean && (awayClean === teamClean || awayClean.includes(teamClean) || teamClean.includes(awayClean)));
+                        const isHomeMyTeam = isMyCalendarTeam(home);
+                        const isAwayMyTeam = isMyCalendarTeam(away);
                         const isMyTeamInvolved = isHomeMyTeam || isAwayMyTeam;
 
                         return html`
                           <div class="calendar-row ${isMyTeamInvolved ? "highlight-row" : ""}">
                             <div class="calendar-col-round">
-                              <span class="cal-round-tag">J${m.round || m.journee || "-"}</span>
+                              <span class="cal-round-tag">${this._t("card.round_short", "R")}${m.round || m.journee || "-"}</span>
                             </div>
                             <div class="calendar-col-teams">
                               <div class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${home}</div>
@@ -419,12 +518,15 @@ class FFBBCard extends LitElement {
   }
 
   _computeViewModel(entities) {
+    const { language, hour12 } = this._localeInfo();
     return computeViewModel({
       entities,
       config: this._config,
       manualView: this._manualView,
       states: this.hass?.states,
       lang: this._translationsLang,
+      locale: language,
+      hour12,
       t: (key, fallback) => this._t(key, fallback),
       isPreview: Boolean(
         this.preview ||
@@ -482,6 +584,10 @@ class FFBBCard extends LitElement {
 
   _renderWatermark(vm) {
     const { leftLogo, rightLogo } = vm;
+    // A watermark whose logo fails to load is hidden (@error). Lit keeps the same
+    // <img> element when the logo URL changes (e.g. switching between the last and
+    // the next match), so it must be shown again as soon as a valid image loads
+    // (@load) -- otherwise it would stay hidden until the page is reloaded.
     return html`
       ${this._config.show_watermark
         ? html`
@@ -491,6 +597,7 @@ class FFBBCard extends LitElement {
               alt=""
               aria-hidden="true"
               @error=${(e) => (e.target.style.display = "none")}
+              @load=${(e) => (e.target.style.display = "")}
             />
             <img
               class="watermark watermark-right"
@@ -498,6 +605,7 @@ class FFBBCard extends LitElement {
               alt=""
               aria-hidden="true"
               @error=${(e) => (e.target.style.display = "none")}
+              @load=${(e) => (e.target.style.display = "")}
             />
           `
         : ""}
