@@ -558,6 +558,7 @@ export function computeViewModel({
   entities = {},
   config = {},
   manualView = null,
+  matchIndex = null,
   states = {},
   lang = "fr",
   // Full locale (e.g. "en-GB") and 12/24h choice used ONLY for dates and times;
@@ -581,9 +582,24 @@ export function computeViewModel({
     isValidState(entities.lastOpponent?.state) ||
     isValidState(entities.lastDate?.state);
   const hasNextMatchData = hasNextMatch || isValidState(entities.nextOpponent?.state);
-  const canToggleView = !isLive && hasLastMatchData && hasNextMatchData;
 
-  const isPostMatch = computeIsPostMatch({
+  const selectedEntity = config.entity && states ? states[config.entity] : null;
+  const calendarMatches = extractCalendarMatches(entities, selectedEntity);
+  const hasCalendar = Array.isArray(calendarMatches) && calendarMatches.length > 0;
+
+  let lastPlayedIndex = -1;
+  let nextMatchIndex = -1;
+  if (hasCalendar) {
+    for (let i = calendarMatches.length - 1; i >= 0; i--) {
+      if (calendarMatches[i].is_played || calendarMatches[i].score) {
+        lastPlayedIndex = i;
+        break;
+      }
+    }
+    nextMatchIndex = calendarMatches.findIndex((m) => !m.is_played && !m.score);
+  }
+
+  const defaultIsPostMatch = computeIsPostMatch({
     defaultView: config.default_match_view || "auto",
     manualView,
     isLive,
@@ -595,62 +611,148 @@ export function computeViewModel({
     now,
   });
 
-  const isGameDay = !isPostMatch && !isLive && hasNextMatch && isToday(nextDateState, now);
+  let currentIndex = 0;
+  if (typeof matchIndex === "number" && hasCalendar) {
+    currentIndex = Math.max(0, Math.min(matchIndex, calendarMatches.length - 1));
+  } else if (manualView === "last") {
+    currentIndex = lastPlayedIndex !== -1 ? lastPlayedIndex : 0;
+  } else if (manualView === "next") {
+    currentIndex = nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1);
+  } else {
+    if (defaultIsPostMatch) {
+      currentIndex = lastPlayedIndex !== -1 ? lastPlayedIndex : 0;
+    } else {
+      currentIndex = nextMatchIndex !== -1 ? nextMatchIndex : 0;
+    }
+  }
 
-  const currentOpponentSensor = isPostMatch ? entities.lastOpponent : entities.nextOpponent;
+  const isCarouselMatch = typeof matchIndex === "number" && hasCalendar && Boolean(calendarMatches[currentIndex]);
+  const currentCalMatch = isCarouselMatch ? calendarMatches[currentIndex] : null;
+
+  const isPostMatch = currentCalMatch
+    ? Boolean(currentCalMatch.is_played || currentCalMatch.score)
+    : defaultIsPostMatch;
+
+  const canToggleView = !isLive && (
+    (hasCalendar && calendarMatches.length > 1) ||
+    (hasLastMatchData && hasNextMatchData)
+  );
+
+  const canGoPrev = hasCalendar && calendarMatches.length > 1
+    ? currentIndex > 0
+    : !isPostMatch;
+
+  const canGoNext = hasCalendar && calendarMatches.length > 1
+    ? currentIndex < calendarMatches.length - 1
+    : isPostMatch;
+
+  const isGameDay = !isPostMatch && !isLive && (
+    currentCalMatch
+      ? Boolean(currentCalMatch.date && isToday(currentCalMatch.date, now))
+      : (hasNextMatch && isToday(nextDateState, now))
+  );
+
   const officialTeamName = entities.poule?.attributes?.team || "";
   const configuredTeamName = config.custom_team_name?.trim();
   const teamName = configuredTeamName || officialTeamName || t("card.unknown_team", "My team");
 
-  const rawOpponent = currentOpponentSensor?.state;
-  const opponentName = isValidState(rawOpponent) ? rawOpponent : t("card.unknown_opponent", "Opponent");
-  const opponentSearchName = isValidState(rawOpponent) ? rawOpponent : "";
+  let isHome = true;
+  let opponentName = t("card.unknown_opponent", "Opponent");
+  let opponentSearchName = "";
+  let teamLogoUrl = DEFAULT_FALLBACK_LOGO;
+  let opponentLogoUrl = DEFAULT_FALLBACK_LOGO;
+  let leftUrl = null;
+  let rightUrl = null;
+  let gymName = "";
+  let gymCity = "";
+  let targetDateStr = null;
+  let roundNumber = "";
+  let isStale = false;
 
-  const isHome = isPostMatch
-    ? (entities.lastScore?.attributes?.is_home ?? entities.lastDate?.attributes?.is_home ?? true)
-    : (entities.nextVenue?.state === "home" || entities.nextOpponent?.attributes?.is_home === true);
+  const currentOpponentSensor = isPostMatch ? entities.lastOpponent : entities.nextOpponent;
 
-  const teamLogoUrl = currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO;
-  const opponentLogoUrl = currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO;
+  if (currentCalMatch) {
+    const homeName = currentCalMatch.home_team || "";
+    const awayName = currentCalMatch.away_team || "";
+    const isOfficialHome = currentCalMatch.is_home !== undefined
+      ? currentCalMatch.is_home
+      : (cleanForMatch(homeName) === cleanForMatch(officialTeamName || teamName));
+
+    isHome = isOfficialHome;
+    opponentName = isHome ? awayName : homeName;
+    opponentSearchName = opponentName;
+
+    teamLogoUrl = isHome
+      ? (currentCalMatch.home_logo || currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO)
+      : (currentCalMatch.away_logo || currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO);
+
+    opponentLogoUrl = isHome
+      ? (currentCalMatch.away_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO)
+      : (currentCalMatch.home_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO);
+
+    leftUrl = isHome ? (currentCalMatch.home_url || null) : (currentCalMatch.away_url || null);
+    rightUrl = isHome ? (currentCalMatch.away_url || null) : (currentCalMatch.home_url || null);
+
+    gymName = currentCalMatch.gym_name || "";
+    gymCity = currentCalMatch.gym_city || "";
+    targetDateStr = currentCalMatch.date || null;
+    roundNumber = String(currentCalMatch.round ?? currentCalMatch.journee ?? "");
+    isStale = Boolean(currentCalMatch.is_stale);
+  } else {
+    const rawOpponent = currentOpponentSensor?.state;
+    opponentName = isValidState(rawOpponent) ? rawOpponent : t("card.unknown_opponent", "Opponent");
+    opponentSearchName = isValidState(rawOpponent) ? rawOpponent : "";
+
+    isHome = isPostMatch
+      ? (entities.lastScore?.attributes?.is_home ?? entities.lastDate?.attributes?.is_home ?? true)
+      : (entities.nextVenue?.state === "home" || entities.nextOpponent?.attributes?.is_home === true);
+
+    teamLogoUrl = currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO;
+    opponentLogoUrl = currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO;
+
+    const searchTeamName = officialTeamName || teamName;
+    const leftMatchName = isHome ? searchTeamName : opponentSearchName;
+    const rightMatchName = isHome ? opponentSearchName : searchTeamName;
+
+    leftUrl = findTeamUrl({
+      isHome,
+      teamName: leftMatchName,
+      entities,
+      opponentSensor: currentOpponentSensor,
+      selectedEntity,
+    });
+    rightUrl = findTeamUrl({
+      isHome: !isHome,
+      teamName: rightMatchName,
+      entities,
+      opponentSensor: currentOpponentSensor,
+      selectedEntity,
+    });
+
+    roundNumber = isPostMatch
+      ? (entities.lastDate?.attributes?.round || "")
+      : (entities.nextDate?.attributes?.round || "");
+
+    gymName = entities.nextLocation?.attributes?.gym_name || entities.nextOpponent?.attributes?.gym_name || "";
+    gymCity = entities.nextLocation?.attributes?.gym_city || entities.nextOpponent?.attributes?.gym_city || "";
+    targetDateStr = isPostMatch ? entities.lastDate?.state : entities.nextDate?.state;
+    isStale = Boolean(entities.nextDate?.attributes?.is_stale);
+  }
 
   const leftName = isHome ? teamName : opponentName;
   const rightName = isHome ? opponentName : teamName;
   const leftLogo = isHome ? teamLogoUrl : opponentLogoUrl;
   const rightLogo = isHome ? opponentLogoUrl : teamLogoUrl;
-
   const searchTeamName = officialTeamName || teamName;
   const leftMatchName = isHome ? searchTeamName : opponentSearchName;
   const rightMatchName = isHome ? opponentSearchName : searchTeamName;
-
-  const selectedEntity = config.entity && states ? states[config.entity] : null;
-  const leftUrl = findTeamUrl({
-    isHome,
-    teamName: leftMatchName,
-    entities,
-    opponentSensor: currentOpponentSensor,
-    selectedEntity,
-  });
-  const rightUrl = findTeamUrl({
-    isHome: !isHome,
-    teamName: rightMatchName,
-    entities,
-    opponentSensor: currentOpponentSensor,
-    selectedEntity,
-  });
 
   const leftEntityId = isHome ? config.entity : currentOpponentSensor?.entity_id;
   const rightEntityId = isHome ? currentOpponentSensor?.entity_id : config.entity;
 
   const competition = entities.poule?.attributes?.competition || "";
   const pouleName = entities.poule?.state || "";
-  const roundNumber = isPostMatch
-    ? (entities.lastDate?.attributes?.round || "")
-    : (entities.nextDate?.attributes?.round || "");
 
-  const gymName = entities.nextLocation?.attributes?.gym_name || entities.nextOpponent?.attributes?.gym_name || "";
-  const gymCity = entities.nextLocation?.attributes?.gym_city || entities.nextOpponent?.attributes?.gym_city || "";
-
-  const targetDateStr = isPostMatch ? entities.lastDate?.state : entities.nextDate?.state;
   const dateFormatted = formatDate(targetDateStr, locale || lang, { hour12 });
   const formStreak = entities.form?.attributes?.current_streak || "";
   const formSequence = entities.form?.state;
@@ -693,10 +795,13 @@ export function computeViewModel({
     }
   }
 
-  const isCalendarClickable = !isLive && !isPostMatch && hasNextMatch;
+  const isCalendarClickable = !isLive && !isPostMatch && Boolean(targetDateStr);
   const isLogoClickable = config.logo_click_action && config.logo_click_action !== "none";
   const hasStandingsData = Array.isArray(entities.rank?.attributes?.standings) && entities.rank.attributes.standings.length > 0;
   const accentColor = resolveAccentColor(config);
+
+  const displayedScore = currentCalMatch?.score || entities.lastScore?.state || "-";
+  const displayedResult = currentCalMatch?.result || entities.lastResult?.state || "draw";
 
   return {
     isValidState,
@@ -708,13 +813,20 @@ export function computeViewModel({
     hasLastMatchData,
     hasNextMatchData,
     canToggleView,
+    canGoPrev,
+    canGoNext,
+    currentIndex,
+    hasCalendar,
+    calendarMatches,
+    displayedScore,
+    displayedResult,
     isPostMatch,
     isGameDay,
     currentOpponentSensor,
     officialTeamName,
     configuredTeamName,
     teamName,
-    rawOpponent,
+    rawOpponent: entities.nextOpponent?.state,
     opponentName,
     opponentSearchName,
     isHome,
@@ -762,5 +874,6 @@ export function computeViewModel({
     isLogoClickable,
     hasStandingsData,
     accentColor,
+    isStale,
   };
 }

@@ -23,6 +23,7 @@ class FFBBCard extends LitElement {
       _config: { state: true },
       _activeModal: { state: true },
       _manualView: { state: true },
+      _matchIndex: { state: true },
     };
   }
 
@@ -32,6 +33,7 @@ class FFBBCard extends LitElement {
     this._translations = getTranslations("en");
     this._activeModal = null;
     this._manualView = null;
+    this._matchIndex = null;
     this._modalTrigger = null;
   }
 
@@ -143,7 +145,7 @@ class FFBBCard extends LitElement {
   }
 
   _openMaps(gymName, gymCity) {
-    const query = encodeURIComponent(`${gymName} ${gymCity}`.trim());
+    const query = encodeURIComponent(`${gymName}${gymCity}`.trim());
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank", "noreferrer");
   }
 
@@ -157,9 +159,9 @@ class FFBBCard extends LitElement {
     }
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     const toGCalIso = (d) => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
-    const title = `${homeTeam} vs ${awayTeam}`;
-    const location = `${gymName} ${gymCity}`.trim();
-    const details = `FFBB match: ${homeTeam} vs ${awayTeam}`;
+    const title = `${homeTeam} vs${awayTeam}`;
+    const location = `${gymName}${gymCity}`.trim();
+    const details = `FFBB match: ${homeTeam} vs${awayTeam}`;
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${toGCalIso(start)}/${toGCalIso(end)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
     window.open(url, "_blank", "noreferrer");
   }
@@ -254,6 +256,20 @@ class FFBBCard extends LitElement {
 
   _setManualView(view) {
     this._manualView = view;
+    this._matchIndex = null;
+  }
+
+  _handleChevronClick(direction, vm) {
+    if (vm.hasCalendar && vm.calendarMatches.length > 1) {
+      const nextIdx = direction === "prev" ? vm.currentIndex - 1 : vm.currentIndex + 1;
+      if (nextIdx >= 0 && nextIdx < vm.calendarMatches.length) {
+        this._matchIndex = nextIdx;
+        const targetMatch = vm.calendarMatches[nextIdx];
+        this._manualView = (targetMatch.is_played || targetMatch.score) ? "last" : "next";
+      }
+    } else {
+      this._setManualView(direction === "prev" ? "last" : "next");
+    }
   }
 
   _onKeyActivate(handler) {
@@ -331,9 +347,6 @@ class FFBBCard extends LitElement {
                       </thead>
                       <tbody>
                         ${standings.map((item) => {
-                          // Attribute names sent by the FFBB Tracker integration: position,
-                          // team_name, points, played, won, lost (no draws in basketball).
-                          // The other spellings are tolerated as fallbacks.
                           const rowName = item.team_name || item.name || "";
                           const isRowHighlighted = isMyTeamRow(rowName) || isOpponentRow(rowName);
 
@@ -404,13 +417,6 @@ class FFBBCard extends LitElement {
                 ? html`
                     <div class="form-badges-container">
                       ${tokens.map((char) => {
-                        // The form string comes from the FFBB Tracker integration and is
-                        // ALWAYS in French, whatever the Home Assistant language:
-                        //   V = Victoire (win), D = Défaite (loss), N = Nul (draw).
-                        // So "D" means LOSS here -- not "Draw" as it would in English.
-                        // W / L are also accepted, only as a defensive fallback.
-                        // Do not "fix" D to mean draw: the badge label is translated
-                        // separately (card.win / card.loss / card.draw) from this letter.
                         let badgeClass = "badge-draw";
                         let label = this._t("card.draw", "Draw");
                         if (char === "V" || char === "W") {
@@ -495,7 +501,7 @@ class FFBBCard extends LitElement {
                       ${matches.map((m) => {
                         const home = m.home_team || m.equipe_domicile || "-";
                         const away = m.away_team || m.equipe_exterieur || "-";
-                        const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
+                        const score = m.score || (m.home_score !== undefined ? `${m.home_score} -${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const isHomeMyTeam = isMyCalendarTeam(home);
                         const isAwayMyTeam = isMyCalendarTeam(away);
@@ -545,6 +551,7 @@ class FFBBCard extends LitElement {
       entities,
       config: this._config,
       manualView: this._manualView,
+      matchIndex: this._matchIndex,
       states: this.hass?.states,
       lang: this._translationsLang,
       locale: language,
@@ -606,10 +613,6 @@ class FFBBCard extends LitElement {
 
   _renderWatermark(vm) {
     const { leftLogo, rightLogo } = vm;
-    // A watermark whose logo fails to load is hidden (@error). Lit keeps the same
-    // <img> element when the logo URL changes (e.g. switching between the last and
-    // the next match), so it must be shown again as soon as a valid image loads
-    // (@load) -- otherwise it would stay hidden until the page is reloaded.
     return html`
       ${this._config.show_watermark
         ? html`
@@ -668,7 +671,6 @@ class FFBBCard extends LitElement {
 
   _renderMatchArea(vm, entities) {
     const {
-      isValidState,
       isLive,
       canToggleView,
       isPostMatch,
@@ -725,9 +727,9 @@ class FFBBCard extends LitElement {
             ? html`
                 <ha-icon
                   icon="mdi:chevron-left"
-                  class="nav-chevron nav-chevron-left ${isPostMatch ? "disabled" : ""}"
-                  @click=${() => this._setManualView("last")}
-                  @keydown=${this._onKeyActivate(() => this._setManualView("last"))}
+                  class="nav-chevron nav-chevron-left ${!vm.canGoPrev ? "disabled" : ""}"
+                  @click=${() => this._handleChevronClick("prev", vm)}
+                  @keydown=${this._onKeyActivate(() => this._handleChevronClick("prev", vm))}
                   role="button"
                   tabindex="0"
                   aria-label=${this._t("card.view_last_match", "Show last played match")}
@@ -740,12 +742,12 @@ class FFBBCard extends LitElement {
             class="center-meta ${isCalendarClickable ? "clickable" : ""}"
             @click=${() => {
               if (isCalendarClickable) {
-                this._openCalendar(entities.nextDate?.state, leftName, rightName, gymName, gymCity);
+                this._openCalendar(vm.targetDateStr, leftName, rightName, gymName, gymCity);
               }
             }}
             @keydown=${
               isCalendarClickable
-                ? this._onKeyActivate(() => this._openCalendar(entities.nextDate?.state, leftName, rightName, gymName, gymCity))
+                ? this._onKeyActivate(() => this._openCalendar(vm.targetDateStr, leftName, rightName, gymName, gymCity))
                 : nothing
             }
             role=${isCalendarClickable ? "button" : nothing}
@@ -766,10 +768,10 @@ class FFBBCard extends LitElement {
               : isPostMatch
               ? html`
                   <div class="score-display">
-                    ${isValidState(entities.lastScore?.state) ? entities.lastScore.state : "-"}
+                    ${vm.displayedScore}
                   </div>
-                  <div class="badge badge-${isValidState(entities.lastResult?.state) ? entities.lastResult.state : "draw"}">
-                    ${this._t(`card.${isValidState(entities.lastResult?.state) ? entities.lastResult.state : "draw"}`)}
+                  <div class="badge badge-${vm.displayedResult}">
+                    ${this._t(`card.${vm.displayedResult}`)}
                   </div>
                 `
               : html`
@@ -779,10 +781,10 @@ class FFBBCard extends LitElement {
                         <div class="match-time">${dateFormatted.time}</div>
                       `
                     : html`<div class="match-time">-</div>`}
-                  ${isGameDay && !entities.nextDate?.attributes?.is_stale
+                  ${isGameDay && !vm.isStale
                     ? html`<div class="badge badge-gameday">${this._t("card.gameday", "Game day")}</div>`
                     : ""}
-                  ${entities.nextDate?.attributes?.is_stale
+                  ${vm.isStale
                     ? html`<div class="badge badge-postponed">${this._t("card.postponed", "Postponed")}</div>`
                     : ""}
                 `}
@@ -792,9 +794,9 @@ class FFBBCard extends LitElement {
             ? html`
                 <ha-icon
                   icon="mdi:chevron-right"
-                  class="nav-chevron nav-chevron-right ${!isPostMatch ? "disabled" : ""}"
-                  @click=${() => this._setManualView("next")}
-                  @keydown=${this._onKeyActivate(() => this._setManualView("next"))}
+                  class="nav-chevron nav-chevron-right ${!vm.canGoNext ? "disabled" : ""}"
+                  @click=${() => this._handleChevronClick("next", vm)}
+                  @keydown=${this._onKeyActivate(() => this._handleChevronClick("next", vm))}
                   role="button"
                   tabindex="0"
                   aria-label=${this._t("card.view_next_match", "Show upcoming match")}
