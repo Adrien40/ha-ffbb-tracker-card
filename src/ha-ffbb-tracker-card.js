@@ -145,7 +145,7 @@ class FFBBCard extends LitElement {
   }
 
   _openMaps(gymName, gymCity) {
-    const query = encodeURIComponent(`${gymName}${gymCity}`.trim());
+    const query = encodeURIComponent(`${gymName} ${gymCity}`.trim());
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank", "noreferrer");
   }
 
@@ -159,9 +159,9 @@ class FFBBCard extends LitElement {
     }
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     const toGCalIso = (d) => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
-    const title = `${homeTeam} vs${awayTeam}`;
-    const location = `${gymName}${gymCity}`.trim();
-    const details = `FFBB match: ${homeTeam} vs${awayTeam}`;
+    const title = `${homeTeam} vs ${awayTeam}`;
+    const location = `${gymName} ${gymCity}`.trim();
+    const details = `FFBB match: ${homeTeam} vs ${awayTeam}`;
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${toGCalIso(start)}/${toGCalIso(end)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
     window.open(url, "_blank", "noreferrer");
   }
@@ -347,6 +347,9 @@ class FFBBCard extends LitElement {
                       </thead>
                       <tbody>
                         ${standings.map((item) => {
+                          // Attribute names sent by the FFBB Tracker integration: position,
+                          // team_name, points, played, won, lost (no draws in basketball).
+                          // The other spellings are tolerated as fallbacks.
                           const rowName = item.team_name || item.name || "";
                           const isRowHighlighted = isMyTeamRow(rowName) || isOpponentRow(rowName);
 
@@ -417,6 +420,13 @@ class FFBBCard extends LitElement {
                 ? html`
                     <div class="form-badges-container">
                       ${tokens.map((char) => {
+                        // The form string comes from the FFBB Tracker integration and is
+                        // ALWAYS in French, whatever the Home Assistant language:
+                        //   V = Victoire (win), D = Défaite (loss), N = Nul (draw).
+                        // So "D" means LOSS here -- not "Draw" as it would in English.
+                        // W / L are also accepted, only as a defensive fallback.
+                        // Do not "fix" D to mean draw: the badge label is translated
+                        // separately (card.win / card.loss / card.draw) from this letter.
                         let badgeClass = "badge-draw";
                         let label = this._t("card.draw", "Draw");
                         if (char === "V" || char === "W") {
@@ -501,7 +511,7 @@ class FFBBCard extends LitElement {
                       ${matches.map((m) => {
                         const home = m.home_team || m.equipe_domicile || "-";
                         const away = m.away_team || m.equipe_exterieur || "-";
-                        const score = m.score || (m.home_score !== undefined ? `${m.home_score} -${m.away_score}` : "");
+                        const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const isHomeMyTeam = isMyCalendarTeam(home);
                         const isAwayMyTeam = isMyCalendarTeam(away);
@@ -588,7 +598,7 @@ class FFBBCard extends LitElement {
         <div class="container">
           ${this._renderWatermark(vm)}
           ${this._renderMatchHeader(vm)}
-          ${this._renderMatchArea(vm, entities)}
+          ${this._renderMatchArea(vm)}
           ${this._renderFooter(vm)}
         </div>
 
@@ -613,6 +623,10 @@ class FFBBCard extends LitElement {
 
   _renderWatermark(vm) {
     const { leftLogo, rightLogo } = vm;
+    // A watermark whose logo fails to load is hidden (@error). Lit keeps the same
+    // <img> element when the logo URL changes (e.g. switching between the last and
+    // the next match), so it must be shown again as soon as a valid image loads
+    // (@load) -- otherwise it would stay hidden until the page is reloaded.
     return html`
       ${this._config.show_watermark
         ? html`
@@ -669,7 +683,7 @@ class FFBBCard extends LitElement {
     `;
   }
 
-  _renderMatchArea(vm, entities) {
+  _renderMatchArea(vm) {
     const {
       isLive,
       canToggleView,
