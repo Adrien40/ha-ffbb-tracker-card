@@ -1580,3 +1580,48 @@ describe("invalid custom accent color falls back to the default", () => {
     expect(await accentStyleFor("bleu")).toContain("--ffbb-accent-color: #ff6b00");
   });
 });
+
+describe("standings table reads the attribute names really sent by the integration", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("shows played / won / lost (including 0), and '-' for draws, which the integration never sends", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "US Dax" },
+        "sensor.basket_landes_poule": { state: "Poule B", attributes: { team: "Basket Landes" } },
+        "sensor.basket_landes_classement": {
+          state: "1",
+          // Same shape as the real sensor: unsorted positions, won / lost, no draws.
+          attributes: {
+            standings: [
+              { position: 10, team_name: "COTE D'OPALE BASKET CALAIS", points: 1, played: 1, won: 0, lost: 1 },
+              { position: 1, team_name: "ASA SCEAUX", points: 2, played: 1, won: 1, lost: 0 },
+              { position: 2, team_name: "APLEMONT LE HAVRE BASKET", points: 2, played: 3, won: 2, lost: 1 },
+            ],
+          },
+        },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    el.shadowRoot.querySelector(".rank-badge.clickable-badge").click();
+    await el.updateComplete;
+
+    const rows = [...el.shadowRoot.querySelectorAll(".standings-table tbody tr")].map((tr) =>
+      [...tr.querySelectorAll("td")].map((td) => td.textContent.trim())
+    );
+    // columns: position, team, points, played, won, lost, draws
+    expect(rows).toEqual([
+      ["1", "ASA SCEAUX", "2", "1", "1", "0", "-"],
+      ["2", "APLEMONT LE HAVRE BASKET", "2", "3", "2", "1", "-"],
+      ["10", "COTE D'OPALE BASKET CALAIS", "1", "1", "0", "1", "-"],
+    ]);
+  });
+});
