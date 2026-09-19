@@ -387,7 +387,7 @@ function browserCssSupports(property, value) {
 }
 
 const COLOR_PATTERN =
-  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[\d.]+%?(deg)?\s*[,\s]\s*[\d.]+%?\s*[,\s]\s*[\d.]+%?(\s*[,/]\s*[\d.]+%?)?\s*\))$/i;
+  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[\d.]+\%?(deg)?\s*[,\s]\s*[\d.]+\%?\s*[,\s]\s*[\d.]+\%?(\s*[,/]\s*[\d.]+\%?)?\s*\))$/i;
 
 /**
  * Whether `value` is a usable CSS color (hex, rgb(), hsl(), a named color,
@@ -670,6 +670,7 @@ export function computeViewModel({
   let isStale = false;
 
   const currentOpponentSensor = isPostMatch ? entities.lastOpponent : entities.nextOpponent;
+  const rawOpponent = currentOpponentSensor?.state;
 
   if (currentCalMatch) {
     const homeName = currentCalMatch.home_team || "";
@@ -690,8 +691,9 @@ export function computeViewModel({
       ? (currentCalMatch.away_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO)
       : (currentCalMatch.home_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO);
 
-    leftUrl = isHome ? (currentCalMatch.home_url || null) : (currentCalMatch.away_url || null);
-    rightUrl = isHome ? (currentCalMatch.away_url || null) : (currentCalMatch.home_url || null);
+    // Left is always the home team and Right is always the away team.
+    leftUrl = sanitizeUrl(currentCalMatch.home_url);
+    rightUrl = sanitizeUrl(currentCalMatch.away_url);
 
     gymName = currentCalMatch.gym_name || "";
     gymCity = currentCalMatch.gym_city || "";
@@ -699,7 +701,6 @@ export function computeViewModel({
     roundNumber = String(currentCalMatch.round ?? currentCalMatch.journee ?? "");
     isStale = Boolean(currentCalMatch.is_stale);
   } else {
-    const rawOpponent = currentOpponentSensor?.state;
     opponentName = isValidState(rawOpponent) ? rawOpponent : t("card.unknown_opponent", "Opponent");
     opponentSearchName = isValidState(rawOpponent) ? rawOpponent : "";
 
@@ -826,7 +827,7 @@ export function computeViewModel({
     officialTeamName,
     configuredTeamName,
     teamName,
-    rawOpponent: entities.nextOpponent?.state,
+    rawOpponent,
     opponentName,
     opponentSearchName,
     isHome,
