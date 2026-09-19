@@ -45,7 +45,7 @@
     "entity_helper": "Select any sensor belonging to the team",
     "custom_team_name": "Custom name for my team",
     "custom_team_name_helper": "Leave blank to keep official FFBB team name",
-    "logo_section": "Logo",
+    "logo_section": "Logos",
     "logo_size": "Team crest size",
     "logo_size_small": "Small",
     "logo_size_medium": "Medium (default)",
