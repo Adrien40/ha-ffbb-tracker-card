@@ -36,7 +36,7 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run ESLint
         run: npm run lint
@@ -54,7 +54,7 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run tests
         run: npm test
@@ -72,7 +72,7 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # This is the check that would have caught the bare `from "lit"`
       # import regression: the bundle failing to build silently left
@@ -256,6 +256,13 @@ jobs:
       # 1 center-meta + 2 rank-badge + 1 footer-form + 1 footer-venue +
       # 3 modal-close-btn = 13 role= attributes; :focus-visible rules live
       # in styles.js, not ha-ffbb-tracker-card.js.
+      #
+      # The three modals (standings, calendar, form) share ONE keyboard
+      # handler, _onModalKeydown, which owns Escape-to-close and the Tab focus
+      # trap. So Escape is handled once in the code, but the handler must be
+      # wired to all 3 dialogs, and each dialog must keep role="dialog" and
+      # aria-modal="true". (The behaviour itself is covered by the modal
+      # accessibility tests in src/interactions.test.js.)
       - name: Every clickable element still has its keyboard/ARIA companions
         run: |
           set -e
@@ -274,6 +281,9 @@ jobs:
 
           check_min 'role="button"/role=${...} attributes' 'role="button"|role=\$\{' 13 "$FILE"
           check_min '@keydown= handlers'                    '@keydown='               16 "$FILE"
-          check_min 'Escape-key modal handling'              'e\.key === "Escape"'     3  "$FILE"
+          check_min 'Escape-key modal handling (shared handler)' 'e\.key === "Escape"'  1  "$FILE"
+          check_min 'shared modal keydown handler wired to dialogs' '@keydown=\$\{this\._onModalKeydown\}' 3 "$FILE"
+          check_min 'role="dialog" on modals'                'role="dialog"'           3  "$FILE"
+          check_min 'aria-modal="true" on modals'            'aria-modal="true"'       3  "$FILE"
           check_min '_onKeyActivate helper usages'           '_onKeyActivate'          14 "$FILE"
           check_min ':focus-visible styles'                  ':focus-visible'          1  "styles.js"
