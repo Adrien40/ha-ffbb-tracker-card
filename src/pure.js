@@ -383,7 +383,7 @@ function browserCssSupports(property, value) {
   if (typeof CSS !== "undefined" && typeof CSS.supports === "function") {
     return CSS.supports(property, value);
   }
-  return null; // no CSS engine available (e.g. plain Node): caller falls back to a pattern
+  return null;
 }
 
 const COLOR_PATTERN =
@@ -454,7 +454,6 @@ export function resolveHour12(timeFormat, language) {
     }
     return resolved.hourCycle === "h12" || resolved.hourCycle === "h11";
   } catch {
-    // Invalid language tag: fall back to 24-hour, the least ambiguous format.
     return false;
   }
 }
@@ -611,7 +610,7 @@ export function computeViewModel({
     now,
   });
 
-  let currentIndex = 0;
+  let currentIndex;
   if (typeof matchIndex === "number" && hasCalendar) {
     currentIndex = Math.max(0, Math.min(matchIndex, calendarMatches.length - 1));
   } else if (manualView === "last") {
@@ -656,18 +655,18 @@ export function computeViewModel({
   const configuredTeamName = config.custom_team_name?.trim();
   const teamName = configuredTeamName || officialTeamName || t("card.unknown_team", "My team");
 
-  let isHome = true;
-  let opponentName = t("card.unknown_opponent", "Opponent");
-  let opponentSearchName = "";
-  let teamLogoUrl = DEFAULT_FALLBACK_LOGO;
-  let opponentLogoUrl = DEFAULT_FALLBACK_LOGO;
-  let leftUrl = null;
-  let rightUrl = null;
-  let gymName = "";
-  let gymCity = "";
-  let targetDateStr = null;
-  let roundNumber = "";
-  let isStale = false;
+  let isHome;
+  let opponentName;
+  let opponentSearchName;
+  let teamLogoUrl;
+  let opponentLogoUrl;
+  let leftUrl;
+  let rightUrl;
+  let gymName;
+  let gymCity;
+  let targetDateStr;
+  let roundNumber;
+  let isStale;
 
   const currentOpponentSensor = isPostMatch ? entities.lastOpponent : entities.nextOpponent;
   const rawOpponent = currentOpponentSensor?.state;
@@ -691,7 +690,6 @@ export function computeViewModel({
       ? (currentCalMatch.away_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO)
       : (currentCalMatch.home_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO);
 
-    // Left is always the home team and Right is always the away team.
     leftUrl = sanitizeUrl(currentCalMatch.home_url);
     rightUrl = sanitizeUrl(currentCalMatch.away_url);
 
