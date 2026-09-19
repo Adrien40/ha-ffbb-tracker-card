@@ -1005,15 +1005,15 @@ describe("card-editor.js section titles come from the translation files", () => 
     return el.shadowRoot.querySelector("ha-form").schema;
   }
 
-  it("English UI shows 'Logo' and 'Ranking' (not the hard-coded French fallback)", async () => {
+  it("English UI shows 'Logos' and 'Ranking' (not the hard-coded French fallback)", async () => {
     const schema = await schemaFor("en");
-    expect(schema.find((f) => f.name === "logo").title).toBe("Logo");
+    expect(schema.find((f) => f.name === "logo").title).toBe("Logos");
     expect(schema.find((f) => f.name === "ranking").title).toBe("Ranking");
   });
 
-  it("French UI shows 'Logo' and 'Classement'", async () => {
+  it("French UI shows 'Logos' and 'Classement'", async () => {
     const schema = await schemaFor("fr");
-    expect(schema.find((f) => f.name === "logo").title).toBe("Logo");
+    expect(schema.find((f) => f.name === "logo").title).toBe("Logos");
     expect(schema.find((f) => f.name === "ranking").title).toBe("Classement");
   });
 });
