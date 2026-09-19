@@ -17,6 +17,3 @@
 *.gif binary
 *.ico binary
 *.svg text eol=lf
-
-# GitHub Linguist overrides
-lit.js linguist-vendored
