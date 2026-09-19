@@ -99,7 +99,7 @@ describe("card-editor.js schema -- \"logo\" expandable section", () => {
     const el = await mountEditor();
     const group = schemaOf(el).find((f) => f.name === "logo");
     expect(group.type).toBe("expandable");
-    expect(group.title).toBe("Logo");
+    expect(group.title).toBe("Logos");
     expect(group.icon).toBeTruthy();
   });
 
