@@ -64,6 +64,7 @@
     "accent_color_custom": "Couleur personnalisée",
     "custom_accent_color": "Code couleur personnalisé (HEX)",
     "custom_accent_color_helper": "Exemple : #1e88e5 ou #ff6b00",
+    "custom_accent_color_invalid": "Couleur non valide (les noms de couleurs sont en anglais : blue, red…) : l'orange par défaut est utilisé.",
     "show_title": "Afficher le titre",
     "title": "Titre",
     "icon": "Icône",
