@@ -203,8 +203,6 @@ describe("_openCalendar()", () => {
     const [url] = openSpy.mock.calls[0];
     expect(url).toContain("calendar.google.com/calendar/render?action=TEMPLATE");
     expect(url).toContain("text=Basket%20Landes%20vs%20JSA%20Bordeaux");
-    // Start and end dates 2h apart, in the calendar API's compact ISO form
-    // (no dashes/colons/milliseconds).
     expect(url).toContain("dates=20260919T200000Z/20260919T220000Z");
   });
 });
@@ -249,11 +247,6 @@ describe("_resolveEntities() / _formatDate() / _extractCalendarMatches()", () =>
   });
 });
 
-// card-editor.js's _valueChanged() is what runs every time a user touches
-// a field in the visual editor (ha-form fires "value-changed" on any edit).
-// Before this block it had zero coverage: a regression here means a
-// setting silently stops saving, with no error anywhere -- the user just
-// finds their toggle "didn't stick" after leaving the editor.
 describe("card-editor.js _valueChanged()", () => {
   function makeEditor(config = { entity: "sensor.my_team_next_match" }) {
     const Editor = customElements.get("ffbb-tracker-card-editor");
@@ -265,7 +258,7 @@ describe("card-editor.js _valueChanged()", () => {
 
   it("does nothing if _config or hass is missing", () => {
     const Editor = customElements.get("ffbb-tracker-card-editor");
-    const bare = new Editor(); // no setConfig(), no hass
+    const bare = new Editor();
     const spy = vi.fn();
     bare.addEventListener("config-changed", spy);
     bare._valueChanged({ detail: { value: { entity: "sensor.x" } } });
@@ -300,8 +293,6 @@ describe("card-editor.js _valueChanged()", () => {
     const spy = vi.fn();
     el.addEventListener("config-changed", spy);
 
-    // ha-form only includes fields currently shown in the schema; none of
-    // the text fields are present in this update.
     el._valueChanged({ detail: { value: { show_rank: false } } });
 
     const { config } = spy.mock.calls[0][0].detail;
@@ -353,13 +344,6 @@ describe("card-editor.js render() schema", () => {
   });
 });
 
-// End-to-end render tests with a full, realistic hass object -- everything
-// above this point calls internal methods directly, but none of it proves
-// the *actual HTML* a user sees is correct (right score, right team names,
-// a badge that really opens its modal on click). This is the fixture from
-// pure.test.js's computeViewModel suite, translated into the raw
-// hass.states shape resolveEntities() expects, so it stays consistent with
-// what's already proven correct at the pure-function level.
 describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", () => {
   const ENTITY = "sensor.basket_landes_prochain_match_adversaire";
 
@@ -380,9 +364,6 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
       attributes: {
         team: "Basket Landes",
         competition: "Wonderligue",
-        // Only read by _extractCalendarMatches() -- exercises both the
-        // "has a score" and "has a date, no score yet" row branches of
-        // the calendar modal in a single fixture.
         calendar: [
           { home_team: "Basket Landes", away_team: "US Mont-de-Marsan", score: "80 - 75", round: 1 },
           { home_team: "AS Dax", away_team: "Basket Landes", date: "2026-09-26T18:00:00", round: 3 },
@@ -422,7 +403,7 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
 
   it("shows the post-match score and both team names when forced to the last-match view", async () => {
     const el = await mountCard();
-    el._setManualView("last"); // deterministic: bypasses any real-clock date math
+    el._setManualView("last");
     await el.updateComplete;
 
     const text = el.shadowRoot.textContent;
@@ -467,14 +448,6 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     expect(badge.classList.contains("rank-solid")).toBe(true);
   });
 
-  // Regression check for the bug reported against the old two-checkbox
-  // design: picking "solid" badges visually forced podium colors on
-  // (correct in the rendered page), but the "enable podium colors" toggle
-  // in the editor stayed unchecked -- an inconsistent state that could
-  // never happen once solid/outline/none became mutually-exclusive values
-  // of a single field. This proves a "solid" badge always carries its
-  // color class (rank-gold/silver/bronze) alongside rank-solid, with no
-  // separate setting able to leave one enabled without the other.
   it("\"solid\" style always includes both the rank-solid class AND the podium color class together", async () => {
     const el = await mountCard({ rank_badge_style: "solid" });
     await el.updateComplete;
@@ -526,7 +499,6 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     expect(el._activeModal).toBe("form");
 
     const badges = el.shadowRoot.querySelectorAll(".form-badge-pill");
-    // V-V-D-V-N -> 5 tokens, one pill each.
     expect(badges.length).toBe(5);
     expect(el.shadowRoot.textContent).toContain("2V");
 
@@ -549,10 +521,9 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     const rows = el.shadowRoot.querySelectorAll(".calendar-row");
     expect(rows.length).toBe(2);
     const text = el.shadowRoot.textContent;
-    expect(text).toContain("80 - 75"); // scored row
-    expect(text).toContain("AS Dax"); // date-only row's opponent name
+    expect(text).toContain("80 - 75");
+    expect(text).toContain("AS Dax");
 
-    // Escape closes it too, same handler as the other two modals.
     document.querySelector(".modal-backdrop")?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
     );
@@ -575,10 +546,6 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     leftLogo.click();
     rightLogo.click();
 
-    // logo_click_action defaults to "team_url"; neither fixture entity has
-    // a url-ish attribute or a matching standings row, so both fall back
-    // to firing hass-more-info instead of window.open -- assert that
-    // fallback explicitly rather than assuming a URL was found.
     expect(openSpy).not.toHaveBeenCalled();
   });
 
@@ -605,7 +572,7 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     expect(rightChevron).not.toBeNull();
     rightChevron.click();
     await el.updateComplete;
-    expect(el._manualView).toBe("next"); // already on "next": right chevron is a no-op there
+    expect(el._manualView).toBe("next");
 
     const leftChevron = el.shadowRoot.querySelector(".nav-chevron-left");
     leftChevron.click();
@@ -618,7 +585,7 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
   it("clicking the venue block opens Google Maps with the gym name and city", async () => {
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
     const el = await mountCard();
-    el._setManualView("next"); // gym/city come from the upcoming-match location
+    el._setManualView("next");
     await el.updateComplete;
 
     const venueBlock = el.shadowRoot.querySelector(".footer-venue");
@@ -649,22 +616,13 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
     el.setConfig({ entity: "sensor.nonexistent_prochain_match_adversaire" });
-    el.hass = { locale: { language: "en-US" } }; // no `states` key -- resolveEntities() short-circuits to null
+    el.hass = { locale: { language: "en-US" } };
     document.body.appendChild(el);
     await el.updateComplete;
 
     expect(el.shadowRoot.querySelector(".card-warning")).not.toBeNull();
   });
 
-  // The .badge-gameday element is the one piece of the isGameDay feature not
-  // already covered: pure.test.js proves computeViewModel() derives the
-  // isGameDay boolean correctly, but nothing before this proved the render()
-  // template actually turns that boolean into a visible badge -- or, just as
-  // important, correctly suppresses it when isLive/isPostMatch/is_stale
-  // would make a "Game day" badge misleading. mountWithStates() reuses this
-  // describe block's HASS_STATES fixture, optionally overriding individual
-  // sensor entries, so each test only has to spell out the one state that
-  // actually matters for it.
   describe("game-day badge (.badge-gameday)", () => {
     function mountWithStates(states, configOverrides = {}) {
       const Card = customElements.get("ffbb-tracker-card");
@@ -701,7 +659,7 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
 
     it("does not show the badge on any day other than the match day", async () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-09-18T08:00:00")); // fixture's next match is the 19th
+      vi.setSystemTime(new Date("2026-09-18T08:00:00"));
 
       const el = await mountWithStates(HASS_STATES);
       el._setManualView("next");
@@ -758,10 +716,6 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
       expect(el.shadowRoot.querySelector(".badge-gameday")).toBeNull();
     });
 
-    // The badge is positioned with position: absolute relative to
-    // .center-meta (see styles.test.js). If the template ever moved it
-    // outside that element, the CSS would silently anchor it to the wrong
-    // ancestor and it would land in the wrong place.
     it("renders the badge inside .center-meta, the element it is anchored to", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-09-19T08:00:00"));
@@ -798,11 +752,104 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
   });
 });
 
+describe("calendar modal interactivity and badges", () => {
+  const ENTITY = "sensor.basket_landes_prochain_match_adversaire";
 
-// ---------------------------------------------------------------------------
-// Regression tests added with the v0.1.5 fixes. Everything above this line is
-// the original v0.1.0 suite, kept intact.
-// ---------------------------------------------------------------------------
+  const HASS_STATES = {
+    "sensor.basket_landes_prochain_match_adversaire": {
+      state: "US Mont-de-Marsan",
+      attributes: { team_logo_url: "/logo1.png", opponent_logo_url: "/logo2.png" },
+    },
+    "sensor.basket_landes_prochain_match_date": { state: "2026-09-19T20:00:00", attributes: { round: "2" } },
+    "sensor.basket_landes_poule": {
+      state: "Poule B",
+      attributes: {
+        team: "Basket Landes",
+        competition: "Wonderligue",
+        calendar: [
+          { home_team: "Basket Landes", away_team: "US Mont-de-Marsan", score: "80 - 75", round: 1 },
+          { home_team: "AS Dax", away_team: "Basket Landes", date: "2026-09-26T18:00:00", round: 2 },
+        ],
+      },
+    },
+    "sensor.basket_landes_classement": {
+      state: "1",
+      attributes: { standings: [{ team_name: "Basket Landes", position: 1 }] },
+    },
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  async function mountCard() {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: ENTITY });
+    el.hass = { states: HASS_STATES, locale: { language: "fr-FR" } };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    return el;
+  }
+
+  it("renders DOM / EXT badges, team mini-logos, and highlights the next match", async () => {
+    const el = await mountCard();
+    el.shadowRoot.querySelector(".header-round.clickable-round").click();
+    await el.updateComplete;
+
+    const rows = el.shadowRoot.querySelectorAll(".calendar-row");
+    expect(rows.length).toBe(2);
+
+    // Row 0 is home (DOM) and played
+    const pillDom = rows[0].querySelector(".cal-venue-pill.pill-dom");
+    expect(pillDom).not.toBeNull();
+    expect(pillDom.textContent.trim()).toBe("DOM");
+    expect(rows[0].classList.contains("next-match-row")).toBe(false);
+
+    // Row 1 is away (EXT), unplayed: marked as next match
+    const pillExt = rows[1].querySelector(".cal-venue-pill.pill-ext");
+    expect(pillExt).not.toBeNull();
+    expect(pillExt.textContent.trim()).toBe("EXT");
+    expect(rows[1].classList.contains("next-match-row")).toBe(true);
+    expect(rows[1].querySelector(".cal-badge-next")?.textContent.trim()).toBe("Prochain");
+
+    // Mini logos are present on both teams
+    const logos = rows[0].querySelectorAll(".cal-mini-logo");
+    expect(logos.length).toBe(2);
+  });
+
+  it("clicking a calendar match row selects the match in the carousel and closes the modal", async () => {
+    const el = await mountCard();
+    el.shadowRoot.querySelector(".header-round.clickable-round").click();
+    await el.updateComplete;
+    expect(el._activeModal).toBe("calendar");
+
+    const rows = el.shadowRoot.querySelectorAll(".calendar-row");
+    // Click played match at index 0
+    rows[0].click();
+    await el.updateComplete;
+
+    expect(el._matchIndex).toBe(0);
+    expect(el._manualView).toBe("last");
+    expect(el._activeModal).toBeNull();
+    expect(el.shadowRoot.querySelector(".modal-backdrop")).toBeNull();
+  });
+
+  it("keyboard activating a calendar row with Enter or Space selects the match", async () => {
+    const el = await mountCard();
+    el.shadowRoot.querySelector(".header-round.clickable-round").click();
+    await el.updateComplete;
+
+    const rows = el.shadowRoot.querySelectorAll(".calendar-row");
+    // Press Enter on upcoming match at index 1
+    rows[1].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    expect(el._matchIndex).toBe(1);
+    expect(el._manualView).toBe("next");
+    expect(el._activeModal).toBeNull();
+  });
+});
 
 describe("i18n on initial render", () => {
   afterEach(() => {
@@ -1023,9 +1070,6 @@ describe("logo error fallback", () => {
     document.body.innerHTML = "";
   });
 
-  // Uses the real sibling-sensor naming so resolveEntities() finds the sensor
-  // carrying the logo attributes -- with an unrecognised entity id the card
-  // silently starts on the default logo and these tests would prove nothing.
   async function mountLogo(logoUrl) {
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
@@ -1058,11 +1102,10 @@ describe("logo error fallback", () => {
 
   it("does NOT reassign src when the fallback itself fails (no infinite error loop)", async () => {
     const img = await mountLogo("https://invalid.example/nonexistent.png");
-    img.dispatchEvent(new Event("error")); // 1st error -> fallback applied
+    img.dispatchEvent(new Event("error"));
     const current = img.src;
     expect(current.endsWith(DEFAULT_FALLBACK_LOGO)).toBe(true);
 
-    // From here on, count every write to img.src.
     let writes = 0;
     Object.defineProperty(img, "src", {
       configurable: true,
@@ -1072,7 +1115,6 @@ describe("logo error fallback", () => {
       },
     });
 
-    // The fallback image is missing too: the browser fires "error" again.
     for (let i = 0; i < 5; i += 1) {
       img.dispatchEvent(new Event("error"));
     }
@@ -1096,10 +1138,6 @@ describe("logo error fallback", () => {
     expect(writes).toBe(0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Modal accessibility + row highlighting (added after the v0.1.5 audit).
-// ---------------------------------------------------------------------------
 
 describe("modal accessibility (standings / form / calendar)", () => {
   const STATES = {
@@ -1144,7 +1182,7 @@ describe("modal accessibility (standings / form / calendar)", () => {
 
     const trigger = el.shadowRoot.querySelector(TRIGGERS[type]);
     expect(trigger, `expected a trigger for the ${type} modal`).not.toBeNull();
-    trigger.focus(); // a keyboard user (or a click on a tabindex element) has focus here
+    trigger.focus();
     trigger.click();
     await el.updateComplete;
     return { el, trigger, card: el.shadowRoot.querySelector(".modal-card") };
@@ -1370,8 +1408,6 @@ describe("getGridOptions() (Sections view sizing)", () => {
   it("is full width by default with a sensible minimum, and leaves the height to the content", () => {
     const el = makeCard();
     expect(el.getGridOptions()).toEqual({ columns: 12, min_columns: 9 });
-    // `rows` must stay undefined: Home Assistant then ignores grid rows and the
-    // card height follows its content.
     expect("rows" in el.getGridOptions()).toBe(false);
   });
 });
@@ -1549,8 +1585,6 @@ describe("invalid custom accent color falls back to the default", () => {
   });
 
   async function accentStyleFor(customColor) {
-    // happy-dom's CSS.supports() says "yes" to everything (even "bleu"), which
-    // a real browser does not: emulate a browser that only knows these colors.
     vi.stubGlobal("CSS", { supports: (prop, value) => prop === "color" && /^(#[0-9a-f]{6}|red)$/i.test(value) });
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
@@ -1598,7 +1632,6 @@ describe("standings table reads the attribute names really sent by the integrati
         "sensor.basket_landes_poule": { state: "Poule B", attributes: { team: "Basket Landes" } },
         "sensor.basket_landes_classement": {
           state: "1",
-          // Same shape as the real sensor: unsorted positions, won / lost, no draws.
           attributes: {
             standings: [
               { position: 10, team_name: "COTE D'OPALE BASKET CALAIS", points: 1, played: 1, won: 0, lost: 1 },
@@ -1617,7 +1650,6 @@ describe("standings table reads the attribute names really sent by the integrati
     const rows = [...el.shadowRoot.querySelectorAll(".standings-table tbody tr")].map((tr) =>
       [...tr.querySelectorAll("td")].map((td) => td.textContent.trim())
     );
-    // columns: position, team, points, played, won, lost, draws
     expect(rows).toEqual([
       ["1", "ASA SCEAUX", "2", "1", "1", "0", "-"],
       ["2", "APLEMONT LE HAVRE BASKET", "2", "3", "2", "1", "-"],
@@ -1627,7 +1659,6 @@ describe("standings table reads the attribute names really sent by the integrati
 });
 
 describe("feedback when the custom accent color is not a valid color", () => {
-  // happy-dom's CSS.supports() answers "yes" to everything: emulate a real browser.
   const stubBrowserColors = () =>
     vi.stubGlobal("CSS", { supports: (prop, value) => prop === "color" && /^(#[0-9a-f]{6}|blue|red)$/i.test(value) });
 
@@ -1653,7 +1684,7 @@ describe("feedback when the custom accent color is not a valid color", () => {
     const helper = await colorFieldHelper("en", { accent_color: "custom", custom_accent_color: "bleu" });
     expect(helper).toContain("⚠");
     expect(helper).toContain("Not a valid color: the default orange is used.");
-    expect(helper).toContain("Example: #1e88e5"); // the example stays visible
+    expect(helper).toContain("Example: #1e88e5");
   });
 
   it("editor: the warning is translated (French) and hints that color names are English", async () => {
@@ -1675,10 +1706,10 @@ describe("feedback when the custom accent color is not a valid color", () => {
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toContain('"bleu"');
 
-    el.setConfig({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "bleu" }); // same value again
+    el.setConfig({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "bleu" });
     expect(warn).toHaveBeenCalledTimes(1);
 
-    el.setConfig({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "vert" }); // a different bad value
+    el.setConfig({ entity: "sensor.x", accent_color: "custom", custom_accent_color: "vert" });
     expect(warn).toHaveBeenCalledTimes(2);
   });
 

@@ -52,14 +52,6 @@ class FFBBCard extends LitElement {
     return 3;
   }
 
-  // Sizing rules for the "Sections" dashboard view (12-column grid).
-  //   - columns: 12 -> full section width by default.
-  //   - min_columns: 9 -> the layout (two team logos of up to 72px, a 100px
-  //     centre block and the card padding) needs roughly 280px; below 9 columns
-  //     it gets squeezed. Home Assistant recommends multiples of 3.
-  //   - `rows` is deliberately NOT defined: per the Home Assistant docs the card
-  //     then ignores the grid rows, so its height follows its content (header,
-  //     footer, and the score / venue / form blocks all change the height).
   getGridOptions() {
     return {
       columns: 12,
@@ -78,9 +70,6 @@ class FFBBCard extends LitElement {
     this._warnIfInvalidAccentColor();
   }
 
-  // An invalid custom color silently falls back to the default orange (see
-  // resolveAccentColor). Tell YAML users why, once per distinct bad value: the
-  // visual editor shows a warning under the field, but YAML has no such UI.
   _warnIfInvalidAccentColor() {
     const { accent_color: mode, custom_accent_color: color } = this._config;
     const value = String(color ?? "").trim();
@@ -131,9 +120,6 @@ class FFBBCard extends LitElement {
     return resolveEntities(this._config.entity, this.hass?.states);
   }
 
-  // Full Home Assistant locale (e.g. "en-GB") plus the user's 12/24h profile
-  // setting. Used for every date and time shown by the card, so the main view
-  // and the calendar modal always agree.
   _localeInfo() {
     const language = this.hass?.locale?.language || this.hass?.language || "en-US";
     return { language, hour12: resolveHour12(this.hass?.locale?.time_format, language) };
@@ -192,7 +178,6 @@ class FFBBCard extends LitElement {
   }
 
   _openModal(type) {
-    // Remember what had focus so it can be given back when the dialog closes.
     this._modalTrigger = this.shadowRoot?.activeElement ?? null;
     this._activeModal = type;
   }
@@ -208,11 +193,8 @@ class FFBBCard extends LitElement {
     }
     const previous = changedProperties.get("_activeModal");
     if (this._activeModal && !previous) {
-      // Dialog just opened: move keyboard focus into it so Escape / Tab work
-      // and screen readers announce it.
       this.shadowRoot?.querySelector(".modal-card")?.focus();
     } else if (!this._activeModal && previous) {
-      // Dialog just closed: give focus back to whatever opened it.
       const trigger = this._modalTrigger;
       this._modalTrigger = null;
       if (trigger && trigger.isConnected && typeof trigger.focus === "function") {
@@ -221,8 +203,6 @@ class FFBBCard extends LitElement {
     }
   }
 
-  // Keyboard handling shared by the three dialogs, attached to the backdrop:
-  // Escape closes, Tab / Shift+Tab stay inside the dialog (focus trap).
   _onModalKeydown(e) {
     if (e.key === "Escape") {
       e.stopPropagation();
@@ -270,6 +250,12 @@ class FFBBCard extends LitElement {
     } else {
       this._setManualView(direction === "prev" ? "last" : "next");
     }
+  }
+
+  _selectCalendarMatch(index, isPlayed) {
+    this._matchIndex = index;
+    this._manualView = isPlayed ? "last" : "next";
+    this._closeModal();
   }
 
   _onKeyActivate(handler) {
@@ -347,9 +333,6 @@ class FFBBCard extends LitElement {
                       </thead>
                       <tbody>
                         ${standings.map((item) => {
-                          // Attribute names sent by the FFBB Tracker integration: position,
-                          // team_name, points, played, won, lost, draws (from the FFBB API's
-                          // own `nuls` field -- not derived or guessed on either side).
                           const rowName = item.team_name || item.name || "";
                           const isRowHighlighted = isMyTeamRow(rowName) || isOpponentRow(rowName);
 
@@ -420,13 +403,6 @@ class FFBBCard extends LitElement {
                 ? html`
                     <div class="form-badges-container">
                       ${tokens.map((char) => {
-                        // The form string comes from the FFBB Tracker integration and is
-                        // ALWAYS in French, whatever the Home Assistant language:
-                        //   V = Victoire (win), D = Défaite (loss), N = Nul (draw).
-                        // So "D" means LOSS here -- not "Draw" as it would in English.
-                        // W / L are also accepted, only as a defensive fallback.
-                        // Do not "fix" D to mean draw: the badge label is translated
-                        // separately (card.win / card.loss / card.draw) from this letter.
                         let badgeClass = "badge-draw";
                         let label = this._t("card.draw", "Draw");
                         if (char === "V" || char === "W") {
@@ -473,6 +449,7 @@ class FFBBCard extends LitElement {
         m.away_team || m.equipe_exterieur || "",
       ]);
       const isMyCalendarTeam = createTeamMatcher(calendarNames, teamName);
+      const nextMatchIndex = matches.findIndex((m) => !m.is_played && !m.score);
 
       return html`
         <div
@@ -508,25 +485,73 @@ class FFBBCard extends LitElement {
               ${matches.length > 0
                 ? html`
                     <div class="calendar-list">
-                      ${matches.map((m) => {
+                      ${matches.map((m, index) => {
                         const home = m.home_team || m.equipe_domicile || "-";
                         const away = m.away_team || m.equipe_exterieur || "-";
+                        const homeLogo = m.home_logo || DEFAULT_FALLBACK_LOGO;
+                        const awayLogo = m.away_logo || DEFAULT_FALLBACK_LOGO;
                         const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const isHomeMyTeam = isMyCalendarTeam(home);
                         const isAwayMyTeam = isMyCalendarTeam(away);
                         const isMyTeamInvolved = isHomeMyTeam || isAwayMyTeam;
+                        const isPlayed = Boolean(m.is_played || score);
+                        const isNextMatch = index === nextMatchIndex;
+
+                        let venueBadge = "";
+                        if (isHomeMyTeam) {
+                          venueBadge = "DOM";
+                        } else if (isAwayMyTeam) {
+                          venueBadge = "EXT";
+                        }
 
                         return html`
-                          <div class="calendar-row ${isMyTeamInvolved ? "highlight-row" : ""}">
+                          <div
+                            class="calendar-row ${isMyTeamInvolved ? "highlight-row" : ""} $ {isNextMatch ? "next-match-row" : ""}"
+                            @click=${() => this._selectCalendarMatch(index, isPlayed)}
+                            @keydown=${this._onKeyActivate(() => this._selectCalendarMatch(index, isPlayed))}
+                            role="button"
+                            tabindex="0"
+                            aria-label="${home} vs${away}"
+                          >
                             <div class="calendar-col-round">
                               <span class="cal-round-tag">${this._t("card.round_short", "R")}${m.round || m.journee || "-"}</span>
+                              ${venueBadge
+                                ? html`<span class="cal-venue-pill ${venueBadge === "DOM" ? "pill-dom" : "pill-ext"}">${venueBadge}</span>`
+                                : ""}
                             </div>
                             <div class="calendar-col-teams">
-                              <div class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${home}</div>
-                              <div class="cal-team ${isAwayMyTeam ? "my-team-text" : ""}">${away}</div>
+                              <div class="cal-team-line">
+                                <img
+                                  class="cal-mini-logo"
+                                  src=${homeLogo}
+                                  alt=""
+                                  @error=${(e) => {
+                                    if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
+                                      e.target.src = DEFAULT_FALLBACK_LOGO;
+                                    }
+                                  }}
+                                />
+                                <span class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${home}</span>
+                              </div>
+                              <div class="cal-team-line">
+                                <img
+                                  class="cal-mini-logo"
+                                  src=${awayLogo}
+                                  alt=""
+                                  @error=${(e) => {
+                                    if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
+                                      e.target.src = DEFAULT_FALLBACK_LOGO;
+                                    }
+                                  }}
+                                />
+                                <span class="cal-team ${isAwayMyTeam ? "my-team-text" : ""}">${away}</span>
+                              </div>
                             </div>
                             <div class="calendar-col-meta">
+                              ${isNextMatch
+                                ? html`<div class="cal-badge-next">Prochain</div>`
+                                : ""}
                               ${score
                                 ? html`<div class="cal-score">${score}</div>`
                                 : dateFormatted
@@ -623,10 +648,6 @@ class FFBBCard extends LitElement {
 
   _renderWatermark(vm) {
     const { leftLogo, rightLogo } = vm;
-    // A watermark whose logo fails to load is hidden (@error). Lit keeps the same
-    // <img> element when the logo URL changes (e.g. switching between the last and
-    // the next match), so it must be shown again as soon as a valid image loads
-    // (@load) -- otherwise it would stay hidden until the page is reloaded.
     return html`
       ${this._config.show_watermark
         ? html`

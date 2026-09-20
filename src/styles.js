@@ -434,10 +434,6 @@ export const cardStyles = css`
     background-color: #ef6c00;
     color: #ffffff;
   }
-  /* Game day / postponed badges hang below the date+time block instead of
-     sitting in the flow: the centre column shares grid row 1 with the logos,
-     so an in-flow badge made that row taller than the logo and pushed the
-     team names and ranks down (very visible with the small logo size). */
   .badge-gameday,
   .badge-postponed {
     position: absolute;
@@ -520,7 +516,8 @@ export const cardStyles = css`
   .footer-form:focus-visible,
   .footer-venue:focus-visible,
   .modal-close-btn:focus-visible,
-  .modal-body:focus-visible {
+  .modal-body:focus-visible,
+  .calendar-row:focus-visible {
     outline: 2px solid var(--ffbb-accent-color, #ff6b00);
     outline-offset: 2px;
   }
@@ -567,8 +564,6 @@ export const cardStyles = css`
     flex-direction: column;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
-  /* Focused programmatically when the dialog opens (tabindex="-1"); the
-     dialog container itself is not an interactive control, so no ring. */
   .modal-card:focus {
     outline: none;
   }
@@ -600,13 +595,28 @@ export const cardStyles = css`
     opacity: 1;
   }
   .modal-subtitle {
-    padding: 4px 16px 8px;
+    padding: 2px 16px 4px;
     font-size: 0.82em;
     color: var(--secondary-text-color);
   }
   .modal-body {
-    padding: 10px 16px 14px;
+    padding: 4px 16px 12px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+  .modal-body::-webkit-scrollbar {
+    width: 5px;
+  }
+  .modal-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+  .modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
   }
   .standings-table {
     width: 100%;
@@ -691,29 +701,60 @@ export const cardStyles = css`
   .calendar-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
   .calendar-row {
     display: grid;
     grid-template-columns: 36px 1fr auto;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
-    border-radius: 10px;
+    padding: 5px 8px;
+    border-radius: 8px;
     background: var(--secondary-background-color, rgba(255, 255, 255, 0.04));
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease, transform 0.1s ease;
+    border-left: 3px solid transparent;
+  }
+  .calendar-row:hover {
+    background: var(--secondary-background-color, rgba(255, 255, 255, 0.12));
+    transform: translateX(2px);
   }
   .calendar-row.highlight-row {
-    background: var(--secondary-background-color, rgba(255, 255, 255, 0.1));
+    background: var(--secondary-background-color, rgba(255, 255, 255, 0.08));
+    border-left: 3px solid rgba(255, 255, 255, 0.18);
+  }
+  .calendar-row.next-match-row {
     border-left: 3px solid var(--ffbb-accent-color, #ff6b00);
+    background: var(--secondary-background-color, rgba(255, 255, 255, 0.12));
   }
   .calendar-col-round {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
   }
   .cal-round-tag {
-    font-size: 0.8em;
+    font-size: 0.78em;
     font-weight: 700;
+    color: var(--secondary-text-color);
+    line-height: 1;
+  }
+  .cal-venue-pill {
+    font-size: 0.65em;
+    font-weight: 800;
+    padding: 1px 3px;
+    border-radius: 4px;
+    line-height: 1;
+    letter-spacing: 0.5px;
+  }
+  .pill-dom {
+    background: rgba(46, 125, 50, 0.2);
+    color: #81c784;
+  }
+  .pill-ext {
+    background: rgba(255, 255, 255, 0.08);
     color: var(--secondary-text-color);
   }
   .calendar-col-teams {
@@ -722,8 +763,25 @@ export const cardStyles = css`
     gap: 2px;
     overflow: hidden;
   }
+  .cal-team-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .cal-mini-logo {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: contain;
+    flex-shrink: 0;
+    background: #ffffff;
+    padding: 1px;
+    box-sizing: border-box;
+  }
   .cal-team {
-    font-size: 0.88em;
+    font-size: 0.84em;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -734,20 +792,33 @@ export const cardStyles = css`
   }
   .calendar-col-meta {
     text-align: right;
-    min-width: 60px;
+    min-width: 56px;
+  }
+  .cal-badge-next {
+    display: inline-block;
+    font-size: 0.68em;
+    font-weight: 700;
+    color: var(--ffbb-accent-color, #ff6b00);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    margin-bottom: 2px;
   }
   .cal-score {
     font-weight: 800;
-    font-size: 0.95em;
+    font-size: 0.92em;
     color: var(--primary-text-color);
+    line-height: 1.2;
   }
   .cal-date {
-    font-size: 0.8em;
+    font-size: 0.76em;
     color: var(--secondary-text-color);
+    line-height: 1.2;
   }
   .cal-time {
-    font-size: 0.8em;
+    font-size: 0.76em;
     font-weight: 600;
+    line-height: 1.2;
   }
   .modal-empty-text {
     text-align: center;
