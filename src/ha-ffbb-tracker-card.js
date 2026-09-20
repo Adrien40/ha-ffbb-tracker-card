@@ -507,7 +507,7 @@ class FFBBCard extends LitElement {
 
                         return html`
                           <div
-                            class="calendar-row ${isMyTeamInvolved ? "highlight-row" : ""} $ {isNextMatch ? "next-match-row" : ""}"
+                            class="calendar-row ${isMyTeamInvolved ? "highlight-row" : ""} ${isNextMatch ? "next-match-row" : ""}"
                             @click=${() => this._selectCalendarMatch(index, isPlayed)}
                             @keydown=${this._onKeyActivate(() => this._selectCalendarMatch(index, isPlayed))}
                             role="button"
