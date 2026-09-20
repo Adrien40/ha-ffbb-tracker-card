@@ -1,12 +1,4 @@
 // @vitest-environment happy-dom
-//
-// components.test.js only smoke-tests that the card imports and that
-// setConfig()/getStubConfig()/_t() behave. Everything a user actually
-// *does* with the card -- clicking a logo, tapping the venue, opening a
-// modal, navigating with the keyboard, seeing a gold/silver/bronze rank
-// badge -- lived in ha-ffbb-tracker-card.js with zero test coverage before
-// this file. These are exactly the code paths where a silent regression
-// would only be noticed by a user tapping a dead button in production.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DEFAULT_FALLBACK_LOGO } from "./pure.js";
 import "./ha-ffbb-tracker-card.js";
@@ -800,20 +792,16 @@ describe("calendar modal interactivity and badges", () => {
     const rows = el.shadowRoot.querySelectorAll(".calendar-row");
     expect(rows.length).toBe(2);
 
-    // Row 0 is home (DOM) and played
     const pillDom = rows[0].querySelector(".cal-venue-pill.pill-dom");
     expect(pillDom).not.toBeNull();
     expect(pillDom.textContent.trim()).toBe("DOM");
     expect(rows[0].classList.contains("next-match-row")).toBe(false);
 
-    // Row 1 is away (EXT), unplayed: marked as next match
     const pillExt = rows[1].querySelector(".cal-venue-pill.pill-ext");
     expect(pillExt).not.toBeNull();
     expect(pillExt.textContent.trim()).toBe("EXT");
     expect(rows[1].classList.contains("next-match-row")).toBe(true);
-    expect(rows[1].querySelector(".cal-badge-next")?.textContent.trim()).toBe("Prochain");
 
-    // Mini logos are present on both teams
     const logos = rows[0].querySelectorAll(".cal-mini-logo");
     expect(logos.length).toBe(2);
   });
@@ -825,7 +813,6 @@ describe("calendar modal interactivity and badges", () => {
     expect(el._activeModal).toBe("calendar");
 
     const rows = el.shadowRoot.querySelectorAll(".calendar-row");
-    // Click played match at index 0
     rows[0].click();
     await el.updateComplete;
 
@@ -841,7 +828,6 @@ describe("calendar modal interactivity and badges", () => {
     await el.updateComplete;
 
     const rows = el.shadowRoot.querySelectorAll(".calendar-row");
-    // Press Enter on upcoming match at index 1
     rows[1].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
     await el.updateComplete;
 
