@@ -348,8 +348,8 @@ class FFBBCard extends LitElement {
                       <tbody>
                         ${standings.map((item) => {
                           // Attribute names sent by the FFBB Tracker integration: position,
-                          // team_name, points, played, won, lost (no draws in basketball).
-                          // The other spellings are tolerated as fallbacks.
+                          // team_name, points, played, won, lost, draws (from the FFBB API's
+                          // own `nuls` field -- not derived or guessed on either side).
                           const rowName = item.team_name || item.name || "";
                           const isRowHighlighted = isMyTeamRow(rowName) || isOpponentRow(rowName);
 
