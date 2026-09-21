@@ -92,13 +92,12 @@ If you find this project useful, you can support its development 🙏
 
 ```yaml
 type: custom:ffbb-tracker-card
-entity: sensor.basket_landes_sasp_la_boulangere_wonderligue_rank
-custom_team_name: ''
+entity: sensor.my_team_next_match_opponent
+custom_team_name: Basket Landes
 logo_size: medium
 logo_click_action: team_url
-default_match_view: auto
 accent_color: default
-custom_accent_color: ''
+default_match_view: auto
 show_title: true
 title: ''
 icon: mdi:basketball
@@ -129,6 +128,7 @@ show_watermark: true
 | `show_header` | `boolean` | `true` | Displays competition, pool name, and clickable round header. |
 | `show_rank` | `boolean` | `true` | Displays interactive rank badges for each team. |
 | `rank_badge_style` | `string` | `outline` | Rank badge visual style: `outline` (gold/silver/bronze border by default), `solid` (metallic fill), or `none` (neutral without podium colors). |
+| `show_standings_below` | `boolean` | `false` | Shows the full standings table in a second card right under the match card (your team and the opponent are highlighted, no scrolling). |
 | `show_form` | `boolean` | `true` | Displays recent form streak indicator (last 5 games). |
 | `show_venue` | `boolean` | `true` | Displays venue details with GPS navigation link in footer. |
 | `show_watermark` | `boolean` | `true` | Shows faded team crest watermarks in background. |
