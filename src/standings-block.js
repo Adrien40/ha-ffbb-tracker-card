@@ -199,11 +199,11 @@ export const standingsBlockStyles = css`
     color: var(--secondary-text-color);
   }
   .standings-card-body {
-    padding: 6px 16px 14px;
+    padding: 6px 8px 14px;
   }
   .standings-card .standings-table .col-team {
     max-width: none;
-    white-space: normal;
+    white-space: nowrap;
     overflow: visible;
     text-overflow: clip;
   }
@@ -274,11 +274,8 @@ export const standingsBlockStyles = css`
     cursor: help;
   }
   .standings-table-detailed td {
-    padding: 6px;
+    padding: 6px 4px;
     white-space: nowrap;
-  }
-  .standings-table-detailed .col-team {
-    white-space: normal;
   }
   .standings-table-detailed .diff-pos {
     color: var(--success-color, #43a047);
@@ -287,18 +284,15 @@ export const standingsBlockStyles = css`
     color: var(--error-color, #e53935);
   }
 
-  /* Narrow screens: cap the pinned team column so the numbers get the room. */
+  /* Narrow screens: keep team names on a single line, let the table scroll
+     horizontally instead of shrinking/wrapping the column. */
   @media (max-width: 600px) {
     .standings-card-body {
-      padding-left: 8px;
-      padding-right: 8px;
+      padding-left: 4px;
+      padding-right: 4px;
     }
     .standings-table-detailed .col-team {
-      width: 104px;
-      min-width: 104px;
-      max-width: 104px;
       font-size: 0.92em;
-      overflow-wrap: anywhere;
     }
   }
 `;
