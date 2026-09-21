@@ -575,39 +575,44 @@ export function resolveCalendarTeamLogo({
   }
 
   const targetClean = cleanForMatch(teamName);
-  if (!targetClean) {
-    return DEFAULT_FALLBACK_LOGO;
-  }
 
-  const nextClean = cleanForMatch(nextOpponentState || "");
-  if (nextClean && (nextClean === targetClean || nextClean.includes(targetClean) || targetClean.includes(nextClean))) {
-    const safeOpp = sanitizeUrl(nextOpponentLogo);
-    if (safeOpp) {
-      return safeOpp;
+  // With no usable team name we can't match anything by name, but that must
+  // not skip the "my team" fallback below.
+  if (targetClean) {
+    const nextClean = cleanForMatch(nextOpponentState || "");
+    if (nextClean && (nextClean === targetClean || nextClean.includes(targetClean) || targetClean.includes(nextClean))) {
+      const safeOpp = sanitizeUrl(nextOpponentLogo);
+      if (safeOpp) {
+        return safeOpp;
+      }
     }
-  }
 
-  const lastClean = cleanForMatch(lastOpponentState || "");
-  if (lastClean && (lastClean === targetClean || lastClean.includes(targetClean) || targetClean.includes(lastClean))) {
-    const safeLastOpp = sanitizeUrl(lastOpponentLogo);
-    if (safeLastOpp) {
-      return safeLastOpp;
+    const lastClean = cleanForMatch(lastOpponentState || "");
+    if (lastClean && (lastClean === targetClean || lastClean.includes(targetClean) || targetClean.includes(lastClean))) {
+      const safeLastOpp = sanitizeUrl(lastOpponentLogo);
+      if (safeLastOpp) {
+        return safeLastOpp;
+      }
     }
-  }
 
-  if (Array.isArray(standings) && standings.length > 0) {
-    const foundInStandings = findUrlInStandings(teamName, standings, [
-      "team_logo_url",
-      "opponent_logo_url",
-      "logo_url",
-      "logo",
-      "url_logo",
-      "team_logo",
-      "club_logo",
-      "crest",
-    ]);
-    if (foundInStandings) {
-      return foundInStandings;
+    if (Array.isArray(standings) && standings.length > 0) {
+      const foundInStandings = findUrlInStandings(teamName, standings, [
+        "team_logo_url",
+        "opponent_logo_url",
+        "logo_url",
+        "logo",
+        "url_logo",
+        "team_logo",
+        "club_logo",
+        "crest",
+        "logo_domicile",
+        "image",
+        "image_url",
+        "badge",
+      ]);
+      if (foundInStandings) {
+        return foundInStandings;
+      }
     }
   }
 
@@ -761,8 +766,18 @@ export function computeViewModel({
       sensorAttrs("lastDate")?.team_logo_url ||
       null;
     const standingsForLogos = entities.rank?.attributes?.standings;
-    const resolveSide = (name, matchLogo, isMyTeam) =>
-      resolveCalendarTeamLogo({
+    // When the carousel is showing exactly the match the opponent sensor
+    // describes (the next one, or the last played one), that sensor's
+    // opponent logo is authoritative even if the team names are spelled
+    // differently between the calendar and the sensor.
+    const sensorIsThisMatch = isPostMatch
+      ? currentIndex === lastPlayedIndex
+      : currentIndex === nextMatchIndex;
+    const sensorOpponentLogo = sensorIsThisMatch
+      ? sanitizeUrl(currentOpponentSensor?.attributes?.opponent_logo_url)
+      : null;
+    const resolveSide = (name, matchLogo, isMyTeam) => {
+      const resolved = resolveCalendarTeamLogo({
         teamName: name,
         matchLogo,
         isMyTeam,
@@ -773,6 +788,11 @@ export function computeViewModel({
         lastOpponentLogo: sensorAttrs("lastOpponent")?.opponent_logo_url,
         standings: standingsForLogos,
       });
+      if (resolved === DEFAULT_FALLBACK_LOGO && !isMyTeam && sensorOpponentLogo) {
+        return sensorOpponentLogo;
+      }
+      return resolved;
+    };
 
     const homeCalLogo = resolveSide(
       homeName,

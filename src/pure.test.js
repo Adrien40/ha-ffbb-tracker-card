@@ -950,3 +950,25 @@ describe("computeViewModel carousel logos", () => {
     expect(vm.rightLogo).toBe("https://x.test/my.png");
   });
 });
+
+describe("computeViewModel carousel logos: robustness", () => {
+  const base = {
+    nextOpponent: { state: "Dax", attributes: { team_logo_url: "https://x.test/my.png", opponent_logo_url: "https://x.test/dax.png" } },
+    nextDate: { state: "2099-01-10T20:00:00", attributes: {} },
+    poule: { state: "Poule B", attributes: { team: "Basket Landes" } },
+    matchInProgress: { state: "off" },
+  };
+  const run = (calendar) =>
+    computeViewModel({
+      entities: { ...base, poule: { ...base.poule, attributes: { ...base.poule.attributes, calendar } } },
+      config: { entity: "sensor.x" },
+      lang: "en",
+      now: new Date("2098-12-01T10:00:00"),
+      matchIndex: 0,
+    });
+
+  it("keeps the sensor logo for the next match when names are spelled differently", () => {
+    const vm = run([{ home_team: "Basket Landes", away_team: "Union Sportive Dax Gamarde", is_home: true, date: "2099-01-10T20:00:00" }]);
+    expect(vm.rightLogo).toBe("https://x.test/dax.png");
+  });
+});
