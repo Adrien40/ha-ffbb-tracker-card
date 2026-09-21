@@ -605,7 +605,6 @@ export function resolveCalendarTeamLogo({
         "team_logo",
         "club_logo",
         "crest",
-        "logo_domicile",
         "image",
         "image_url",
         "badge",
@@ -796,12 +795,12 @@ export function computeViewModel({
 
     const homeCalLogo = resolveSide(
       homeName,
-      currentCalMatch.home_logo || currentCalMatch.home_team_logo || currentCalMatch.logo_domicile,
+      currentCalMatch.home_logo || currentCalMatch.home_team_logo,
       isHome,
     );
     const awayCalLogo = resolveSide(
       awayName,
-      currentCalMatch.away_logo || currentCalMatch.away_team_logo || currentCalMatch.logo_exterieur,
+      currentCalMatch.away_logo || currentCalMatch.away_team_logo,
       !isHome,
     );
 
