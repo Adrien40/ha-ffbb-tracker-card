@@ -11,6 +11,7 @@ import {
   computeViewModel,
   DEFAULT_FALLBACK_LOGO,
   createTeamMatcher,
+  resolveCalendarTeamLogo,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
@@ -480,6 +481,12 @@ class FFBBCard extends LitElement {
       // First row with neither a score nor is_played: assumes the calendar
       // is in chronological order, same assumption the API itself makes.
       const nextMatchIndex = matches.findIndex((m) => !m.is_played && !m.score);
+      const myTeamLogo =
+        entities.nextOpponent?.attributes?.team_logo_url ||
+        entities.lastOpponent?.attributes?.team_logo_url ||
+        entities.nextDate?.attributes?.team_logo_url ||
+        DEFAULT_FALLBACK_LOGO;
+      const standings = entities.rank?.attributes?.standings;
 
       return html`
         <div
@@ -518,8 +525,6 @@ class FFBBCard extends LitElement {
                       ${matches.map((m, index) => {
                         const home = m.home_team || m.equipe_domicile || "-";
                         const away = m.away_team || m.equipe_exterieur || "-";
-                        const homeLogo = m.home_logo || DEFAULT_FALLBACK_LOGO;
-                        const awayLogo = m.away_logo || DEFAULT_FALLBACK_LOGO;
                         const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const isHomeMyTeam = isMyCalendarTeam(home);
@@ -527,6 +532,30 @@ class FFBBCard extends LitElement {
                         const isMyTeamInvolved = isHomeMyTeam || isAwayMyTeam;
                         const isPlayed = Boolean(m.is_played || score);
                         const isNextMatch = index === nextMatchIndex;
+
+                        const homeLogo = resolveCalendarTeamLogo({
+                          teamName: home,
+                          matchLogo: m.home_logo || m.home_team_logo || m.logo_domicile,
+                          isMyTeam: isHomeMyTeam,
+                          myTeamLogo,
+                          nextOpponentState: entities.nextOpponent?.state,
+                          nextOpponentLogo: entities.nextOpponent?.attributes?.opponent_logo_url,
+                          lastOpponentState: entities.lastOpponent?.state,
+                          lastOpponentLogo: entities.lastOpponent?.attributes?.opponent_logo_url,
+                          standings,
+                        });
+
+                        const awayLogo = resolveCalendarTeamLogo({
+                          teamName: away,
+                          matchLogo: m.away_logo || m.away_team_logo || m.logo_exterieur,
+                          isMyTeam: isAwayMyTeam,
+                          myTeamLogo,
+                          nextOpponentState: entities.nextOpponent?.state,
+                          nextOpponentLogo: entities.nextOpponent?.attributes?.opponent_logo_url,
+                          lastOpponentState: entities.lastOpponent?.state,
+                          lastOpponentLogo: entities.lastOpponent?.attributes?.opponent_logo_url,
+                          standings,
+                        });
 
                         let venueBadge = "";
                         if (isHomeMyTeam) {
