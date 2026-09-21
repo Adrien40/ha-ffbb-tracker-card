@@ -23,9 +23,9 @@ If you find this project useful, you can support its development 🙏
 ## ⚡ Key Features
 
 * 🏀 **Automatic Entity Resolution:** Pick any single sensor belonging to the team (next match, pool, standings...), the card automatically detects and binds all related entities.
-* 🔄 **Dynamic Match Carousel:** Switch between the last played match and upcoming schedule with one tap on navigation chevrons.
+* 🔄 **Dynamic Match Carousel:** Step through every match of the season with the navigation chevrons (or tap a row of the season schedule to jump straight to it). Without a calendar, the chevrons toggle between the last and the next match.
 * ⏱️ **Adaptive Match Display:**
-  * **Pre-match:** Day, date, and tip-off time.
+  * **Pre-match:** Day, date, and tip-off time, plus a "Game day" badge on the day of the match (a "Postponed" badge replaces it when the fixture is postponed).
   * **Post-match:** Large final score display and high-contrast solid outcome badge (**Win**, **Loss**, or **Draw**).
   * **Live:** "Live" badge with pulsing white dot and kickoff time display.
 * 🥇 **Podium Rank Badges:** Automatic visual highlight for Top 3 rankings (gold, silver, bronze) with customizable styles: subtle glowing outline (default), beveled metallic solid, or neutral without podium colors.
@@ -34,12 +34,15 @@ If you find this project useful, you can support its development 🙏
 * 📅 **Add to Calendar:** Tap the date to create a prefilled Google Calendar event with tip-off time, teams, and gym address.
 * 🌐 **Official Club Link:** Tap team crests to open the team's official page on the FFBB portal (enabled by default).
 * 📊 **Built-in Interactive Modals:**
-  * **Full Standings:** Tap rank badges (`1st`, `4th`...) to inspect the complete pool standings table (points, played, wins, losses) with team and opponent highlights.
+  * **Full Standings:** Tap rank badges (`1st`, `4th`...) to inspect the complete pool standings table (points, played, wins, losses, draws) with team and opponent highlights.
   * **Season Schedule:** Tap the "Round" header to browse the ordered schedule of all pool matches with past scores and upcoming fixtures.
   * **Form Details:** Tap the recent form sequence (e.g. `W-W-L-W-D`) for match details and active streak counts.
 * 🖼️ **Watermark Crests:** Background club crests rendered with a smooth elliptical radial mask to eliminate visible straight edges.
 * ⚙️ **Complete Visual Editor (`ha-form`):** Fully manageable through the Home Assistant UI, no mandatory YAML editing.
 * 🔒 **100% Local & Secure:** Zero external CDN calls - Lit is a tracked npm dependency, bundled in at build time.
+
+> [!NOTE]
+> **Crests and team links in the carousel.** The FFBB Tracker sensors expose the crest of the next and last opponent only. For any other match, the card uses the crest and link carried by the calendar row when the integration provides them, then the sensors when the club name matches, and finally the standings (links only). Without any data, the default crest is shown rather than another club's crest.
 
 ---
 

@@ -23,9 +23,9 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 ## ⚡ Fonctionnalités principales
 
 * 🏀 **Détection automatique des entités :** renseignez simplement n'importe quel capteur de l'équipe (prochain match, poule, classement...), la carte résout automatiquement l'ensemble des données associées.
-* 🔄 **Carrousel dynamique de match :** basculez d'un clic entre le dernier match joué et le prochain match programmé grâce aux chevrons de navigation.
+* 🔄 **Carrousel dynamique de match :** parcourez tous les matchs de la saison avec les chevrons de navigation (ou touchez une ligne du calendrier pour y accéder directement). Sans calendrier, les chevrons basculent entre le dernier et le prochain match.
 * ⏱️ **Affichage adaptatif de la rencontre :**
-  * **Avant-match :** jour, date et heure du coup d'envoi.
+  * **Avant-match :** jour, date et heure du coup d'envoi, avec un badge « Jour de match » le jour de la rencontre (remplacé par « Reporté » si le match est reporté).
   * **Après-match :** score final grand format et badge de résultat plein à fort contraste (**Victoire**, **Défaite** ou **Nul**).
   * **Direct :** badge « En direct » avec point blanc pulsant et affichage de l'heure du match en cours.
 * 🥇 **Badges de classement podium :** mise en valeur visuelle automatique du Top 3 (or, argent, bronze) avec style au choix : bordure lumineuse (par défaut), plein métallique biseauté, ou neutre sans podium.
@@ -34,12 +34,15 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 * 📅 **Ajout au calendrier :** un clic sur la date génère un événement Google Agenda prérempli avec l'horaire, les équipes et l'adresse de la salle.
 * 🌐 **Lien officiel du club :** un clic sur le blason ouvre la page officielle de l'équipe sur le site de la FFBB (activé par défaut).
 * 📊 **Modales interactives intégrées :**
-  * **Classement complet :** un clic sur la pastille de position (`1er`, `4e`...) ouvre le tableau complet de la poule (points, joués, victoires, défaites) avec surlignage de votre équipe et de l'adversaire.
+  * **Classement complet :** un clic sur la pastille de position (`1er`, `4e`...) ouvre le tableau complet de la poule (points, joués, victoires, défaites, nuls) avec surlignage de votre équipe et de l'adversaire.
   * **Calendrier de la saison :** un clic sur l'en-tête « Journée » ouvre la liste ordonnée de tous les matchs de la poule avec les scores passés et les matchs à venir.
   * **Détail de la forme :** un clic sur la série (ex. `V-V-D-V-N`) affiche le récapitulatif détaillé et la série active.
 * 🖼️ **Logos en filigrane :** logos des clubs affichés en arrière-plan avec masque radial elliptique adouci pour donner du relief sans arête brute.
 * ⚙️ **Éditeur visuel complet (`ha-form`) :** personnalisable intégralement via l'interface graphique de Home Assistant, sans YAML obligatoire.
 * 🔒 **100 % local & sécurisé :** aucune dépendance CDN distante - Lit est une dépendance npm suivie, intégrée au build.
+
+> [!NOTE]
+> **Blasons et liens d'équipe dans le carrousel.** Les capteurs FFBB Tracker n'exposent que le blason du prochain et du dernier adversaire. Pour les autres matchs, la carte utilise le blason et le lien portés par la ligne du calendrier quand l'intégration les fournit, puis les capteurs si le nom du club correspond, et enfin le classement (liens uniquement). Sans aucune donnée, le blason par défaut s'affiche plutôt que celui d'un autre club.
 
 ---
 
