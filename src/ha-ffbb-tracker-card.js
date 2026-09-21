@@ -70,6 +70,10 @@ class FFBBCard extends LitElement {
     this._warnIfInvalidAccentColor();
   }
 
+  // Silent no-op for every mode except "custom" -- a bad value there falls
+  // back to the default orange in computeViewModel, so this only exists to
+  // surface *why* the color didn't apply, once per distinct bad value (not
+  // once per render), instead of failing silently.
   _warnIfInvalidAccentColor() {
     const { accent_color: mode, custom_accent_color: color } = this._config;
     const value = String(color ?? "").trim();
@@ -99,6 +103,8 @@ class FFBBCard extends LitElement {
     return translate(this._translations, key, fallback);
   }
 
+  // A no-break space before ":" is the French typographic convention
+  // (avoids the colon starting a new line); English just wants ":".
   _colon() {
     return this._translationsLang === "fr" ? "\u00a0:" : ":";
   }
@@ -106,6 +112,9 @@ class FFBBCard extends LitElement {
   _getRankClass(rank) {
     if (!rank) return "";
     const style = this._config?.rank_badge_style;
+    // "none"/disable_podium_colors both mean "no medal colors" -- the
+    // latter predates rank_badge_style and is kept for back-compat with
+    // configs saved before that option existed.
     if (style === "none" || this._config?.disable_podium_colors) return "";
     const match = String(rank).trim().match(/^(\d+)/);
     if (!match) return "";
@@ -178,6 +187,8 @@ class FFBBCard extends LitElement {
   }
 
   _openModal(type) {
+    // Remember what had focus before opening, so closing can put it back
+    // (see `updated()` below) instead of dropping focus to <body>.
     this._modalTrigger = this.shadowRoot?.activeElement ?? null;
     this._activeModal = type;
   }
@@ -186,6 +197,12 @@ class FFBBCard extends LitElement {
     this._activeModal = null;
   }
 
+  // Focus management for the modal, driven off _activeModal's transitions
+  // rather than the click/keydown handlers themselves, so it fires no
+  // matter how a modal opened or closed (click, Escape, or a future
+  // caller). Opening moves focus into the dialog (required for
+  // role="dialog" to be usable via keyboard); closing restores it to
+  // whatever triggered the open, completing the round-trip.
   updated(changedProperties) {
     super.updated(changedProperties);
     if (!changedProperties.has("_activeModal")) {
@@ -203,6 +220,10 @@ class FFBBCard extends LitElement {
     }
   }
 
+  // Escape closes the modal from anywhere inside it. Tab/Shift+Tab are
+  // trapped within the dialog's focusable elements so keyboard focus can't
+  // escape to the page behind it while the modal is open -- standard
+  // modal-dialog accessibility behavior.
   _onModalKeydown(e) {
     if (e.key === "Escape") {
       e.stopPropagation();
@@ -218,6 +239,8 @@ class FFBBCard extends LitElement {
     }
     const focusables = [...card.querySelectorAll('[tabindex]:not([tabindex="-1"])')];
     if (focusables.length === 0) {
+      // Nothing focusable inside (e.g. an empty-state modal): keep focus
+      // on the dialog itself rather than letting Tab leave it.
       e.preventDefault();
       card.focus();
       return;
@@ -239,6 +262,11 @@ class FFBBCard extends LitElement {
     this._matchIndex = null;
   }
 
+  // Two navigation modes depending on what's available: with a real
+  // calendar (multiple matches), the chevrons step through it match by
+  // match via _matchIndex, and _manualView just follows whether the
+  // landed-on match has been played. Without one, there's only "last" vs
+  // "next" to toggle between, same as before the calendar existed.
   _handleChevronClick(direction, vm) {
     if (vm.hasCalendar && vm.calendarMatches.length > 1) {
       const nextIdx = direction === "prev" ? vm.currentIndex - 1 : vm.currentIndex + 1;
@@ -449,6 +477,8 @@ class FFBBCard extends LitElement {
         m.away_team || m.equipe_exterieur || "",
       ]);
       const isMyCalendarTeam = createTeamMatcher(calendarNames, teamName);
+      // First row with neither a score nor is_played: assumes the calendar
+      // is in chronological order, same assumption the API itself makes.
       const nextMatchIndex = matches.findIndex((m) => !m.is_played && !m.score);
 
       return html`
@@ -549,9 +579,6 @@ class FFBBCard extends LitElement {
                               </div>
                             </div>
                             <div class="calendar-col-meta">
-                              ${isNextMatch
-                                ? html`<div class="cal-badge-next">Prochain</div>`
-                                : ""}
                               ${score
                                 ? html`<div class="cal-score">${score}</div>`
                                 : dateFormatted
@@ -730,6 +757,8 @@ class FFBBCard extends LitElement {
       hasStandingsData,
     } = vm;
 
+    // "solid" and the older solid_rank_badges boolean are two ways to ask
+    // for the same filled-background rank-badge look; keep both working.
     const isSolid = this._config?.rank_badge_style === "solid" || Boolean(this._config?.solid_rank_badges);
     const solidRankClass = isSolid ? "rank-solid" : "";
 
@@ -971,6 +1000,9 @@ class FFBBCard extends LitElement {
   }
 }
 
+// Defensive: avoids a "this name has already been used" crash if the
+// module is ever evaluated twice (e.g. HA re-registering resources after
+// a dashboard reload without a full page refresh).
 if (!customElements.get("ffbb-tracker-card")) {
   customElements.define("ffbb-tracker-card", FFBBCard);
 }
