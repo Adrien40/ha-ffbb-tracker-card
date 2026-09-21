@@ -1,5 +1,5 @@
 // "Standings below the card" -- a second <ha-card> rendered right under the
-// main match card (config: show_standings_below).
+// main match card (config: display_mode).
 //
 // Everything specific to this feature lives in this file: the row-highlight
 // helper, the template, and the styles. ha-ffbb-tracker-card.js only imports
@@ -143,9 +143,13 @@ function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
 }
 
 /**
- * Renders the full standings as its own <ha-card>. Returns `nothing` when
- * there is no standings data, so an empty card never appears under the main
- * one.
+ * Renders the full standings as its own <ha-card>. Unlike before, this never
+ * returns `nothing`: when this card is explicitly requested (display_mode
+ * "standings" or "both") but there is no standings data yet -- e.g. early
+ * season, or the FFBB sensor is briefly unavailable -- it still renders the
+ * card with its header, showing "no standings available" instead of
+ * disappearing silently. A vanished card with no explanation looks like a
+ * bug; an empty state does not.
  */
 export function renderStandingsBlock({
   standings,
@@ -154,23 +158,27 @@ export function renderStandingsBlock({
   teamName,
   displayTeamName,
   accentColor,
+  title,
+  icon,
   t,
 }) {
   const rows = sortStandings(standings);
-  if (rows.length === 0) return nothing;
-
   const pouleText = poule && !INVALID_STATES.includes(poule) ? poule : "";
   const competitionText = competition && !INVALID_STATES.includes(competition) ? competition : "";
+  const cardTitle = title || t("card.standings_title", "Standings");
+  const cardIcon = icon !== undefined ? icon : "mdi:format-list-numbered";
 
   return html`
     <ha-card class="standings-card" style="--ffbb-accent-color: ${accentColor};">
       <div class="standings-card-header">
-        <ha-icon icon="mdi:format-list-numbered"></ha-icon>
-        <span>${t("card.standings_title", "Standings")}${pouleText ? ` • ${pouleText}` : ""}</span>
+        ${cardIcon ? html`<ha-icon icon=${cardIcon}></ha-icon>` : nothing}
+        <span>${cardTitle}${pouleText ? ` • ${pouleText}` : ""}</span>
       </div>
       ${competitionText ? html`<div class="standings-card-subtitle">${competitionText}</div>` : nothing}
       <div class="standings-card-body">
-        ${renderDetailedTable({ rows, teamName, displayTeamName, t })}
+        ${rows.length > 0
+          ? renderDetailedTable({ rows, teamName, displayTeamName, t })
+          : html`<div class="standings-empty-text">${t("card.no_standings", "No standings data available.")}</div>`}
       </div>
     </ha-card>
   `;
@@ -205,6 +213,12 @@ export const standingsBlockStyles = css`
   }
   .standings-card-body {
     padding: 6px 8px 14px;
+  }
+  .standings-empty-text {
+    text-align: center;
+    padding: 16px;
+    color: var(--secondary-text-color);
+    font-style: italic;
   }
   .standings-card .standings-table .col-team {
     max-width: none;

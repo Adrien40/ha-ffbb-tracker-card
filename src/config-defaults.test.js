@@ -26,27 +26,24 @@ describe("DEFAULT_CONFIG", () => {
       show_header: true,
       show_rank: true,
       rank_badge_style: "outline",
-      show_standings_below: false,
+      display_mode: "match",
+      standings_title: "",
+      standings_icon: "mdi:format-list-numbered",
       show_form: true,
       show_venue: true,
       show_watermark: true,
     });
   });
 
-  // show_standings_below adds a whole second card, so it is opt-in: existing
-  // dashboards must look exactly the same after an upgrade.
-  const OPT_IN_TOGGLES = ["show_standings_below"];
-
-  it("opt-in toggles default to false", () => {
-    for (const key of OPT_IN_TOGGLES) {
-      expect(DEFAULT_CONFIG[key]).toBe(false);
-    }
+  // display_mode adds a whole second card (or replaces the match card
+  // entirely), so it defaults to "match": existing dashboards must look
+  // exactly the same after an upgrade.
+  it('display_mode defaults to "match" (opt-in, so existing dashboards are unchanged)', () => {
+    expect(DEFAULT_CONFIG.display_mode).toBe("match");
   });
 
-  it("every show_* toggle defaults to true, except the opt-in ones", () => {
-    const showKeys = Object.keys(DEFAULT_CONFIG).filter(
-      (k) => k.startsWith("show_") && !OPT_IN_TOGGLES.includes(k)
-    );
+  it("every show_* toggle defaults to true", () => {
+    const showKeys = Object.keys(DEFAULT_CONFIG).filter((k) => k.startsWith("show_"));
     expect(showKeys.length).toBeGreaterThan(0);
     for (const key of showKeys) {
       expect(DEFAULT_CONFIG[key]).toBe(true);

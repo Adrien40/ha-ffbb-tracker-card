@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 //
-// Tests for the "standings below the card" feature (show_standings_below).
+// Tests for the second, standalone standings card (config: display_mode).
 // The feature lives in standings-block.js; ha-ffbb-tracker-card.js only calls
 // it, so the tests are split the same way: the module on its own first, then
 // the card with the option on and off.
@@ -64,10 +64,12 @@ describe("standings-block.js isHighlightedRow()", () => {
 });
 
 describe("standings-block.js renderStandingsBlock()", () => {
-  it("renders nothing when there is no standings data", () => {
+  it("still renders the card, with an empty-state message, when there is no standings data", () => {
     for (const standings of [undefined, null, [], "not-an-array"]) {
       const host = renderBlock({ standings });
-      expect(host.querySelector("ha-card"), String(standings)).toBeNull();
+      expect(host.querySelector("ha-card"), String(standings)).not.toBeNull();
+      expect(host.querySelector(".standings-table"), String(standings)).toBeNull();
+      expect(host.querySelector(".standings-empty-text"), String(standings)).not.toBeNull();
     }
   });
 
@@ -144,7 +146,7 @@ describe("standings-block.js styles -- no scrollbar", () => {
   });
 });
 
-describe("ffbb-tracker-card with show_standings_below", () => {
+describe("ffbb-tracker-card with display_mode", () => {
   const ENTITY = "sensor.basket_landes_prochain_match_adversaire";
   const STATES = {
     [ENTITY]: { state: "US Mont-de-Marsan", attributes: {} },
@@ -168,41 +170,66 @@ describe("ffbb-tracker-card with show_standings_below", () => {
     document.body.innerHTML = "";
   });
 
-  it("is off by default: no second card is rendered", async () => {
+  it('defaults to "match": no second card is rendered', async () => {
     const el = await mountCard();
     expect(el.shadowRoot.querySelector(".standings-card")).toBeNull();
     expect(el.shadowRoot.querySelectorAll("ha-card")).toHaveLength(1);
   });
 
-  it("renders a second ha-card with the whole table when enabled", async () => {
-    const el = await mountCard({ show_standings_below: true });
+  it('renders a second ha-card with the whole table when display_mode is "both"', async () => {
+    const el = await mountCard({ display_mode: "both" });
     expect(el.shadowRoot.querySelectorAll("ha-card")).toHaveLength(2);
     expect(el.shadowRoot.querySelectorAll(".standings-card tbody tr")).toHaveLength(14);
   });
 
   it("places the standings card after the match card", async () => {
-    const el = await mountCard({ show_standings_below: true });
+    const el = await mountCard({ display_mode: "both" });
     const cards = el.shadowRoot.querySelectorAll("ha-card");
     expect(cards[0].classList.contains("standings-card")).toBe(false);
     expect(cards[1].classList.contains("standings-card")).toBe(true);
   });
 
-  it("does not render an empty second card when the pool has no standings data", async () => {
+  it('renders only the standings card when display_mode is "standings"', async () => {
+    const el = await mountCard({ display_mode: "standings" });
+    const cards = el.shadowRoot.querySelectorAll("ha-card");
+    expect(cards).toHaveLength(1);
+    expect(cards[0].classList.contains("standings-card")).toBe(true);
+  });
+
+  it("shows an empty-state message (not a vanished card) when the pool has no standings data", async () => {
     const states = { ...STATES, "sensor.basket_landes_classement": { state: "1", attributes: {} } };
-    const el = await mountCard({ show_standings_below: true }, states);
-    expect(el.shadowRoot.querySelector(".standings-card")).toBeNull();
+    const el = await mountCard({ display_mode: "both" }, states);
+    expect(el.shadowRoot.querySelector(".standings-card")).not.toBeNull();
+    expect(el.shadowRoot.querySelector(".standings-table")).toBeNull();
+    expect(el.shadowRoot.querySelector(".standings-empty-text").textContent.trim()).toBe(
+      "Aucune donnée de classement disponible."
+    );
   });
 
   it("works independently of show_rank (badges hidden, table still shown)", async () => {
-    const el = await mountCard({ show_standings_below: true, show_rank: false });
+    const el = await mountCard({ display_mode: "both", show_rank: false });
     expect(el.shadowRoot.querySelectorAll(".standings-card tbody tr")).toHaveLength(14);
   });
 
   it("does not disturb the existing popup: the rank badge still opens the modal", async () => {
-    const el = await mountCard({ show_standings_below: true });
+    const el = await mountCard({ display_mode: "both" });
     el._openModal("standings");
     await el.updateComplete;
     expect(el.shadowRoot.querySelector(".modal-card")).not.toBeNull();
+  });
+
+  it("uses the official standings title and icon by default", async () => {
+    const el = await mountCard({ display_mode: "both" });
+    const header = el.shadowRoot.querySelector(".standings-card-header");
+    expect(header.textContent).toContain("Classement");
+    expect(header.querySelector("ha-icon").getAttribute("icon")).toBe("mdi:format-list-numbered");
+  });
+
+  it("uses a custom standings title and icon when configured", async () => {
+    const el = await mountCard({ display_mode: "both", standings_title: "Notre poule", standings_icon: "mdi:trophy" });
+    const header = el.shadowRoot.querySelector(".standings-card-header");
+    expect(header.textContent).toContain("Notre poule");
+    expect(header.querySelector("ha-icon").getAttribute("icon")).toBe("mdi:trophy");
   });
 
   it("registers the standings styles alongside the card styles", () => {
@@ -241,7 +268,7 @@ describe("ffbb-tracker-card with show_standings_below", () => {
 
 
 // ---------------------------------------------------------------------------
-// Second card (show_standings_below): always the detailed table, same columns as the official FFBB page
+// Second card (display_mode "both" or "standings"): always the detailed table, same columns as the official FFBB page
 //   EQUIPES | PTS | RENCONTRES (J G P N) | I | PEN. | FOR. | DEF. |
 //   PENALITES (ARB ENT) | POINTS (M E D)
 // ---------------------------------------------------------------------------
@@ -346,9 +373,10 @@ describe("standings-block.js detailed table", () => {
     expect(new Set(titles).size).toBe(13);
   });
 
-  it("still returns nothing when there is no standings data", () => {
+  it("still renders the card, with an empty-state message, when there is no standings data", () => {
     const host = renderBlock({ standings: [] });
-    expect(host.querySelector("ha-card")).toBeNull();
+    expect(host.querySelector("ha-card")).not.toBeNull();
+    expect(host.querySelector(".standings-empty-text")).not.toBeNull();
   });
 
   it("keeps the wide table scrollable horizontally only, with position and team pinned", () => {
@@ -418,19 +446,19 @@ describe("ffbb-tracker-card second card = detailed standings", () => {
   });
 
   it("shows the detailed table in the second card, with French labels", async () => {
-    const el = await mountCard({ show_standings_below: true });
+    const el = await mountCard({ display_mode: "both" });
     expect(el.shadowRoot.querySelectorAll("ha-card")).toHaveLength(2);
     expect(el.shadowRoot.querySelector(".standings-table-detailed")).not.toBeNull();
     expect(text(el.shadowRoot.querySelectorAll("th.group-head"))).toEqual(["Rencontres", "Pénalités", "Points"]);
   });
 
-  it("renders no second card without show_standings_below", async () => {
+  it('renders no second card with the default display_mode ("match")', async () => {
     const el = await mountCard({});
     expect(el.shadowRoot.querySelectorAll("ha-card")).toHaveLength(1);
   });
 
   it("keeps the simple standings in the popup, opened from the rank badges", async () => {
-    const el = await mountCard({ show_standings_below: true });
+    const el = await mountCard({ display_mode: "both" });
     el._openModal("standings");
     await el.updateComplete;
     expect(el.shadowRoot.querySelectorAll(".modal-card thead th")).toHaveLength(7);

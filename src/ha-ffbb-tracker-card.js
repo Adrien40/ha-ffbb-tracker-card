@@ -677,20 +677,24 @@ class FFBBCard extends LitElement {
     const vm = this._computeViewModel(entities);
 
     return html`
-      <ha-card style="--ffbb-accent-color: ${vm.accentColor};">
-        ${this._renderHeader(vm)}
+      ${vm.displayMode !== "standings"
+        ? html`
+            <ha-card style="--ffbb-accent-color: ${vm.accentColor};">
+              ${this._renderHeader(vm)}
 
-        <div class="container">
-          ${this._renderWatermark(vm)}
-          ${this._renderMatchHeader(vm)}
-          ${this._renderMatchArea(vm)}
-          ${this._renderFooter(vm)}
-        </div>
+              <div class="container">
+                ${this._renderWatermark(vm)}
+                ${this._renderMatchHeader(vm)}
+                ${this._renderMatchArea(vm)}
+                ${this._renderFooter(vm)}
+              </div>
 
-        ${this._renderModal(entities, vm.searchTeamName, vm.opponentSearchName, vm.configuredTeamName)}
-      </ha-card>
+              ${this._renderModal(entities, vm.searchTeamName, vm.opponentSearchName, vm.configuredTeamName)}
+            </ha-card>
+          `
+        : nothing}
 
-      ${this._config.show_standings_below
+      ${vm.displayMode !== "match"
         ? renderStandingsBlock({
             standings: entities.rank?.attributes?.standings,
             poule: entities.poule?.state,
@@ -698,6 +702,8 @@ class FFBBCard extends LitElement {
             teamName: vm.searchTeamName,
             displayTeamName: vm.configuredTeamName,
             accentColor: vm.accentColor,
+            title: vm.standingsTitle,
+            icon: vm.standingsIcon,
             t: (key, fallback) => this._t(key, fallback),
           })
         : nothing}

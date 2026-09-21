@@ -174,16 +174,16 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     expect(group.flatten).toBe(true);
   });
 
-  it("nests show_rank, rank_badge_style and show_standings_below when show_rank is true (the default)", async () => {
+  it("nests show_rank, rank_badge_style and display_mode when show_rank is true (the default)", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank", "rank_badge_style", "show_standings_below"]);
+    expect(names).toEqual(["show_rank", "rank_badge_style", "display_mode"]);
   });
 
-  it("omits rank_badge_style (but keeps show_rank and show_standings_below) when show_rank is false", async () => {
+  it("omits rank_badge_style (but keeps show_rank and display_mode) when show_rank is false", async () => {
     const el = await mountEditor({ show_rank: false });
     const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank", "show_standings_below"]);
+    expect(names).toEqual(["show_rank", "display_mode"]);
   });
 
   it("gives show_rank default: true and rank_badge_style default: \"outline\"", async () => {
@@ -193,11 +193,12 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     expect(group.find((f) => f.name === "rank_badge_style").default).toBe("outline");
   });
 
-  it("gives show_standings_below default: false (opt-in, so existing cards are unchanged)", async () => {
+  it('gives display_mode default: "match" (opt-in, so existing cards are unchanged)', async () => {
     const el = await mountEditor();
-    const field = groupSchema(el, "ranking").find((f) => f.name === "show_standings_below");
-    expect(field.default).toBe(false);
-    expect(field.selector).toEqual({ boolean: {} });
+    const field = groupSchema(el, "ranking").find((f) => f.name === "display_mode");
+    expect(field.default).toBe("match");
+    const values = field.selector.select.options.map((o) => o.value);
+    expect(values).toEqual(["match", "standings", "both"]);
   });
 
   it("offers exactly the three none/outline/solid options for rank_badge_style", async () => {
@@ -205,6 +206,24 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     const field = groupSchema(el, "ranking").find((f) => f.name === "rank_badge_style");
     const values = field.selector.select.options.map((o) => o.value);
     expect(values).toEqual(["none", "outline", "solid"]);
+  });
+
+  it("hides standings_title and standings_icon when display_mode is \"match\" (the default)", async () => {
+    const el = await mountEditor();
+    const names = groupSchema(el, "ranking").map((f) => f.name);
+    expect(names).not.toContain("standings_title");
+    expect(names).not.toContain("standings_icon");
+  });
+
+  it("shows standings_title and standings_icon once a standings card is requested", async () => {
+    for (const display_mode of ["standings", "both"]) {
+      const el = await mountEditor({ display_mode });
+      const names = groupSchema(el, "ranking").map((f) => f.name);
+      expect(names, display_mode).toContain("standings_title");
+      expect(names, display_mode).toContain("standings_icon");
+      const iconField = groupSchema(el, "ranking").find((f) => f.name === "standings_icon");
+      expect(iconField.selector).toEqual({ icon: {} });
+    }
   });
 });
 

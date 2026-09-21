@@ -921,6 +921,14 @@ export function computeViewModel({
   const titleIcon = config.icon !== undefined ? config.icon : "mdi:basketball";
   const logoSizeClass = `logo-box-${config.logo_size || "medium"}`;
 
+  // Which card(s) the person wants to see: the match card, the standings
+  // card, or both (default). Each card keeps its own title/icon below --
+  // this only decides whether it is rendered at all.
+  const displayMode = ["match", "standings", "both"].includes(config.display_mode) ? config.display_mode : "match";
+  const configuredStandingsTitle = config.standings_title?.trim();
+  const standingsTitle = configuredStandingsTitle || t("card.standings_title", "Standings");
+  const standingsIcon = config.standings_icon !== undefined ? config.standings_icon : "mdi:format-list-numbered";
+
   const showRank = config.show_rank !== false;
   const rawUserRank = entities.rank?.state;
   const userRankNum = isValidState(rawUserRank) ? rawUserRank : null;
@@ -1007,6 +1015,9 @@ export function computeViewModel({
     configuredTitle,
     titleText,
     titleIcon,
+    displayMode,
+    standingsTitle,
+    standingsIcon,
     logoSizeClass,
     showRank,
     rawUserRank,

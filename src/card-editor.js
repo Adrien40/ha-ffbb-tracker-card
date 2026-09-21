@@ -77,7 +77,7 @@ class FFBBCardEditor extends LitElement {
     }
 
     const updatedValue = { ...ev.detail.value };
-    const textFields = ["entity", "custom_team_name", "title", "icon", "custom_accent_color"];
+    const textFields = ["entity", "custom_team_name", "title", "icon", "custom_accent_color", "standings_title"];
     for (const field of textFields) {
       if (!(field in updatedValue)) {
         updatedValue[field] = "";
@@ -259,11 +259,35 @@ class FFBBCardEditor extends LitElement {
               ]
             : []),
           {
-            name: "show_standings_below",
-            label: this._t("editor.show_standings_below", "Show detailed standings in a second card"),
-            default: false,
-            selector: { boolean: {} },
+            name: "display_mode",
+            label: this._t("editor.display_mode", "Cards to display"),
+            default: "match",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "match", label: this._t("editor.display_mode_match", "Match card only (default)") },
+                  { value: "standings", label: this._t("editor.display_mode_standings", "Standings card only") },
+                  { value: "both", label: this._t("editor.display_mode_both", "Match card + standings card") },
+                ],
+              },
+            },
           },
+          ...(this._config.display_mode !== "match"
+            ? [
+                {
+                  name: "standings_title",
+                  label: this._t("editor.standings_title", "Standings card title"),
+                  helper: this._t("editor.standings_title_helper", "Leave blank for the default title"),
+                  selector: { text: {} },
+                },
+                {
+                  name: "standings_icon",
+                  label: this._t("editor.standings_icon", "Standings card icon"),
+                  selector: { icon: {} },
+                },
+              ]
+            : []),
         ],
       },
       {

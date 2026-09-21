@@ -288,7 +288,7 @@ describe("card-editor.js _valueChanged()", () => {
     expect(event.detail.config).toMatchObject({ show_rank: false });
   });
 
-  it("defaults text fields (entity, custom_team_name, title, icon, custom_accent_color) to \"\" when ha-form omits them", () => {
+  it("defaults text fields (entity, custom_team_name, title, icon, custom_accent_color, standings_title) to \"\" when ha-form omits them", () => {
     const el = makeEditor();
     const spy = vi.fn();
     el.addEventListener("config-changed", spy);
@@ -301,6 +301,7 @@ describe("card-editor.js _valueChanged()", () => {
     expect(config.title).toBe("");
     expect(config.icon).toBe("");
     expect(config.custom_accent_color).toBe("");
+    expect(config.standings_title).toBe("");
   });
 });
 

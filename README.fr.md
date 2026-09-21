@@ -104,6 +104,9 @@ icon: mdi:basketball
 show_header: true
 show_rank: true
 rank_badge_style: outline
+display_mode: match
+standings_title: ''
+standings_icon: mdi:format-list-numbered
 show_form: true
 show_venue: true
 show_watermark: true
@@ -128,7 +131,9 @@ show_watermark: true
 | `show_header` | `boolean` | `true` | Affiche l'en-tête avec la compétition, la poule et la journée interactive. |
 | `show_rank` | `boolean` | `true` | Affiche la pastille interactive du classement de chaque équipe. |
 | `rank_badge_style` | `string` | `outline` | Style visuel des badges de classement : `outline` (bordure or/argent/bronze par défaut), `solid` (plein métallique) ou `none` (neutre sans podium). |
-| `show_standings_below` | `boolean` | `false` | Affiche le classement détaillé dans une seconde carte, juste sous la carte de match, avec les colonnes du site officiel FFBB : Pts, Rencontres (J G P N), I, Pén., For., Déf., Pénalités (Arb / Ent) et Points (M / E / D). Votre équipe et l'adversaire sont surlignés ; sur petit écran, le tableau défile horizontalement, les colonnes rang et équipe restant épinglées. Le classement simple reste dans la popup ouverte depuis les pastilles de classement. |
+| `display_mode` | `string` | `match` | Carte(s) à afficher : `match` (uniquement la carte de match, comme aujourd'hui), `standings` (uniquement la carte classement), ou `both` (les deux). La carte classement reprend les colonnes du site officiel FFBB : Pts, Rencontres (J G P N), I, Pén., For., Déf., Pénalités (Arb / Ent) et Points (M / E / D) — seule votre équipe est surlignée ; sur petit écran, le tableau défile horizontalement, les colonnes rang et équipe restant épinglées. S'il n'y a pas encore de classement disponible, la carte reste affichée avec un message "aucun classement disponible" au lieu de disparaître. Le classement simple reste dans la popup ouverte depuis les pastilles de classement. |
+| `standings_title` | `string` | `""` | Titre personnalisé de la carte classement (par défaut, "Classement" traduit si laissé vide). Utilisé seulement si `display_mode` vaut `standings` ou `both`. |
+| `standings_icon` | `string` | `mdi:format-list-numbered` | Icône affichée à côté du titre de la carte classement. |
 | `show_form` | `boolean` | `true` | Affiche la pastille de forme récente (5 derniers matchs joués). |
 | `show_venue` | `boolean` | `true` | Affiche l'adresse de la salle avec le lien de navigation GPS en pied de carte. |
 | `show_watermark` | `boolean` | `true` | Affiche les logos des clubs en filigrane en arrière-plan. |
