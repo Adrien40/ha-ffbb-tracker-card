@@ -1005,7 +1005,7 @@ var ke=globalThis,Ae=ke.ShadowRoot&&(ke.ShadyCSS===void 0||ke.ShadyCSS.nativeSha
                             @keydown=${this._onKeyActivate(()=>this._selectCalendarMatch(f,$))}
                             role="button"
                             tabindex="0"
-                            aria-label="${k} vs${E}"
+                            aria-label="${k} vs ${E}"
                           >
                             <div class="calendar-col-round">
                               <span class="cal-round-tag">${this._t("card.round_short","R")}${d.round||"-"}</span>
