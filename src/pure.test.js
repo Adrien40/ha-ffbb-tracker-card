@@ -972,3 +972,37 @@ describe("computeViewModel carousel logos: robustness", () => {
     expect(vm.rightLogo).toBe("https://x.test/dax.png");
   });
 });
+
+describe("computeViewModel carousel team URLs", () => {
+  const T = "Basket Landes";
+  const entities = {
+    nextOpponent: { state: "US Dax", attributes: { team_url: "https://x.test/me", opponent_url: "https://x.test/dax" } },
+    nextDate: { state: "2099-01-10T20:00:00", attributes: {} },
+    poule: {
+      state: "Poule B",
+      attributes: {
+        team: T,
+        calendar: [
+          { home_team: T, away_team: "US Dax", date: "2099-01-10T20:00:00" },
+          { home_team: "BC Orthez - 1", away_team: T, date: "2099-01-17T20:00:00" },
+        ],
+      },
+    },
+    rank: { state: "1", attributes: { standings: [{ team_name: "BC Orthez", team_url: "https://x.test/orthez" }] } },
+    matchInProgress: { state: "off" },
+  };
+  const run = (matchIndex) =>
+    computeViewModel({ entities, config: { entity: "sensor.x" }, lang: "en", now: new Date("2098-12-01T10:00:00"), matchIndex });
+
+  it("resolves both URLs for the match the opponent sensor describes", () => {
+    const vm = run(0);
+    expect(vm.leftUrl).toBe("https://x.test/me");
+    expect(vm.rightUrl).toBe("https://x.test/dax");
+  });
+
+  it("looks other opponents up in the standings instead of reusing the sensor URL", () => {
+    const vm = run(1);
+    expect(vm.leftUrl).toBe("https://x.test/orthez");
+    expect(vm.rightUrl).toBe("https://x.test/me");
+  });
+});

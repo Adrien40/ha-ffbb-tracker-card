@@ -807,8 +807,48 @@ export function computeViewModel({
     teamLogoUrl = isHome ? homeCalLogo : awayCalLogo;
     opponentLogoUrl = isHome ? awayCalLogo : homeCalLogo;
 
-    leftUrl = sanitizeUrl(currentCalMatch.home_url);
-    rightUrl = sanitizeUrl(currentCalMatch.away_url);
+    // Calendar rows carry no team URLs, so resolve each side like the logos:
+    // explicit row URL -> my team's sensor URL -> the opponent sensor URL
+    // (only when it describes this very match, or its name matches) ->
+    // standings lookup by team name.
+    const sameTeam = (a, b) => {
+      const x = cleanForMatch(a);
+      const y = cleanForMatch(b);
+      return Boolean(x && y && (x === y || x.includes(y) || y.includes(x)));
+    };
+    const resolveSideUrl = (name, rowUrl, isMyTeam) => {
+      const direct = sanitizeUrl(rowUrl);
+      if (direct) {
+        return direct;
+      }
+      if (isMyTeam) {
+        return findTeamUrl({
+          isHome: true,
+          teamName: officialTeamName || teamName,
+          entities,
+          opponentSensor: currentOpponentSensor,
+          selectedEntity,
+        });
+      }
+      if (sensorIsThisMatch) {
+        const fromSensor = sanitizeUrl(currentOpponentSensor?.attributes?.opponent_url);
+        if (fromSensor) {
+          return fromSensor;
+        }
+      }
+      for (const sensor of [entities.nextOpponent, entities.lastOpponent]) {
+        if (sameTeam(sensor?.state, name)) {
+          const u = sanitizeUrl(sensor?.attributes?.opponent_url);
+          if (u) {
+            return u;
+          }
+        }
+      }
+      return findUrlInStandings(name, standingsForLogos, ["team_url", "url", "link"]);
+    };
+
+    leftUrl = resolveSideUrl(homeName, currentCalMatch.home_url, isHome);
+    rightUrl = resolveSideUrl(awayName, currentCalMatch.away_url, !isHome);
 
     gymName = currentCalMatch.gym_name || "";
     gymCity = currentCalMatch.gym_city || "";
