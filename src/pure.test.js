@@ -916,3 +916,37 @@ describe("isValidCssColor / custom accent color", () => {
     expect(resolveAccentColor({ accent_color: "custom", custom_accent_color: "rgb(30, 136, 229)" })).toBe("rgb(30, 136, 229)");
   });
 });
+
+describe("computeViewModel carousel logos", () => {
+  const entities = {
+    nextOpponent: { state: "US Dax", attributes: { team_logo_url: "https://x.test/my.png", opponent_logo_url: "https://x.test/dax.png" } },
+    nextDate: { state: "2099-01-10T20:00:00", attributes: {} },
+    lastOpponent: { state: "AS Pau", attributes: { opponent_logo_url: "https://x.test/pau.png" } },
+    poule: {
+      state: "Poule B",
+      attributes: {
+        team: "Basket Landes",
+        calendar: [
+          { home_team: "Basket Landes", away_team: "BC Orthez", is_home: true, date: "2099-01-03T20:00:00" },
+          { home_team: "US Dax", away_team: "Basket Landes", is_home: false, date: "2099-01-10T20:00:00" },
+        ],
+      },
+    },
+    rank: { state: "1", attributes: { standings: [{ team_name: "BC Orthez", team_logo_url: "https://x.test/orthez.png" }] } },
+    matchInProgress: { state: "off" },
+  };
+  const run = (matchIndex) =>
+    computeViewModel({ entities, config: { entity: "sensor.x" }, lang: "en", now: new Date("2098-12-01T10:00:00"), matchIndex });
+
+  it("does not reuse the next-opponent sensor logo for another opponent", () => {
+    const vm = run(0);
+    expect(vm.leftLogo).toBe("https://x.test/my.png");
+    expect(vm.rightLogo).toBe("https://x.test/orthez.png");
+  });
+
+  it("uses the sensor opponent logo when the opponent name matches", () => {
+    const vm = run(1);
+    expect(vm.leftLogo).toBe("https://x.test/dax.png");
+    expect(vm.rightLogo).toBe("https://x.test/my.png");
+  });
+});

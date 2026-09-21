@@ -749,13 +749,44 @@ export function computeViewModel({
     opponentName = isHome ? awayName : homeName;
     opponentSearchName = opponentName;
 
-    teamLogoUrl = isHome
-      ? (currentCalMatch.home_logo || currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO)
-      : (currentCalMatch.away_logo || currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO);
+    // The next/last opponent sensors describe the *next/last* match, not
+    // necessarily the one the carousel is showing. Resolve each side by team
+    // name (match logo -> sensor if the name matches -> standings) so a
+    // carousel row never inherits another opponent's crest.
+    const sensorAttrs = (id) => entities[id]?.attributes;
+    const myTeamSensorLogo =
+      sensorAttrs("nextOpponent")?.team_logo_url ||
+      sensorAttrs("lastOpponent")?.team_logo_url ||
+      sensorAttrs("nextDate")?.team_logo_url ||
+      sensorAttrs("lastDate")?.team_logo_url ||
+      null;
+    const standingsForLogos = entities.rank?.attributes?.standings;
+    const resolveSide = (name, matchLogo, isMyTeam) =>
+      resolveCalendarTeamLogo({
+        teamName: name,
+        matchLogo,
+        isMyTeam,
+        myTeamLogo: myTeamSensorLogo,
+        nextOpponentState: entities.nextOpponent?.state,
+        nextOpponentLogo: sensorAttrs("nextOpponent")?.opponent_logo_url,
+        lastOpponentState: entities.lastOpponent?.state,
+        lastOpponentLogo: sensorAttrs("lastOpponent")?.opponent_logo_url,
+        standings: standingsForLogos,
+      });
 
-    opponentLogoUrl = isHome
-      ? (currentCalMatch.away_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO)
-      : (currentCalMatch.home_logo || currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO);
+    const homeCalLogo = resolveSide(
+      homeName,
+      currentCalMatch.home_logo || currentCalMatch.home_team_logo || currentCalMatch.logo_domicile,
+      isHome,
+    );
+    const awayCalLogo = resolveSide(
+      awayName,
+      currentCalMatch.away_logo || currentCalMatch.away_team_logo || currentCalMatch.logo_exterieur,
+      !isHome,
+    );
+
+    teamLogoUrl = isHome ? homeCalLogo : awayCalLogo;
+    opponentLogoUrl = isHome ? awayCalLogo : homeCalLogo;
 
     leftUrl = sanitizeUrl(currentCalMatch.home_url);
     rightUrl = sanitizeUrl(currentCalMatch.away_url);
