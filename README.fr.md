@@ -126,7 +126,7 @@ show_watermark: true
 | `accent_color` | `string` | `default` | Style de la couleur d'accentuation : `default` (orange basket), `theme` (couleur primaire HA) ou `custom`. |
 | `custom_accent_color` | `string` | `""` | Code couleur HEX si `accent_color: custom` (ex. : `#1e88e5`). |
 | `show_title` | `boolean` | `true` | Affiche ou masque la barre de titre supérieure. |
-| `title` | `string` | `""` | Titre personnalisé (affiche « Prochain match » par défaut si vide). |
+| `title` | `string` | `""` | Titre personnalisé. Laissez vide pour un titre dynamique qui suit l'état du match : « Prochain match », « Match en direct » ou « Dernier match ». |
 | `icon` | `string` | `mdi:basketball` | Icône affichée à côté du titre. |
 | `show_header` | `boolean` | `true` | Affiche l'en-tête avec la compétition, la poule et la journée interactive. |
 | `show_rank` | `boolean` | `true` | Affiche la pastille interactive du classement de chaque équipe. |

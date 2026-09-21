@@ -122,6 +122,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "title",
         label: this._t("editor.title", "Title"),
+        helper: this._t("editor.title_helper", 'Leave blank for a dynamic default title ("Next match" / "Live match" / "Last match")'),
         selector: { text: {} },
       },
       {
@@ -258,6 +259,15 @@ class FFBBCardEditor extends LitElement {
                 },
               ]
             : []),
+        ],
+      },
+      {
+        name: "standings_card",
+        type: "expandable",
+        title: this._t("editor.standings_card_section", "Standings card"),
+        icon: "mdi:card-multiple-outline",
+        flatten: true,
+        schema: [
           {
             name: "display_mode",
             label: this._t("editor.display_mode", "Cards to display"),

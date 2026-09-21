@@ -126,7 +126,7 @@ show_watermark: true
 | `accent_color` | `string` | `default` | Accent color source: `default` (basketball orange), `theme` (HA primary color), or `custom`. |
 | `custom_accent_color` | `string` | `""` | Custom HEX color code when `accent_color: custom` (e.g., `#1e88e5`). |
 | `show_title` | `boolean` | `true` | Toggles the card title header. |
-| `title` | `string` | `""` | Custom title (defaults to translated "Next match" if left blank). |
+| `title` | `string` | `""` | Custom title. Leave blank for a dynamic default that follows the match state: "Next match", "Live match", or "Last match". |
 | `icon` | `string` | `mdi:basketball` | Icon displayed beside the title. |
 | `show_header` | `boolean` | `true` | Displays competition, pool name, and clickable round header. |
 | `show_rank` | `boolean` | `true` | Displays interactive rank badges for each team. |

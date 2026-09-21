@@ -64,7 +64,7 @@ describe("card-editor.js render()", () => {
 });
 
 describe("card-editor.js schema -- base fields", () => {
-  it("includes every top-level field exactly once, in a stable order (logo and ranking are expandable groups)", async () => {
+  it("includes every top-level field exactly once, in a stable order (logo, ranking and standings_card are expandable groups)", async () => {
     const el = await mountEditor();
     expect(fieldNames(el)).toEqual([
       "entity",
@@ -77,6 +77,7 @@ describe("card-editor.js schema -- base fields", () => {
       "custom_team_name",
       "accent_color",
       "ranking",
+      "standings_card",
       "show_form",
       "show_venue",
     ]);
@@ -91,6 +92,13 @@ describe("card-editor.js schema -- base fields", () => {
       expect(field, `expected a "${name}" field in the schema`).toBeDefined();
       expect(field.default).toBe(true);
     }
+  });
+
+  it("tells the user the title is dynamic by default when left blank", async () => {
+    const el = await mountEditor();
+    const field = schemaOf(el).find((f) => f.name === "title");
+    expect(field.helper).toBeTruthy();
+    expect(field.helper.toLowerCase()).toContain("prochain match");
   });
 });
 
@@ -174,16 +182,30 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     expect(group.flatten).toBe(true);
   });
 
-  it("nests show_rank, rank_badge_style and display_mode when show_rank is true (the default)", async () => {
-    const el = await mountEditor();
-    const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank", "rank_badge_style", "display_mode"]);
+  // This section is only about the rank badges shown ON the match card
+  // (podium colors, etc.) -- it must not be mixed with the separate
+  // "standings_card" section below, which is about the second, standalone
+  // card. Two different concepts, two different expandable groups.
+  it("only ever contains show_rank and rank_badge_style -- never the standings-card fields", async () => {
+    for (const overrides of [{}, { show_rank: false }, { display_mode: "both" }]) {
+      const el = await mountEditor(overrides);
+      const names = groupSchema(el, "ranking").map((f) => f.name);
+      expect(names, JSON.stringify(overrides)).not.toContain("display_mode");
+      expect(names, JSON.stringify(overrides)).not.toContain("standings_title");
+      expect(names, JSON.stringify(overrides)).not.toContain("standings_icon");
+    }
   });
 
-  it("omits rank_badge_style (but keeps show_rank and display_mode) when show_rank is false", async () => {
+  it("nests show_rank and rank_badge_style when show_rank is true (the default)", async () => {
+    const el = await mountEditor();
+    const names = groupSchema(el, "ranking").map((f) => f.name);
+    expect(names).toEqual(["show_rank", "rank_badge_style"]);
+  });
+
+  it("omits rank_badge_style (but keeps show_rank) when show_rank is false", async () => {
     const el = await mountEditor({ show_rank: false });
     const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank", "display_mode"]);
+    expect(names).toEqual(["show_rank"]);
   });
 
   it("gives show_rank default: true and rank_badge_style default: \"outline\"", async () => {
@@ -193,24 +215,45 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     expect(group.find((f) => f.name === "rank_badge_style").default).toBe("outline");
   });
 
-  it('gives display_mode default: "match" (opt-in, so existing cards are unchanged)', async () => {
-    const el = await mountEditor();
-    const field = groupSchema(el, "ranking").find((f) => f.name === "display_mode");
-    expect(field.default).toBe("match");
-    const values = field.selector.select.options.map((o) => o.value);
-    expect(values).toEqual(["match", "standings", "both"]);
-  });
-
   it("offers exactly the three none/outline/solid options for rank_badge_style", async () => {
     const el = await mountEditor();
     const field = groupSchema(el, "ranking").find((f) => f.name === "rank_badge_style");
     const values = field.selector.select.options.map((o) => o.value);
     expect(values).toEqual(["none", "outline", "solid"]);
   });
+});
+
+describe("card-editor.js schema -- \"standings_card\" expandable section", () => {
+  it("is its own expandable group, separate from \"ranking\"", async () => {
+    const el = await mountEditor();
+    const group = schemaOf(el).find((f) => f.name === "standings_card");
+    expect(group.type).toBe("expandable");
+    expect(group.title).toBe("Carte classement");
+    expect(group.icon).toBeTruthy();
+    expect(group.flatten).toBe(true);
+    expect(group.name).not.toBe("ranking");
+  });
+
+  it("never contains show_rank or rank_badge_style -- those live in \"ranking\"", async () => {
+    for (const display_mode of ["match", "standings", "both"]) {
+      const el = await mountEditor({ display_mode });
+      const names = groupSchema(el, "standings_card").map((f) => f.name);
+      expect(names, display_mode).not.toContain("show_rank");
+      expect(names, display_mode).not.toContain("rank_badge_style");
+    }
+  });
+
+  it('gives display_mode default: "match" (opt-in, so existing cards are unchanged)', async () => {
+    const el = await mountEditor();
+    const field = groupSchema(el, "standings_card").find((f) => f.name === "display_mode");
+    expect(field.default).toBe("match");
+    const values = field.selector.select.options.map((o) => o.value);
+    expect(values).toEqual(["match", "standings", "both"]);
+  });
 
   it("hides standings_title and standings_icon when display_mode is \"match\" (the default)", async () => {
     const el = await mountEditor();
-    const names = groupSchema(el, "ranking").map((f) => f.name);
+    const names = groupSchema(el, "standings_card").map((f) => f.name);
     expect(names).not.toContain("standings_title");
     expect(names).not.toContain("standings_icon");
   });
@@ -218,10 +261,10 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
   it("shows standings_title and standings_icon once a standings card is requested", async () => {
     for (const display_mode of ["standings", "both"]) {
       const el = await mountEditor({ display_mode });
-      const names = groupSchema(el, "ranking").map((f) => f.name);
+      const names = groupSchema(el, "standings_card").map((f) => f.name);
       expect(names, display_mode).toContain("standings_title");
       expect(names, display_mode).toContain("standings_icon");
-      const iconField = groupSchema(el, "ranking").find((f) => f.name === "standings_icon");
+      const iconField = groupSchema(el, "standings_card").find((f) => f.name === "standings_icon");
       expect(iconField.selector).toEqual({ icon: {} });
     }
   });
