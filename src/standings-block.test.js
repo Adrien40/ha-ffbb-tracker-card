@@ -121,8 +121,8 @@ describe("standings-block.js styles -- no scrollbar", () => {
     expect(css).not.toMatch(/overflow(-y)?\s*:\s*(auto|scroll)/);
   });
 
-  it("lets long team names wrap instead of being cut with an ellipsis", () => {
-    expect(css).toMatch(/\.standings-card \.standings-table \.col-team\s*{[^}]*white-space:\s*normal/);
+  it("keeps team names on a single line instead of wrapping", () => {
+    expect(css).toMatch(/\.standings-card \.standings-table \.col-team\s*{[^}]*white-space:\s*nowrap/);
   });
 
   it("keeps a gap between the match card and the standings card", () => {
