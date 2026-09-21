@@ -42,7 +42,7 @@ If you find this project useful, you can support its development 🙏
 * 🔒 **100% Local & Secure:** Zero external CDN calls - Lit is a tracked npm dependency, bundled in at build time.
 
 > [!NOTE]
-> **Crests and team links in the carousel.** The FFBB Tracker sensors expose the crest of the next and last opponent only. For any other match, the card uses the crest and link carried by the calendar row when the integration provides them, then the sensors when the club name matches, and finally the standings (links only). Without any data, the default crest is shown rather than another club's crest.
+> **Crests and team links in the carousel.** For each match, the card uses the crest and link carried by the matching row of the pool sensor's `calendar` attribute (`home_logo`, `away_logo`, `home_url`, `away_url`). When a row doesn't provide them, it falls back to the next and last opponent sensors if the club name matches, then to the standings (links only). Without any data, the default crest is shown rather than another club's crest.
 
 ---
 

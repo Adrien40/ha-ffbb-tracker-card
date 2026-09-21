@@ -42,7 +42,7 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 * 🔒 **100 % local & sécurisé :** aucune dépendance CDN distante - Lit est une dépendance npm suivie, intégrée au build.
 
 > [!NOTE]
-> **Blasons et liens d'équipe dans le carrousel.** Les capteurs FFBB Tracker n'exposent que le blason du prochain et du dernier adversaire. Pour les autres matchs, la carte utilise le blason et le lien portés par la ligne du calendrier quand l'intégration les fournit, puis les capteurs si le nom du club correspond, et enfin le classement (liens uniquement). Sans aucune donnée, le blason par défaut s'affiche plutôt que celui d'un autre club.
+> **Blasons et liens d'équipe dans le carrousel.** Pour chaque match, la carte utilise le blason et le lien portés par la ligne correspondante de l'attribut `calendar` du capteur poule (`home_logo`, `away_logo`, `home_url`, `away_url`). Quand une ligne ne les fournit pas, elle se rabat sur les capteurs du prochain et du dernier adversaire si le nom du club correspond, puis sur le classement (liens uniquement). Sans aucune donnée, le blason par défaut s'affiche plutôt que celui d'un autre club.
 
 ---
 
