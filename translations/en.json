@@ -96,7 +96,7 @@
     "show_header": "Show header / Round",
     "ranking_section": "Ranking",
     "show_rank": "Show team ranking",
-    "show_standings_below": "Show full standings below the card",
+    "show_standings_below": "Show detailed standings in a second card",
     "rank_badge_style": "Rank badge style",
     "rank_badge_none": "Neutral (no podium)",
     "rank_badge_outline": "Outline (gold, silver, bronze) — (default)",
