@@ -92,14 +92,15 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 
 ```yaml
 type: custom:ffbb-tracker-card
-entity: sensor.mon_equipe_prochain_match_adversaire
-custom_team_name: Basket Landes
+entity: sensor.basket_landes_sasp_la_boulangere_wonderligue_classement
+custom_team_name: ''
 logo_size: medium
 logo_click_action: team_url
-accent_color: default
 default_match_view: auto
+accent_color: default
+custom_accent_color: ''
 show_title: true
-title: Prochain match
+title: ''
 icon: mdi:basketball
 show_header: true
 show_rank: true
