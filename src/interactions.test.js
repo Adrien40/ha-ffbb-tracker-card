@@ -1440,7 +1440,7 @@ describe("calendar modal: round tag and standings 'draws' column", () => {
 
   const CALENDAR = [
     { home_team: "Basket Landes", away_team: "US Dax", date: "2099-09-19T20:00:00", round: 1 },
-    { home_team: "US Dax", away_team: "Basket Landes", date: "2099-09-26T20:00:00", journee: 2 },
+    { home_team: "US Dax", away_team: "Basket Landes", date: "2099-09-26T20:00:00", round: 2 },
   ];
 
   async function roundTags(language) {
@@ -1453,7 +1453,7 @@ describe("calendar modal: round tag and standings 'draws' column", () => {
   it.each([
     ["fr", ["J1", "J2"]],
     ["en", ["R1", "R2"]],
-  ])("round tag is translated for %s (also for the 'journee' key)", async (language, expected) => {
+  ])("round tag is translated for %s", async (language, expected) => {
     expect(await roundTags(language)).toEqual(expected);
   });
 

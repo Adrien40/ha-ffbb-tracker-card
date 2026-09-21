@@ -5,6 +5,8 @@
 // exercised indirectly through render(). Anything that needs `this.hass` or
 // `this._config` takes it as an explicit argument instead.
 
+import { ENTITY_ID_PATTERN, SENSOR_SUFFIXES, BINARY_SENSOR_SUFFIXES } from "./entity-names.js";
+
 // Crest shown when a team logo fails to load.
 //
 // This path is intentional and correct -- it is NOT a missing asset. Do not
@@ -31,8 +33,9 @@ export function cleanForMatch(s) {
 /**
  * Resolve every FFBB Tracker sensor belonging to one team from a single
  * configured entity_id, by deriving the shared entity-id prefix and
- * probing both French and English suffix variants (the integration's
- * entity_id slugs follow the language the entities were created under).
+ * probing both French and English suffix variants (listed in
+ * entity-names.js: the integration's entity_id slugs follow the language
+ * the entities were created under).
  * Returns null if `selected` or `states` is falsy.
  *
  * `states` is `hass.states` resolved by the caller; this stays pure by
@@ -43,9 +46,7 @@ export function resolveEntities(selected, states) {
     return null;
   }
 
-  const matched = selected.match(
-    /^(sensor|binary_sensor)\.([a-z0-9_]+?)_(prochain_match|next_match|dernier_match|last_match|classement|rank|poule|forme_recente|form|game_day|jour_de_match|match_en_cours|match_in_progress)/
-  );
+  const matched = selected.match(ENTITY_ID_PATTERN);
   const prefix = matched ? `sensor.${matched[2]}_` : selected.substring(0, selected.lastIndexOf("_") + 1);
   const binPrefix = matched ? `binary_sensor.${matched[2]}_` : prefix.replace("sensor.", "binary_sensor.");
 
@@ -58,21 +59,14 @@ export function resolveEntities(selected, states) {
     return null;
   };
 
-  return {
-    nextOpponent: findState([`${prefix}prochain_match_adversaire`, `${prefix}next_match_opponent`]),
-    nextDate: findState([`${prefix}prochain_match_date`, `${prefix}next_match_date`]),
-    nextLocation: findState([`${prefix}prochain_match_lieu`, `${prefix}next_match_location`]),
-    nextVenue: findState([`${prefix}prochain_match_terrain`, `${prefix}next_match_venue_type`]),
-    lastScore: findState([`${prefix}dernier_match_score`, `${prefix}last_match_score`]),
-    lastOpponent: findState([`${prefix}dernier_match_adversaire`, `${prefix}last_match_opponent`]),
-    lastResult: findState([`${prefix}dernier_match_resultat`, `${prefix}last_match_result`]),
-    lastDate: findState([`${prefix}dernier_match_date`, `${prefix}last_match_date`]),
-    poule: findState([`${prefix}poule`]),
-    rank: findState([`${prefix}classement`, `${prefix}rank`]),
-    rankEvolution: findState([`${prefix}classement_evolution`, `${prefix}rank_evolution`]),
-    form: findState([`${prefix}forme_recente`, `${prefix}form`]),
-    matchInProgress: findState([`${binPrefix}match_en_cours`, `${binPrefix}match_in_progress`]),
-  };
+  const resolved = {};
+  for (const [key, suffixes] of Object.entries(SENSOR_SUFFIXES)) {
+    resolved[key] = findState(suffixes.map((suffix) => `${prefix}${suffix}`));
+  }
+  for (const [key, suffixes] of Object.entries(BINARY_SENSOR_SUFFIXES)) {
+    resolved[key] = findState(suffixes.map((suffix) => `${binPrefix}${suffix}`));
+  }
+  return resolved;
 }
 
 /**
@@ -512,7 +506,6 @@ export function findTeamUrl({
   if (isMyTeam) {
     const directTeamUrl = searchAttrs(opponentSensor?.attributes, [
       "team_url",
-      "url_equipe",
       "team_link",
     ]);
     if (directTeamUrl) return directTeamUrl;
@@ -524,7 +517,7 @@ export function findTeamUrl({
       entities?.rank,
     ];
     for (const ent of entitiesToCheck) {
-      const found = searchAttrs(ent?.attributes, ["team_url", "url_equipe", "team_link"]);
+      const found = searchAttrs(ent?.attributes, ["team_url", "team_link"]);
       if (found) return found;
     }
 
@@ -536,7 +529,6 @@ export function findTeamUrl({
       "opponent_url",
       "opponent_team_url",
       "opponent_link",
-      "url_adversaire",
     ]);
     if (directOppUrl) return directOppUrl;
 
@@ -601,7 +593,6 @@ export function resolveCalendarTeamLogo({
         "opponent_logo_url",
         "logo_url",
         "logo",
-        "url_logo",
         "team_logo",
         "club_logo",
         "crest",
@@ -853,7 +844,7 @@ export function computeViewModel({
     gymName = currentCalMatch.gym_name || "";
     gymCity = currentCalMatch.gym_city || "";
     targetDateStr = currentCalMatch.date || null;
-    roundNumber = String(currentCalMatch.round ?? currentCalMatch.journee ?? "");
+    roundNumber = String(currentCalMatch.round ?? "");
     isStale = Boolean(currentCalMatch.is_stale);
   } else {
     opponentName = isValidState(rawOpponent) ? rawOpponent : t("card.unknown_opponent", "Opponent");

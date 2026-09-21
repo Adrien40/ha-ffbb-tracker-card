@@ -474,8 +474,8 @@ class FFBBCard extends LitElement {
       const competition = entities.poule?.attributes?.competition || "";
       const poule = entities.poule?.state || "";
       const calendarNames = matches.flatMap((m) => [
-        m.home_team || m.equipe_domicile || "",
-        m.away_team || m.equipe_exterieur || "",
+        m.home_team || "",
+        m.away_team || "",
       ]);
       const isMyCalendarTeam = createTeamMatcher(calendarNames, teamName);
       // First row with neither a score nor is_played: assumes the calendar
@@ -523,8 +523,8 @@ class FFBBCard extends LitElement {
                 ? html`
                     <div class="calendar-list">
                       ${matches.map((m, index) => {
-                        const home = m.home_team || m.equipe_domicile || "-";
-                        const away = m.away_team || m.equipe_exterieur || "-";
+                        const home = m.home_team || "-";
+                        const away = m.away_team || "-";
                         const score = m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const isHomeMyTeam = isMyCalendarTeam(home);
@@ -535,7 +535,7 @@ class FFBBCard extends LitElement {
 
                         const homeLogo = resolveCalendarTeamLogo({
                           teamName: home,
-                          matchLogo: m.home_logo || m.home_team_logo || m.logo_domicile,
+                          matchLogo: m.home_logo || m.home_team_logo,
                           isMyTeam: isHomeMyTeam,
                           myTeamLogo,
                           nextOpponentState: entities.nextOpponent?.state,
@@ -547,7 +547,7 @@ class FFBBCard extends LitElement {
 
                         const awayLogo = resolveCalendarTeamLogo({
                           teamName: away,
-                          matchLogo: m.away_logo || m.away_team_logo || m.logo_exterieur,
+                          matchLogo: m.away_logo || m.away_team_logo,
                           isMyTeam: isAwayMyTeam,
                           myTeamLogo,
                           nextOpponentState: entities.nextOpponent?.state,
@@ -574,7 +574,7 @@ class FFBBCard extends LitElement {
                             aria-label="${home} vs${away}"
                           >
                             <div class="calendar-col-round">
-                              <span class="cal-round-tag">${this._t("card.round_short", "R")}${m.round || m.journee || "-"}</span>
+                              <span class="cal-round-tag">${this._t("card.round_short", "R")}${m.round || "-"}</span>
                               ${venueBadge
                                 ? html`<span class="cal-venue-pill ${venueBadge === "DOM" ? "pill-dom" : "pill-ext"}">${venueBadge}</span>`
                                 : ""}
