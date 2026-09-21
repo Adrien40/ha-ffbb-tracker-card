@@ -1051,6 +1051,41 @@ describe("standings modal highlighting", () => {
     expect(el.shadowRoot.querySelectorAll(".standings-table tbody tr").length).toBe(3);
     expect(el.shadowRoot.querySelectorAll(".standings-table tr.highlight-row").length).toBe(0);
   });
+
+  it("shows the custom_team_name on my own row, and the real name everywhere else, including the opponent", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({
+      entity: "sensor.basket_landes_prochain_match_adversaire",
+      custom_team_name: "Les Panthères",
+    });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "AS Dax" },
+        "sensor.basket_landes_poule": { state: "Poule A", attributes: { team: "Basket Landes" } },
+        "sensor.basket_landes_classement": {
+          state: "1",
+          attributes: {
+            standings: [
+              { position: 1, team_name: "Basket Landes", points: 10 },
+              { position: 2, team_name: "AS Dax", points: 8 },
+              { position: 3, team_name: "Zzz", points: 6 },
+            ],
+          },
+        },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    el.shadowRoot.querySelector(".clickable-badge").click();
+    await el.updateComplete;
+
+    const names = [...el.shadowRoot.querySelectorAll(".standings-table tbody .col-team")].map((c) => c.textContent.trim());
+    expect(names).toEqual(["Les Panthères", "AS Dax", "Zzz"]);
+  });
 });
 
 describe("card-editor.js section titles come from the translation files", () => {
@@ -1957,6 +1992,21 @@ describe("carousel and calendar modal on a real FFBB dataset", () => {
     expect(rows).toHaveLength(3);
     expect([...rows].every((r) => r.classList.contains("highlight-row"))).toBe(true);
     expect([...rows].map((r) => r.classList.contains("next-match-row"))).toEqual([false, true, false]);
+  });
+
+  it("shows the custom_team_name on my own rows in the calendar, opponents keep their real name", async () => {
+    await mount({ custom_team_name: "Les Panthères" });
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const rows = [...el.shadowRoot.querySelectorAll(".calendar-row")];
+    const teamsPerRow = rows.map((r) => [...r.querySelectorAll(".cal-team")].map((s) => s.textContent.trim()));
+    expect(teamsPerRow).toEqual([
+      ["Les Panthères", "MAGESCQ BASKET"],
+      ["BASKET BIAUDOS ST MARTIN DE SEIG", "Les Panthères"],
+      ["BISCARROSSE OLYMPIQUE BASKET - 1", "Les Panthères"],
+    ]);
+    // The card's own name is never shown in an opponent-only slot.
+    expect(el.shadowRoot.textContent).not.toContain(T);
   });
 
   it("a broken crest URL is swapped once for the default and never loops", async () => {

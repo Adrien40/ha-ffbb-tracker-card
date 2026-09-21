@@ -33,7 +33,6 @@ function renderBlock(overrides = {}) {
     poule: "Poule B",
     competition: "Wonderligue",
     teamName: "Equipe 3",
-    opponentName: "Equipe 9",
     accentColor: "#ff6b00",
     t,
     ...overrides,
@@ -44,23 +43,23 @@ function renderBlock(overrides = {}) {
 
 describe("standings-block.js isHighlightedRow()", () => {
   it("matches the user's team, ignoring case, accents and punctuation", () => {
-    expect(isHighlightedRow({ team_name: "US Mont-de-Marsan" }, "us mont de marsan", "")).toBe(true);
+    expect(isHighlightedRow({ team_name: "US Mont-de-Marsan" }, "us mont de marsan")).toBe(true);
   });
 
-  it("matches the opponent", () => {
-    expect(isHighlightedRow({ team_name: "AS Dax" }, "Basket Landes", "AS Dax")).toBe(true);
+  it("does NOT match the opponent -- only the user's own team is highlighted here", () => {
+    expect(isHighlightedRow({ team_name: "AS Dax" }, "Basket Landes")).toBe(false);
   });
 
   it("does not match unrelated teams", () => {
-    expect(isHighlightedRow({ team_name: "AS Dax" }, "Basket Landes", "US Mont-de-Marsan")).toBe(false);
+    expect(isHighlightedRow({ team_name: "AS Dax" }, "Basket Landes")).toBe(false);
   });
 
   it("reads the name from `name` when `team_name` is missing", () => {
-    expect(isHighlightedRow({ name: "AS Dax" }, "AS Dax", "")).toBe(true);
+    expect(isHighlightedRow({ name: "AS Dax" }, "AS Dax")).toBe(true);
   });
 
-  it("never highlights when both names are empty", () => {
-    expect(isHighlightedRow({ team_name: "AS Dax" }, "", "")).toBe(false);
+  it("never highlights when the team name is empty", () => {
+    expect(isHighlightedRow({ team_name: "AS Dax" }, "")).toBe(false);
   });
 });
 
@@ -83,10 +82,25 @@ describe("standings-block.js renderStandingsBlock()", () => {
     expect(positions).toEqual(Array.from({ length: 14 }, (_, i) => String(i + 1)));
   });
 
-  it("highlights exactly the team and the opponent rows", () => {
+  it("highlights only the user's own team row, not the opponent", () => {
     const host = renderBlock();
     const highlighted = [...host.querySelectorAll("tr.highlight-row .col-team")].map((c) => c.textContent.trim());
-    expect(highlighted).toEqual(["Equipe 3", "Equipe 9"]);
+    expect(highlighted).toEqual(["Equipe 3"]);
+  });
+
+  it("shows the custom team name on my own row instead of the official one, and leaves every other row untouched", () => {
+    const host = renderBlock({ displayTeamName: "Les Panthères" });
+    const names = [...host.querySelectorAll("tbody .col-team")].map((c) => c.textContent.trim());
+    expect(names).toContain("Les Panthères");
+    expect(names).not.toContain("Equipe 3");
+    // Everyone else keeps their real, official name.
+    expect(names).toContain("Equipe 9");
+  });
+
+  it("keeps the official name when no custom team name is configured", () => {
+    const host = renderBlock({ displayTeamName: undefined });
+    const names = [...host.querySelectorAll("tbody .col-team")].map((c) => c.textContent.trim());
+    expect(names).toContain("Equipe 3");
   });
 
   it("shows the pool and the competition in the header", () => {
@@ -213,7 +227,7 @@ describe("ffbb-tracker-card with show_standings_below", () => {
   });
 
   it("does not highlight a row that has no name", () => {
-    expect(isHighlightedRow({ position: 3 }, "Basket Landes", "AS Dax")).toBe(false);
+    expect(isHighlightedRow({ position: 3 }, "Basket Landes")).toBe(false);
   });
 
   it("shows the real number of draws when the data has one, in the block", () => {
@@ -292,10 +306,10 @@ describe("standings-block.js detailed table", () => {
     expect(host.querySelectorAll("tbody tr")).toHaveLength(14);
   });
 
-  it("highlights the team and the opponent", () => {
+  it("highlights only the user's own team, not the opponent", () => {
     const host = renderBlock({ detailed: true });
     const highlighted = text([...host.querySelectorAll("tr.highlight-row")].map((tr) => tr.querySelector(".col-team")));
-    expect(highlighted).toEqual(["Equipe 3", "Equipe 9"]);
+    expect(highlighted).toEqual(["Equipe 3"]);
   });
 
   it("shows a dash for missing values but keeps a real 0", () => {

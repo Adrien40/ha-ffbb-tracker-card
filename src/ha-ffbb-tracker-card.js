@@ -300,7 +300,7 @@ class FFBBCard extends LitElement {
     return extractCalendarMatches(entities, configuredEntity);
   }
 
-  _renderModal(entities, teamName, opponentName) {
+  _renderModal(entities, teamName, opponentName, displayTeamName) {
     if (!this._activeModal) {
       return html``;
     }
@@ -362,12 +362,17 @@ class FFBBCard extends LitElement {
                       <tbody>
                         ${standings.map((item) => {
                           const rowName = item.team_name || item.name || "";
-                          const isRowHighlighted = isMyTeamRow(rowName) || isOpponentRow(rowName);
+                          const isOwnRow = isMyTeamRow(rowName);
+                          const isRowHighlighted = isOwnRow || isOpponentRow(rowName);
+                          // My own row shows the name from the card config,
+                          // never the opponent's -- their row keeps the
+                          // official federation name.
+                          const displayedTeamLabel = isOwnRow && displayTeamName ? displayTeamName : (item.team_name || item.name || "-");
 
                           return html`
                             <tr class=${isRowHighlighted ? "highlight-row" : ""}>
                               <td class="pos-cell">${item.position || item.rank || "-"}</td>
-                              <td class="col-team">${item.team_name || item.name || "-"}</td>
+                              <td class="col-team">${displayedTeamLabel}</td>
                               <td class="pts-cell">${item.points ?? item.pts ?? "-"}</td>
                               <td>${item.played ?? "-"}</td>
                               <td>${item.wins ?? item.won ?? "-"}</td>
@@ -570,7 +575,7 @@ class FFBBCard extends LitElement {
                             @keydown=${this._onKeyActivate(() => this._selectCalendarMatch(index, isPlayed))}
                             role="button"
                             tabindex="0"
-                            aria-label="${home} vs ${away}"
+                            aria-label="${isHomeMyTeam && displayTeamName ? displayTeamName : home} vs ${isAwayMyTeam && displayTeamName ? displayTeamName : away}"
                           >
                             <div class="calendar-col-round">
                               <span class="cal-round-tag">${this._t("card.round_short", "R")}${m.round || "-"}</span>
@@ -590,7 +595,7 @@ class FFBBCard extends LitElement {
                                     }
                                   }}
                                 />
-                                <span class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${home}</span>
+                                <span class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${isHomeMyTeam && displayTeamName ? displayTeamName : home}</span>
                               </div>
                               <div class="cal-team-line">
                                 <img
@@ -603,7 +608,7 @@ class FFBBCard extends LitElement {
                                     }
                                   }}
                                 />
-                                <span class="cal-team ${isAwayMyTeam ? "my-team-text" : ""}">${away}</span>
+                                <span class="cal-team ${isAwayMyTeam ? "my-team-text" : ""}">${isAwayMyTeam && displayTeamName ? displayTeamName : away}</span>
                               </div>
                             </div>
                             <div class="calendar-col-meta">
@@ -682,7 +687,7 @@ class FFBBCard extends LitElement {
           ${this._renderFooter(vm)}
         </div>
 
-        ${this._renderModal(entities, vm.searchTeamName, vm.opponentSearchName)}
+        ${this._renderModal(entities, vm.searchTeamName, vm.opponentSearchName, vm.configuredTeamName)}
       </ha-card>
 
       ${this._config.show_standings_below
@@ -691,7 +696,7 @@ class FFBBCard extends LitElement {
             poule: entities.poule?.state,
             competition: entities.poule?.attributes?.competition,
             teamName: vm.searchTeamName,
-            opponentName: vm.opponentSearchName,
+            displayTeamName: vm.configuredTeamName,
             accentColor: vm.accentColor,
             t: (key, fallback) => this._t(key, fallback),
           })

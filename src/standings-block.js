@@ -24,19 +24,18 @@ import { cleanForMatch, sortStandings } from "./pure.js";
 const INVALID_STATES = ["unknown", "unavailable"];
 
 /**
- * True when a standings row belongs to the user's team or to the opponent
- * (same fuzzy name matching as the standings modal), so the row can be
- * highlighted.
+ * True when a standings row belongs to the user's own team (same fuzzy name
+ * matching as the standings modal), so the row can be highlighted. Unlike
+ * the standings modal, the opponent is deliberately NOT highlighted here:
+ * this table shows the whole pool, and the opponent is just one more row
+ * among many, not a second "me".
  */
-export function isHighlightedRow(item, teamName, opponentName) {
+export function isHighlightedRow(item, teamName) {
   const itemClean = cleanForMatch(item?.team_name || item?.name || "");
   const teamClean = cleanForMatch(teamName);
-  const oppClean = cleanForMatch(opponentName);
   // A row without any name must never match (`"x".includes("")` is true).
-  if (!itemClean) return false;
-  const isTeam = Boolean(teamClean && (itemClean.includes(teamClean) || teamClean.includes(itemClean)));
-  const isOpponent = Boolean(oppClean && (itemClean.includes(oppClean) || oppClean.includes(itemClean)));
-  return isTeam || isOpponent;
+  if (!itemClean || !teamClean) return false;
+  return itemClean.includes(teamClean) || teamClean.includes(itemClean);
 }
 
 // Cell display: a missing value (null/undefined/"") is shown as "-", a real 0
@@ -86,7 +85,7 @@ export const DETAILED_COLUMNS = {
   ],
 };
 
-function renderDetailedTable({ rows, teamName, opponentName, t }) {
+function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
   const { matches, singles, penalties, points } = DETAILED_COLUMNS;
   const label = (col) => t(`card.${col.key}`, col.fb);
   const title = (col) => t(`card.${col.full}`, col.fullFb);
@@ -118,19 +117,25 @@ function renderDetailedTable({ rows, teamName, opponentName, t }) {
           </tr>
         </thead>
         <tbody>
-          ${rows.map(
-            (item) => html`
-              <tr class=${isHighlightedRow(item, teamName, opponentName) ? "highlight-row" : ""}>
+          ${rows.map((item) => {
+            const highlighted = isHighlightedRow(item, teamName);
+            // On my own row, show the name I picked in the card config
+            // instead of the federation's official name -- everywhere
+            // else the real, official team name is kept so the table
+            // still matches the FFBB page.
+            const rowTeamLabel = highlighted && displayTeamName ? displayTeamName : item.team_name || item.name || "-";
+            return html`
+              <tr class=${highlighted ? "highlight-row" : ""}>
                 <td class="pos-cell col-pos">${item.position || item.rank || "-"}</td>
-                <td class="col-team">${item.team_name || item.name || "-"}</td>
+                <td class="col-team">${rowTeamLabel}</td>
                 <td class="pts-cell">${cell(item.points ?? item.pts)}</td>
                 ${matches.map((col) => body(col, item))}
                 ${singles.map((col) => body(col, item))}
                 ${penalties.map((col) => body(col, item))}
                 ${points.map((col) => body(col, item))}
               </tr>
-            `
-          )}
+            `;
+          })}
         </tbody>
       </table>
     </div>
@@ -147,7 +152,7 @@ export function renderStandingsBlock({
   poule,
   competition,
   teamName,
-  opponentName,
+  displayTeamName,
   accentColor,
   t,
 }) {
@@ -165,7 +170,7 @@ export function renderStandingsBlock({
       </div>
       ${competitionText ? html`<div class="standings-card-subtitle">${competitionText}</div>` : nothing}
       <div class="standings-card-body">
-        ${renderDetailedTable({ rows, teamName, opponentName, t })}
+        ${renderDetailedTable({ rows, teamName, displayTeamName, t })}
       </div>
     </ha-card>
   `;
@@ -216,6 +221,12 @@ export const standingsBlockStyles = css`
   .standings-table-detailed {
     min-width: 560px;
     font-variant-numeric: tabular-nums;
+    /* Match the font scale of the popup's simple standings table
+       (.standings-table, 0.85em) so the body text of both tables reads
+       at the same size. Previously only the headers were scaled down
+       here, leaving the data cells at the card's full 1em -- larger than
+       everything in the table above them. */
+    font-size: 0.85em;
   }
   .standings-table-detailed th {
     padding: 8px 6px 4px;
