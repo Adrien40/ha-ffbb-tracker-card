@@ -113,10 +113,8 @@ class FFBBCard extends LitElement {
   _getRankClass(rank) {
     if (!rank) return "";
     const style = this._config?.rank_badge_style;
-    // "none"/disable_podium_colors both mean "no medal colors" -- the
-    // latter predates rank_badge_style and is kept for back-compat with
-    // configs saved before that option existed.
-    if (style === "none" || this._config?.disable_podium_colors) return "";
+    // "none" means "no medal colors".
+    if (style === "none") return "";
     const match = String(rank).trim().match(/^(\d+)/);
     if (!match) return "";
     const pos = parseInt(match[1], 10);
@@ -786,9 +784,7 @@ class FFBBCard extends LitElement {
       hasStandingsData,
     } = vm;
 
-    // "solid" and the older solid_rank_badges boolean are two ways to ask
-    // for the same filled-background rank-badge look; keep both working.
-    const isSolid = this._config?.rank_badge_style === "solid" || Boolean(this._config?.solid_rank_badges);
+    const isSolid = this._config?.rank_badge_style === "solid";
     const solidRankClass = isSolid ? "rank-solid" : "";
 
     return html`

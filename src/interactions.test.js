@@ -964,7 +964,7 @@ describe("live match DOM rendering", () => {
   });
 });
 
-describe("rank badge legacy config keys (pre-0.1.5 editor)", () => {
+describe("rank badge style (removed legacy keys are ignored)", () => {
   afterEach(() => {
     document.body.innerHTML = "";
   });
@@ -986,15 +986,32 @@ describe("rank badge legacy config keys (pre-0.1.5 editor)", () => {
     return el.shadowRoot.querySelector(".rank-badge");
   }
 
-  it("solid_rank_badges: true still produces a solid badge", async () => {
-    const badge = await mountRank({ solid_rank_badges: true });
+  it("rank_badge_style: solid produces a solid podium badge", async () => {
+    const badge = await mountRank({ rank_badge_style: "solid" });
     expect(badge.classList.contains("rank-solid")).toBe(true);
     expect(badge.classList.contains("rank-gold")).toBe(true);
   });
 
-  it("disable_podium_colors: true still removes the podium color", async () => {
-    const badge = await mountRank({ disable_podium_colors: true });
+  it("rank_badge_style: none removes the podium color", async () => {
+    const badge = await mountRank({ rank_badge_style: "none" });
     expect(badge.classList.contains("rank-gold")).toBe(false);
+    expect(badge.classList.contains("rank-solid")).toBe(false);
+  });
+
+  it("the default style is the outline podium badge", async () => {
+    const badge = await mountRank({});
+    expect(badge.classList.contains("rank-gold")).toBe(true);
+    expect(badge.classList.contains("rank-solid")).toBe(false);
+  });
+
+  it("the removed solid_rank_badges option no longer changes the badge", async () => {
+    const badge = await mountRank({ solid_rank_badges: true });
+    expect(badge.classList.contains("rank-solid")).toBe(false);
+  });
+
+  it("the removed disable_podium_colors option no longer changes the badge", async () => {
+    const badge = await mountRank({ disable_podium_colors: true });
+    expect(badge.classList.contains("rank-gold")).toBe(true);
   });
 });
 

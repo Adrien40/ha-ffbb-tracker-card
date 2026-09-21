@@ -1277,3 +1277,75 @@ describe("findTeamUrl: opponent and own-team resolution", () => {
     expect(url).toBeNull();
   });
 });
+
+describe("carousel with the calendar rows as the integration really sends them (UJSBP U13M)", () => {
+  const T = "UNION JEUN SP BUGLOSE PONTONX";
+  const logo = (id) => `https://api.ffbb.app/assets/${id}?height=220&fit=contain&format=avif`;
+  const url = (club, team) => `https://competitions.ffbb.com/ligues/naq/comites/0040/clubs/${club}/equipes/${team}`;
+  const L = {
+    me: logo("c6d1d2fc-e612-42ae-a1bd-2474cc12fbc8"),
+    magescq: logo("4777cdef-c834-4f79-92c4-176e99247033"),
+    biaudos: logo("3b1c5eb8-88c2-4654-b3d3-536de26120a2"),
+    biscarrosse: logo("38eaa9cb-9fba-4ded-b473-81e143170dcc"),
+    ocean: logo("a9ef59d4-7cdf-4393-af36-230c2703eb8b"),
+  };
+  const U = {
+    me: url("naq0040116", "200000005374157"),
+    magescq: url("naq0040061", "200000005374156"),
+    biaudos: url("naq0040127", "200000005374154"),
+    biscarrosse: url("naq0040013", "200000005374158"),
+    ocean: url("naq0040135", "200000005374155"),
+  };
+  const row = (round, home, away, homeKey, awayKey, isHome, played) => ({
+    round,
+    home_team: home,
+    away_team: away,
+    home_logo: L[homeKey],
+    away_logo: L[awayKey],
+    home_url: U[homeKey],
+    away_url: U[awayKey],
+    date: "2026-09-19T11:00:00+00:00",
+    score: played ? "51 - 46" : null,
+    is_played: played,
+    is_home: isHome,
+  });
+  const entities = {
+    nextOpponent: { state: "BASKET BIAUDOS ST MARTIN DE SEIG", attributes: { is_home: false, team_logo_url: L.me, opponent_logo_url: L.biaudos } },
+    nextDate: { state: "2026-09-26T14:00:00+00:00", attributes: { round: 2 } },
+    lastOpponent: { state: "MAGESCQ BASKET", attributes: { team_logo_url: L.me, opponent_logo_url: L.magescq } },
+    poule: {
+      state: "D2 Poule B",
+      attributes: {
+        team: T,
+        calendar: [
+          row(1, T, "MAGESCQ BASKET", "me", "magescq", true, true),
+          row(2, "BASKET BIAUDOS ST MARTIN DE SEIG", T, "biaudos", "me", false, false),
+          row(3, "BISCARROSSE OLYMPIQUE BASKET - 1", T, "biscarrosse", "me", false, false),
+          row(5, T, "BASKET OCEAN COTE SUD - 1", "me", "ocean", true, false),
+        ],
+      },
+    },
+    matchInProgress: { state: "off" },
+  };
+  const at = (matchIndex) =>
+    computeViewModel({ entities, config: { entity: "sensor.ujsbp_u13m_poule" }, lang: "fr", now: new Date("2026-09-21T10:00:00"), matchIndex });
+
+  it.each([
+    [0, "me", "magescq"],
+    [1, "biaudos", "me"],
+    [2, "biscarrosse", "me"],
+    [3, "me", "ocean"],
+  ])("match %i shows the crest and link carried by its own row on each side", (i, left, right) => {
+    const vm = at(i);
+    expect([vm.leftLogo, vm.rightLogo]).toEqual([L[left], L[right]]);
+    expect([vm.leftUrl, vm.rightUrl]).toEqual([U[left], U[right]]);
+  });
+
+  it("never falls back to the default crest when every row carries its logos", () => {
+    for (let i = 0; i < 4; i++) {
+      const vm = at(i);
+      expect(vm.leftLogo).not.toBe(DEFAULT_FALLBACK_LOGO);
+      expect(vm.rightLogo).not.toBe(DEFAULT_FALLBACK_LOGO);
+    }
+  });
+});
