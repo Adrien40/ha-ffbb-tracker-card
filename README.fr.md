@@ -128,7 +128,7 @@ show_watermark: true
 | `show_header` | `boolean` | `true` | Affiche l'en-tête avec la compétition, la poule et la journée interactive. |
 | `show_rank` | `boolean` | `true` | Affiche la pastille interactive du classement de chaque équipe. |
 | `rank_badge_style` | `string` | `outline` | Style visuel des badges de classement : `outline` (bordure or/argent/bronze par défaut), `solid` (plein métallique) ou `none` (neutre sans podium). |
-| `show_standings_below` | `boolean` | `false` | Affiche le classement complet dans une seconde carte, juste sous la carte de match (votre équipe et l'adversaire sont surlignés, sans défilement). |
+| `show_standings_below` | `boolean` | `false` | Affiche le classement détaillé dans une seconde carte, juste sous la carte de match, avec les colonnes du site officiel FFBB : Pts, Rencontres (J G P N), I, Pén., For., Déf., Pénalités (Arb / Ent) et Points (M / E / D). Votre équipe et l'adversaire sont surlignés ; sur petit écran, le tableau défile horizontalement, les colonnes rang et équipe restant épinglées. Le classement simple reste dans la popup ouverte depuis les pastilles de classement. |
 | `show_form` | `boolean` | `true` | Affiche la pastille de forme récente (5 derniers matchs joués). |
 | `show_venue` | `boolean` | `true` | Affiche l'adresse de la salle avec le lien de navigation GPS en pied de carte. |
 | `show_watermark` | `boolean` | `true` | Affiche les logos des clubs en filigrane en arrière-plan. |

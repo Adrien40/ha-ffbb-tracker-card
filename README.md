@@ -128,7 +128,7 @@ show_watermark: true
 | `show_header` | `boolean` | `true` | Displays competition, pool name, and clickable round header. |
 | `show_rank` | `boolean` | `true` | Displays interactive rank badges for each team. |
 | `rank_badge_style` | `string` | `outline` | Rank badge visual style: `outline` (gold/silver/bronze border by default), `solid` (metallic fill), or `none` (neutral without podium colors). |
-| `show_standings_below` | `boolean` | `false` | Shows the full standings table in a second card right under the match card (your team and the opponent are highlighted, no scrolling). |
+| `show_standings_below` | `boolean` | `false` | Shows the detailed standings in a second card right under the match card, with the columns of the official FFBB page: Pts, Games (J G P N), I, Pen., Forf., Def., Penalties (Ref / Coach) and Points (scored / conceded / difference). Your team and the opponent are highlighted; on a narrow screen the table scrolls sideways with the rank and team columns pinned. The simple standings stays in the popup opened from the rank badges. |
 | `show_form` | `boolean` | `true` | Displays recent form streak indicator (last 5 games). |
 | `show_venue` | `boolean` | `true` | Displays venue details with GPS navigation link in footer. |
 | `show_watermark` | `boolean` | `true` | Shows faded team crest watermarks in background. |
