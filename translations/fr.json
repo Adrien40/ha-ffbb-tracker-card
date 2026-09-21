@@ -71,6 +71,7 @@
     "show_header": "Afficher l'en-tête / Journée",
     "ranking_section": "Classement",
     "show_rank": "Afficher le classement des équipes",
+    "show_standings_below": "Afficher le classement complet sous la carte",
     "rank_badge_style": "Style des badges de classement",
     "rank_badge_none": "Neutre (sans podium)",
     "rank_badge_outline": "Bordure (or, argent, bronze) — (par défaut)",
