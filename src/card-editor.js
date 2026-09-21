@@ -262,6 +262,18 @@ class FFBBCardEditor extends LitElement {
         ],
       },
       {
+        name: "show_form",
+        label: this._t("editor.show_form", "Show recent form"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_venue",
+        label: this._t("editor.show_venue", "Show venue"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
         name: "standings_card",
         type: "expandable",
         title: this._t("editor.standings_card_section", "Standings card"),
@@ -299,18 +311,6 @@ class FFBBCardEditor extends LitElement {
               ]
             : []),
         ],
-      },
-      {
-        name: "show_form",
-        label: this._t("editor.show_form", "Show recent form"),
-        default: true,
-        selector: { boolean: {} },
-      },
-      {
-        name: "show_venue",
-        label: this._t("editor.show_venue", "Show venue"),
-        default: true,
-        selector: { boolean: {} },
       },
     ];
 

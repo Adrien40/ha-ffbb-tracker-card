@@ -77,9 +77,9 @@ describe("card-editor.js schema -- base fields", () => {
       "custom_team_name",
       "accent_color",
       "ranking",
-      "standings_card",
       "show_form",
       "show_venue",
+      "standings_card",
     ]);
   });
 
@@ -232,6 +232,12 @@ describe("card-editor.js schema -- \"standings_card\" expandable section", () =>
     expect(group.icon).toBeTruthy();
     expect(group.flatten).toBe(true);
     expect(group.name).not.toBe("ranking");
+  });
+
+  it("sits last in the top-level schema, after show_form and show_venue", async () => {
+    const el = await mountEditor();
+    const names = fieldNames(el);
+    expect(names[names.length - 1]).toBe("standings_card");
   });
 
   it("never contains show_rank or rank_badge_style -- those live in \"ranking\"", async () => {

@@ -196,6 +196,18 @@ describe("ffbb-tracker-card with display_mode", () => {
     expect(cards[0].classList.contains("standings-card")).toBe(true);
   });
 
+  it('gets the "standings-compact" class (smaller, popup-aligned font) when shown alongside the match card', async () => {
+    const el = await mountCard({ display_mode: "both" });
+    const card = el.shadowRoot.querySelector(".standings-card");
+    expect(card.classList.contains("standings-compact")).toBe(true);
+  });
+
+  it('does NOT get the "standings-compact" class (normal card font size) when it is the only card', async () => {
+    const el = await mountCard({ display_mode: "standings" });
+    const card = el.shadowRoot.querySelector(".standings-card");
+    expect(card.classList.contains("standings-compact")).toBe(false);
+  });
+
   it("shows an empty-state message (not a vanished card) when the pool has no standings data", async () => {
     const states = { ...STATES, "sensor.basket_landes_classement": { state: "1", attributes: {} } };
     const el = await mountCard({ display_mode: "both" }, states);

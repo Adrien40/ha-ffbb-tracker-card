@@ -704,6 +704,7 @@ class FFBBCard extends LitElement {
             accentColor: vm.accentColor,
             title: vm.standingsTitle,
             icon: vm.standingsIcon,
+            compact: vm.displayMode === "both",
             t: (key, fallback) => this._t(key, fallback),
           })
         : nothing}

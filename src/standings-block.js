@@ -150,6 +150,12 @@ function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
  * card with its header, showing "no standings available" instead of
  * disappearing silently. A vanished card with no explanation looks like a
  * bug; an empty state does not.
+ *
+ * `compact` sets the table's font scale: true (display_mode "both", the
+ * card sits right under the match card) keeps it aligned with the popup's
+ * simple standings table (0.85em); false (display_mode "standings", this is
+ * the only card on the dashboard) lets it read at a normal card's text
+ * size, like any other standalone HA card.
  */
 export function renderStandingsBlock({
   standings,
@@ -160,6 +166,7 @@ export function renderStandingsBlock({
   accentColor,
   title,
   icon,
+  compact,
   t,
 }) {
   const rows = sortStandings(standings);
@@ -169,7 +176,7 @@ export function renderStandingsBlock({
   const cardIcon = icon !== undefined ? icon : "mdi:format-list-numbered";
 
   return html`
-    <ha-card class="standings-card" style="--ffbb-accent-color: ${accentColor};">
+    <ha-card class="standings-card ${compact ? "standings-compact" : ""}" style="--ffbb-accent-color: ${accentColor};">
       <div class="standings-card-header">
         ${cardIcon ? html`<ha-icon icon=${cardIcon}></ha-icon>` : nothing}
         <span>${cardTitle}${pouleText ? ` • ${pouleText}` : ""}</span>
@@ -235,11 +242,13 @@ export const standingsBlockStyles = css`
   .standings-table-detailed {
     min-width: 560px;
     font-variant-numeric: tabular-nums;
-    /* Match the font scale of the popup's simple standings table
-       (.standings-table, 0.85em) so the body text of both tables reads
-       at the same size. Previously only the headers were scaled down
-       here, leaving the data cells at the card's full 1em -- larger than
-       everything in the table above them. */
+  }
+  /* Only when the card sits right under the match card (display_mode
+     "both") do we shrink the table to match the popup's simple standings
+     table (0.85em). Standing alone as the only card on the dashboard, it
+     keeps a normal card's text size instead -- see the "compact" doc
+     comment on renderStandingsBlock. */
+  .standings-compact .standings-table-detailed {
     font-size: 0.85em;
   }
   .standings-table-detailed th {
