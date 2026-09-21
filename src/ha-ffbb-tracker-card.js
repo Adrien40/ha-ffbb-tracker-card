@@ -571,7 +571,7 @@ class FFBBCard extends LitElement {
                             @keydown=${this._onKeyActivate(() => this._selectCalendarMatch(index, isPlayed))}
                             role="button"
                             tabindex="0"
-                            aria-label="${home} vs${away}"
+                            aria-label="${home} vs ${away}"
                           >
                             <div class="calendar-col-round">
                               <span class="cal-round-tag">${this._t("card.round_short", "R")}${m.round || "-"}</span>

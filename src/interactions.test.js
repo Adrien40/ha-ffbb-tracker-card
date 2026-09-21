@@ -1923,6 +1923,15 @@ describe("carousel and calendar modal on a real FFBB dataset", () => {
     ]);
   });
 
+  it("each calendar row has an accessible label with spaces around 'vs'", async () => {
+    await mount();
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const labels = [...el.shadowRoot.querySelectorAll(".calendar-row")].map((r) => r.getAttribute("aria-label"));
+    expect(labels[0]).toBe(`${T} vs MAGESCQ BASKET`);
+    expect(labels.every((l) => / vs /.test(l))).toBe(true);
+  });
+
   it("the calendar modal marks my rows and the next match", async () => {
     await mount();
     el._activeModal = "calendar";
