@@ -58,7 +58,7 @@ If you find this project useful, you can support its development 🙏
 
 ### Via HACS (Recommended)
 
-1. Open **HACS** in Home Assistant, then navigate to **Frontend**.
+1. Open **HACS** in Home Assistant.
 2. Click the top-right three dots > **Custom repositories**.
 3. Enter repository URL: `https://github.com/Adrien40/ha-ffbb-tracker-card`
 4. Select category **Dashboard**, then click **Add**.
@@ -137,7 +137,7 @@ show_watermark: true
 ### 🗑️ Uninstallation
 
 1. Remove the card from your dashboards: switch each affected view to YAML mode (or delete the card through the visual editor) and remove the corresponding `type: custom:ffbb-tracker-card` block.
-2. If installed via HACS: open **HACS** > **Frontend** section, open the **FFBB Tracker Card** entry, then select **Remove**. HACS automatically removes the associated resource.
+2. If installed via HACS: open **HACS**, find the **FFBB Tracker Card** entry (downloaded repositories are listed first, or use the search field), open its three-dots menu, then select **Remove**. HACS automatically removes the associated resource.
 3. If installed manually:
    * Delete the `/config/www/community/ha-ffbb-tracker-card/` folder.
    * Remove the corresponding resource under **Settings** > **Dashboards** > **Resources**.

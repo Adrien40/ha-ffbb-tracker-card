@@ -58,7 +58,7 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 
 ### Via HACS (recommandé)
 
-1. Ouvrez **HACS** dans Home Assistant, puis rendez-vous dans la section **Interface**.
+1. Ouvrez **HACS** dans Home Assistant.
 2. Cliquez sur les trois points en haut à droite > **Dépôts personnalisés**.
 3. Saisissez l'adresse : `https://github.com/Adrien40/ha-ffbb-tracker-card`
 4. Sélectionnez le type **Tableau de bord** puis cliquez sur **Ajouter**.
@@ -137,7 +137,7 @@ show_watermark: true
 ### 🗑️ Désinstallation
 
 1. Retirez la carte de vos tableaux de bord : passez chaque vue concernée en mode YAML (ou supprimez la carte via l'éditeur visuel) et supprimez le bloc `type: custom:ffbb-tracker-card` correspondant.
-2. Si installée via HACS : ouvrez **HACS** > section **Interface**, ouvrez la fiche **FFBB Tracker Card**, puis sélectionnez **Supprimer**. HACS retire automatiquement la ressource associée.
+2. Si installée via HACS : ouvrez **HACS**, trouvez la fiche **FFBB Tracker Card** (les dépôts téléchargés sont listés en premier, ou utilisez la recherche), ouvrez son menu à trois points, puis sélectionnez **Supprimer**. HACS retire automatiquement la ressource associée.
 3. Si installée manuellement :
    * Supprimez le dossier `/config/www/community/ha-ffbb-tracker-card/`.
    * Retirez la ressource correspondante dans **Paramètres** > **Tableaux de bord** > **Ressources**.
