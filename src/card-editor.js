@@ -258,6 +258,12 @@ class FFBBCardEditor extends LitElement {
                 },
               ]
             : []),
+          {
+            name: "show_standings_below",
+            label: this._t("editor.show_standings_below", "Show full standings below the card"),
+            default: false,
+            selector: { boolean: {} },
+          },
         ],
       },
       {

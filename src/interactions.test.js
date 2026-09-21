@@ -1474,7 +1474,7 @@ describe("calendar modal: round tag and standings 'draws' column", () => {
     expect(await roundTags(language)).toEqual(expected);
   });
 
-  it("draws column: shows the real value (including 0) and '-' only when the data is missing", async () => {
+  it("draws column: shows the real value, and 0 when the data is missing", async () => {
     const el = await mount("en", {
       calendar: CALENDAR,
       standings: [
@@ -1489,7 +1489,7 @@ describe("calendar modal: round tag and standings 'draws' column", () => {
       const cells = tr.querySelectorAll("td");
       return cells[cells.length - 1].textContent.trim();
     });
-    expect(lastCells).toEqual(["0", "-", "2"]);
+    expect(lastCells).toEqual(["0", "0", "2"]);
   });
 });
 
@@ -1636,7 +1636,7 @@ describe("standings table reads the attribute names really sent by the integrati
     document.body.innerHTML = "";
   });
 
-  it("shows played / won / lost (including 0), and '-' for draws, which the integration never sends", async () => {
+  it("shows played / won / lost (including 0), and 0 for draws when no value is sent", async () => {
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
     el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
@@ -1667,9 +1667,9 @@ describe("standings table reads the attribute names really sent by the integrati
       [...tr.querySelectorAll("td")].map((td) => td.textContent.trim())
     );
     expect(rows).toEqual([
-      ["1", "ASA SCEAUX", "2", "1", "1", "0", "-"],
-      ["2", "APLEMONT LE HAVRE BASKET", "2", "3", "2", "1", "-"],
-      ["10", "COTE D'OPALE BASKET CALAIS", "1", "1", "0", "1", "-"],
+      ["1", "ASA SCEAUX", "2", "1", "1", "0", "0"],
+      ["2", "APLEMONT LE HAVRE BASKET", "2", "3", "2", "1", "0"],
+      ["10", "COTE D'OPALE BASKET CALAIS", "1", "1", "0", "1", "0"],
     ]);
   });
 });

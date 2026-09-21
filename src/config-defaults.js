@@ -25,6 +25,7 @@ export const DEFAULT_CONFIG = {
   show_header: true,
   show_rank: true,
   rank_badge_style: "outline",
+  show_standings_below: false,
   show_form: true,
   show_venue: true,
   show_watermark: true,

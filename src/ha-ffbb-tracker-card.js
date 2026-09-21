@@ -15,6 +15,7 @@ import {
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
+import { renderStandingsBlock, standingsBlockStyles } from "./standings-block.js";
 import "./card-editor.js";
 
 class FFBBCard extends LitElement {
@@ -368,10 +369,10 @@ class FFBBCard extends LitElement {
                               <td class="pos-cell">${item.position || item.rank || "-"}</td>
                               <td class="col-team">${item.team_name || item.name || "-"}</td>
                               <td class="pts-cell">${item.points ?? item.pts ?? "-"}</td>
-                              <td>${item.played ?? item.joues ?? "-"}</td>
-                              <td>${item.wins ?? item.won ?? item.gagnes ?? "-"}</td>
-                              <td>${item.losses ?? item.lost ?? item.perdus ?? "-"}</td>
-                              <td>${item.draws ?? item.nuls ?? item.nul ?? item.n ?? "-"}</td>
+                              <td>${item.played ?? "-"}</td>
+                              <td>${item.wins ?? item.won ?? "-"}</td>
+                              <td>${item.losses ?? item.lost ?? "-"}</td>
+                              <td>${item.draws ?? "0"}</td>
                             </tr>
                           `;
                         })}
@@ -683,6 +684,18 @@ class FFBBCard extends LitElement {
 
         ${this._renderModal(entities, vm.searchTeamName, vm.opponentSearchName)}
       </ha-card>
+
+      ${this._config.show_standings_below
+        ? renderStandingsBlock({
+            standings: entities.rank?.attributes?.standings,
+            poule: entities.poule?.state,
+            competition: entities.poule?.attributes?.competition,
+            teamName: vm.searchTeamName,
+            opponentName: vm.opponentSearchName,
+            accentColor: vm.accentColor,
+            t: (key, fallback) => this._t(key, fallback),
+          })
+        : nothing}
     `;
   }
 
@@ -1021,7 +1034,7 @@ class FFBBCard extends LitElement {
   }
 
   static get styles() {
-    return cardStyles;
+    return [cardStyles, standingsBlockStyles];
   }
 }
 

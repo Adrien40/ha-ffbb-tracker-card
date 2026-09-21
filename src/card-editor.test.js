@@ -174,16 +174,16 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     expect(group.flatten).toBe(true);
   });
 
-  it("nests show_rank and rank_badge_style when show_rank is true (the default)", async () => {
+  it("nests show_rank, rank_badge_style and show_standings_below when show_rank is true (the default)", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank", "rank_badge_style"]);
+    expect(names).toEqual(["show_rank", "rank_badge_style", "show_standings_below"]);
   });
 
-  it("omits rank_badge_style (but keeps show_rank) when show_rank is false", async () => {
+  it("omits rank_badge_style (but keeps show_rank and show_standings_below) when show_rank is false", async () => {
     const el = await mountEditor({ show_rank: false });
     const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank"]);
+    expect(names).toEqual(["show_rank", "show_standings_below"]);
   });
 
   it("gives show_rank default: true and rank_badge_style default: \"outline\"", async () => {
@@ -191,6 +191,13 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     const group = groupSchema(el, "ranking");
     expect(group.find((f) => f.name === "show_rank").default).toBe(true);
     expect(group.find((f) => f.name === "rank_badge_style").default).toBe("outline");
+  });
+
+  it("gives show_standings_below default: false (opt-in, so existing cards are unchanged)", async () => {
+    const el = await mountEditor();
+    const field = groupSchema(el, "ranking").find((f) => f.name === "show_standings_below");
+    expect(field.default).toBe(false);
+    expect(field.selector).toEqual({ boolean: {} });
   });
 
   it("offers exactly the three none/outline/solid options for rank_badge_style", async () => {
