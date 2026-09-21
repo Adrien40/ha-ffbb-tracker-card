@@ -19,6 +19,8 @@ import {
   createTeamMatcher,
   resolveHour12,
   isValidCssColor,
+  resolveCalendarTeamLogo,
+  DEFAULT_FALLBACK_LOGO,
 } from "./pure.js";
 import { getTranslations, translate } from "./translations.js";
 
@@ -1004,5 +1006,274 @@ describe("computeViewModel carousel team URLs", () => {
     const vm = run(1);
     expect(vm.leftUrl).toBe("https://x.test/orthez");
     expect(vm.rightUrl).toBe("https://x.test/me");
+  });
+});
+
+describe("resolveCalendarTeamLogo", () => {
+  const MY = "https://x.test/my.png";
+  const OPP_NEXT = "https://x.test/next.png";
+  const OPP_LAST = "https://x.test/last.png";
+  const base = {
+    teamName: "US Dax",
+    nextOpponentState: "US Dax",
+    nextOpponentLogo: OPP_NEXT,
+    lastOpponentState: "AS Pau",
+    lastOpponentLogo: OPP_LAST,
+    myTeamLogo: MY,
+  };
+
+  it("returns the logo carried by the match row first, over every sensor", () => {
+    expect(resolveCalendarTeamLogo({ ...base, matchLogo: "https://x.test/row.png" })).toBe("https://x.test/row.png");
+  });
+
+  it("ignores an unsafe or malformed row logo and keeps resolving", () => {
+    for (const bad of ["javascript:alert(1)", "data:text/html,x", "logo.png", "", null, 42]) {
+      expect(resolveCalendarTeamLogo({ ...base, matchLogo: bad }), String(bad)).toBe(OPP_NEXT);
+    }
+  });
+
+  it("uses the next-opponent sensor logo only when the team name matches it", () => {
+    expect(resolveCalendarTeamLogo(base)).toBe(OPP_NEXT);
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "BC Orthez" })).toBe(DEFAULT_FALLBACK_LOGO);
+  });
+
+  it("matches the sensor name loosely (case, accents, punctuation, suffix)", () => {
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "us  DAX - 1" })).toBe(OPP_NEXT);
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "Union Sportive Dax", nextOpponentState: "Dax" })).toBe(OPP_NEXT);
+  });
+
+  it("falls back to the last-opponent sensor when only that one matches", () => {
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "AS Pau" })).toBe(OPP_LAST);
+  });
+
+  it("does not use a sensor logo that is missing or unsafe", () => {
+    expect(resolveCalendarTeamLogo({ ...base, nextOpponentLogo: null })).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(resolveCalendarTeamLogo({ ...base, nextOpponentLogo: "javascript:x" })).toBe(DEFAULT_FALLBACK_LOGO);
+  });
+
+  it("returns my team's logo for my own row, without needing a name", () => {
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "", isMyTeam: true })).toBe(MY);
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "Basket Landes", isMyTeam: true })).toBe(MY);
+  });
+
+  it("never returns my team's logo for an opponent row", () => {
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "BC Orthez", isMyTeam: false })).not.toBe(MY);
+  });
+
+  it("returns the default crest when there is nothing to show", () => {
+    expect(resolveCalendarTeamLogo()).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(resolveCalendarTeamLogo({ teamName: "" })).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(resolveCalendarTeamLogo({ teamName: "X", isMyTeam: true, myTeamLogo: DEFAULT_FALLBACK_LOGO })).toBe(DEFAULT_FALLBACK_LOGO);
+  });
+
+  it("looks the team up in the standings when the sensors do not know it", () => {
+    const standings = [{ team_name: "BC Orthez", team_logo_url: "https://x.test/orthez.png" }];
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "BC Orthez - 1", standings })).toBe("https://x.test/orthez.png");
+  });
+
+  it("tries the standings logo keys in order and skips rows without a usable one", () => {
+    const standings = [{ team_name: "BC Orthez", logo: "https://x.test/logo-key.png", crest: "https://x.test/crest.png" }];
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "BC Orthez", standings })).toBe("https://x.test/logo-key.png");
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "BC Orthez", standings: [{ team_name: "BC Orthez" }] })).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(resolveCalendarTeamLogo({ ...base, teamName: "BC Orthez", standings: "nope" })).toBe(DEFAULT_FALLBACK_LOGO);
+  });
+});
+
+describe("carousel with a real FFBB dataset (UJSBP U13M)", () => {
+  const T = "UNION JEUN SP BUGLOSE PONTONX";
+  const asset = (id) => `https://api.ffbb.app/assets/${id}?height=220&fit=contain&format=avif`;
+  const MY = asset("c6d1d2fc");
+  const MAGESCQ = asset("4777cdef");
+  const BIAUDOS = asset("3b1c5eb8");
+  const team = (n) => `https://competitions.ffbb.com/equipes/${n}`;
+
+  const entities = {
+    nextOpponent: {
+      state: "BASKET BIAUDOS ST MARTIN DE SEIG",
+      attributes: { is_home: false, team_url: team(1), opponent_url: team(5), team_logo_url: MY, opponent_logo_url: BIAUDOS },
+    },
+    nextDate: { state: "2026-09-26T14:00:00+00:00", attributes: { round: 2, team_logo_url: MY, opponent_logo_url: BIAUDOS } },
+    nextVenue: { state: "away", attributes: { is_home: false } },
+    lastOpponent: {
+      state: "MAGESCQ BASKET",
+      attributes: { team_url: team(1), opponent_url: team(4), team_logo_url: MY, opponent_logo_url: MAGESCQ },
+    },
+    lastDate: { state: "2026-09-19T11:00:00+00:00", attributes: { round: 1, is_home: true } },
+    lastScore: { state: "51 - 46", attributes: { is_home: true } },
+    poule: {
+      state: "D2 Poule B",
+      attributes: {
+        team: T,
+        competition: "Départementale masculine U13 - Division 2",
+        calendar: [
+          { round: 1, home_team: T, away_team: "MAGESCQ BASKET", date: "2026-09-19T11:00:00+00:00", score: "51 - 46", is_played: true },
+          { round: 2, home_team: "BASKET BIAUDOS ST MARTIN DE SEIG", away_team: T, date: "2026-09-26T14:00:00+00:00", score: null, is_played: false },
+          { round: 3, home_team: "BISCARROSSE OLYMPIQUE BASKET - 1", away_team: T, date: "2026-10-10T11:30:00+00:00", score: null, is_played: false },
+          { round: 5, home_team: T, away_team: "BASKET OCEAN COTE SUD - 1", date: "2026-11-07T12:30:00+00:00", score: null, is_played: false },
+        ],
+      },
+    },
+    rank: {
+      state: "1",
+      attributes: {
+        standings: [
+          { position: 1, team_name: T, team_url: team(1), url: team(1) },
+          { position: 2, team_name: "BISCARROSSE OLYMPIQUE BASKET", team_url: team(2), url: team(2) },
+          { position: 3, team_name: "BASKET OCEAN COTE SUD", team_url: team(3), url: team(3) },
+          { position: 4, team_name: "MAGESCQ BASKET", team_url: team(4), url: team(4) },
+          { position: 5, team_name: "BASKET BIAUDOS ST MARTIN DE SEIG", team_url: team(5), url: team(5) },
+        ],
+      },
+    },
+    matchInProgress: { state: "off" },
+  };
+
+  const at = (matchIndex) =>
+    computeViewModel({
+      entities,
+      config: { entity: "sensor.ujsbp_u13m_poule" },
+      lang: "fr",
+      now: new Date("2026-09-21T10:00:00"),
+      matchIndex,
+    });
+
+  it("J1 (played, home): both crests and both links resolve", () => {
+    const vm = at(0);
+    expect([vm.leftName, vm.rightName]).toEqual([T, "MAGESCQ BASKET"]);
+    expect([vm.leftLogo, vm.rightLogo]).toEqual([MY, MAGESCQ]);
+    expect([vm.leftUrl, vm.rightUrl]).toEqual([team(1), team(4)]);
+    expect(vm.isPostMatch).toBe(true);
+  });
+
+  it("J2 (next match, away): the opponent sits on the left with its own crest", () => {
+    const vm = at(1);
+    expect([vm.leftName, vm.rightName]).toEqual(["BASKET BIAUDOS ST MARTIN DE SEIG", T]);
+    expect([vm.leftLogo, vm.rightLogo]).toEqual([BIAUDOS, MY]);
+    expect([vm.leftUrl, vm.rightUrl]).toEqual([team(5), team(1)]);
+    expect(vm.isPostMatch).toBe(false);
+  });
+
+  it("J3: never shows the next opponent's crest for a different club, but still links to it", () => {
+    const vm = at(2);
+    expect(vm.leftLogo).not.toBe(BIAUDOS);
+    expect(vm.leftLogo).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(vm.rightLogo).toBe(MY);
+    expect(vm.leftUrl).toBe(team(2));
+    expect(vm.rightUrl).toBe(team(1));
+  });
+
+  it("J5 (later home match): my crest on the left, default crest and standings link for the opponent", () => {
+    const vm = at(3);
+    expect(vm.leftLogo).toBe(MY);
+    expect(vm.rightLogo).toBe(DEFAULT_FALLBACK_LOGO);
+    expect([vm.leftUrl, vm.rightUrl]).toEqual([team(1), team(3)]);
+  });
+
+  it("never returns a nullish crest or an empty href on any match", () => {
+    for (let i = 0; i < 4; i++) {
+      const vm = at(i);
+      expect(vm.leftLogo).toBeTruthy();
+      expect(vm.rightLogo).toBeTruthy();
+      expect(vm.leftUrl).toBeTruthy();
+      expect(vm.rightUrl).toBeTruthy();
+    }
+  });
+
+  it("keeps the round and venue consistent with the match shown", () => {
+    expect(at(0).roundNumber).toBe("1");
+    expect(at(2).roundNumber).toBe("3");
+    expect(at(1).isHome).toBe(false);
+    expect(at(3).isHome).toBe(true);
+  });
+
+  it("clamps an out-of-range index instead of crashing", () => {
+    expect(at(99).leftName).toBe(T);
+    expect(at(-5).rightName).toBe("MAGESCQ BASKET");
+  });
+
+  it("without an index (no carousel), falls back to the sensors' own crests", () => {
+    const vm = computeViewModel({
+      entities,
+      config: { entity: "sensor.ujsbp_u13m_poule" },
+      lang: "fr",
+      now: new Date("2026-09-21T10:00:00"),
+      manualView: "next",
+    });
+    expect([vm.leftLogo, vm.rightLogo]).toEqual([BIAUDOS, MY]);
+  });
+
+  it("a row-level logo or link, when the integration provides one, wins over every fallback", () => {
+    const withLogos = {
+      ...entities,
+      poule: {
+        ...entities.poule,
+        attributes: {
+          ...entities.poule.attributes,
+          calendar: entities.poule.attributes.calendar.map((m) =>
+            m.round === 3
+              ? { ...m, home_logo: "https://x.test/bisc.png", home_url: "https://x.test/bisc" }
+              : m
+          ),
+        },
+      },
+    };
+    const vm = computeViewModel({
+      entities: withLogos,
+      config: { entity: "sensor.ujsbp_u13m_poule" },
+      lang: "fr",
+      now: new Date("2026-09-21T10:00:00"),
+      matchIndex: 2,
+    });
+    expect(vm.leftLogo).toBe("https://x.test/bisc.png");
+    expect(vm.leftUrl).toBe("https://x.test/bisc");
+  });
+});
+
+describe("findTeamUrl: opponent and own-team resolution", () => {
+  const entities = {
+    rank: {
+      attributes: {
+        standings: [
+          { team_name: "US Dax", team_url: "https://x.test/dax" },
+          { team_name: "Basket Landes", url: "https://x.test/landes" },
+        ],
+      },
+    },
+  };
+
+  it("uses the opponent sensor's opponent_url for the opponent side", () => {
+    const url = findTeamUrl({
+      isHome: false,
+      teamName: "US Dax",
+      entities,
+      opponentSensor: { attributes: { opponent_url: "https://x.test/sensor-dax" } },
+    });
+    expect(url).toBe("https://x.test/sensor-dax");
+  });
+
+  it("uses the sensor's team_url for my own side, then the standings", () => {
+    expect(
+      findTeamUrl({ isHome: true, teamName: "Basket Landes", entities, opponentSensor: { attributes: { team_url: "https://x.test/me" } } })
+    ).toBe("https://x.test/me");
+    expect(findTeamUrl({ isHome: true, teamName: "Basket Landes", entities, opponentSensor: null })).toBe("https://x.test/landes");
+  });
+
+  it("falls back to the standings by team name for the opponent", () => {
+    expect(findTeamUrl({ isHome: false, teamName: "US Dax", entities, opponentSensor: null })).toBe("https://x.test/dax");
+  });
+
+  it("returns null rather than a competition URL when nothing matches", () => {
+    expect(findTeamUrl({ isHome: false, teamName: "Nobody", entities, opponentSensor: null })).toBeNull();
+    expect(findTeamUrl()).toBeNull();
+  });
+
+  it("rejects an unsafe URL coming from a sensor", () => {
+    const url = findTeamUrl({
+      isHome: false,
+      teamName: "Nobody",
+      entities: {},
+      opponentSensor: { attributes: { opponent_url: "javascript:alert(1)" } },
+    });
+    expect(url).toBeNull();
   });
 });

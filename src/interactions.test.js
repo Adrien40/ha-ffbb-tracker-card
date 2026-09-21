@@ -1723,3 +1723,224 @@ describe("feedback when the custom accent color is not a valid color", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 });
+describe("text built from several fields keeps its separators", () => {
+  let openSpy;
+
+  beforeEach(() => {
+    openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("_openMaps() separates gym and city with a space", () => {
+    makeCard()._openMaps("SALLE DE BIAUDOS", "BIAUDOS");
+    expect(openSpy.mock.calls[0][0]).toContain("query=SALLE%20DE%20BIAUDOS%20BIAUDOS");
+  });
+
+  it("_openMaps() has no dangling separator when the city is missing", () => {
+    makeCard()._openMaps("SALLE DE BIAUDOS", "");
+    const url = openSpy.mock.calls[0][0];
+    expect(url).toContain("query=SALLE%20DE%20BIAUDOS");
+    expect(url.endsWith("%20")).toBe(false);
+  });
+
+  it("_openCalendar() puts spaces around 'vs' in the title and the details", () => {
+    makeCard()._openCalendar("2026-09-26T14:00:00Z", "BASKET BIAUDOS", "UJSBP", "SALLE DE BIAUDOS", "BIAUDOS");
+    const url = openSpy.mock.calls[0][0];
+    expect(url).toContain("text=BASKET%20BIAUDOS%20vs%20UJSBP");
+    expect(url).toContain(`details=${encodeURIComponent("FFBB match: BASKET BIAUDOS vs UJSBP")}`);
+  });
+
+  it("_openCalendar() separates gym and city in the location", () => {
+    makeCard()._openCalendar("2026-09-26T14:00:00Z", "A", "B", "SALLE DE BIAUDOS", "BIAUDOS");
+    expect(openSpy.mock.calls[0][0]).toContain(`location=${encodeURIComponent("SALLE DE BIAUDOS BIAUDOS")}`);
+  });
+
+  it("_openCalendar() location is just the gym when there is no city", () => {
+    makeCard()._openCalendar("2026-09-26T14:00:00Z", "A", "B", "SALLE DE BIAUDOS", "");
+    expect(openSpy.mock.calls[0][0]).toContain(`location=${encodeURIComponent("SALLE DE BIAUDOS")}`);
+  });
+});
+
+describe("carousel and calendar modal on a real FFBB dataset", () => {
+  const T = "UNION JEUN SP BUGLOSE PONTONX";
+  const asset = (id) => `https://api.ffbb.app/assets/${id}?height=220&fit=contain&format=avif`;
+  const MY = asset("c6d1d2fc");
+  const MAGESCQ = asset("4777cdef");
+  const BIAUDOS = asset("3b1c5eb8");
+  const team = (n) => `https://competitions.ffbb.com/equipes/${n}`;
+  const ENTITY = "sensor.ujsbp_u13m_prochain_match_adversaire";
+
+  const STATES = {
+    [ENTITY]: {
+      state: "BASKET BIAUDOS ST MARTIN DE SEIG",
+      attributes: { is_home: false, team_url: team(1), opponent_url: team(5), team_logo_url: MY, opponent_logo_url: BIAUDOS },
+    },
+    "sensor.ujsbp_u13m_prochain_match_date": { state: "2099-09-26T14:00:00+00:00", attributes: { round: 2 } },
+    "sensor.ujsbp_u13m_prochain_match_terrain": { state: "away", attributes: { is_home: false } },
+    "sensor.ujsbp_u13m_dernier_match_adversaire": {
+      state: "MAGESCQ BASKET",
+      attributes: { team_url: team(1), opponent_url: team(4), team_logo_url: MY, opponent_logo_url: MAGESCQ },
+    },
+    "sensor.ujsbp_u13m_dernier_match_date": { state: "2026-09-19T11:00:00+00:00", attributes: { round: 1 } },
+    "sensor.ujsbp_u13m_dernier_match_score": { state: "51 - 46" },
+    "sensor.ujsbp_u13m_poule": {
+      state: "D2 Poule B",
+      attributes: {
+        team: T,
+        competition: "Départementale masculine U13 - Division 2",
+        calendar: [
+          { round: 1, home_team: T, away_team: "MAGESCQ BASKET", date: "2026-09-19T11:00:00+00:00", score: "51 - 46", is_played: true },
+          { round: 2, home_team: "BASKET BIAUDOS ST MARTIN DE SEIG", away_team: T, date: "2099-09-26T14:00:00+00:00", score: null, is_played: false },
+          { round: 3, home_team: "BISCARROSSE OLYMPIQUE BASKET - 1", away_team: T, date: "2099-10-10T11:30:00+00:00", score: null, is_played: false },
+        ],
+      },
+    },
+    "sensor.ujsbp_u13m_classement": {
+      state: "1",
+      attributes: {
+        standings: [
+          { position: 1, team_name: T, team_url: team(1) },
+          { position: 2, team_name: "BISCARROSSE OLYMPIQUE BASKET", team_url: team(2) },
+          { position: 4, team_name: "MAGESCQ BASKET", team_url: team(4) },
+          { position: 5, team_name: "BASKET BIAUDOS ST MARTIN DE SEIG", team_url: team(5) },
+        ],
+      },
+    },
+    "binary_sensor.ujsbp_u13m_match_en_cours": { state: "off" },
+  };
+
+  let el;
+
+  async function mount(config = {}) {
+    const Card = customElements.get("ffbb-tracker-card");
+    el = new Card();
+    el.setConfig({ entity: ENTITY, ...config });
+    el.hass = { states: STATES, locale: { language: "fr-FR" } };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    return el;
+  }
+
+  const logos = () => [...el.shadowRoot.querySelectorAll("img.logo")].map((i) => i.getAttribute("src"));
+
+  async function goTo(index) {
+    el._matchIndex = index;
+    await el.updateComplete;
+  }
+
+  afterEach(() => {
+    el?.remove();
+    vi.restoreAllMocks();
+  });
+
+  it("shows each match's own two crests as the carousel moves", async () => {
+    await mount();
+    await goTo(0);
+    expect(logos()).toEqual([MY, MAGESCQ]);
+    await goTo(1);
+    expect(logos()).toEqual([BIAUDOS, MY]);
+  });
+
+  it("shows the default crest (not another club's) for a club with no known logo", async () => {
+    await mount();
+    await goTo(2);
+    const [left, right] = logos();
+    expect(left).toBe(DEFAULT_FALLBACK_LOGO);
+    expect(right).toBe(MY);
+    expect(left).not.toBe(BIAUDOS);
+  });
+
+  it("clicking a logo opens that team's page on every match", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+    await mount();
+
+    const expected = [
+      [team(1), team(4)],
+      [team(5), team(1)],
+      [team(2), team(1)],
+    ];
+    for (let i = 0; i < expected.length; i++) {
+      await goTo(i);
+      openSpy.mockClear();
+      const [left, right] = el.shadowRoot.querySelectorAll(".logo-box");
+      left.click();
+      right.click();
+      expect(openSpy.mock.calls.map((c) => c[0]), `match ${i}`).toEqual(expected[i]);
+      expect(openSpy.mock.calls.every((c) => c[1] === "_blank" && c[2] === "noreferrer")).toBe(true);
+    }
+  });
+
+  it("does not fall back to the more-info dialog when a link exists", async () => {
+    vi.spyOn(window, "open").mockImplementation(() => {});
+    await mount();
+    await goTo(2);
+    const moreInfo = vi.fn();
+    el.addEventListener("hass-more-info", moreInfo);
+    el.shadowRoot.querySelector(".logo-box").click();
+    expect(moreInfo).not.toHaveBeenCalled();
+  });
+
+  it("logo_click_action 'none' opens nothing", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+    await mount({ logo_click_action: "none" });
+    await goTo(1);
+    el.shadowRoot.querySelectorAll(".logo-box").forEach((b) => b.click());
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it("the calendar modal shows the score with a space around the dash", async () => {
+    await mount();
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const scores = [...el.shadowRoot.querySelectorAll(".cal-score")].map((n) => n.textContent.trim());
+    expect(scores).toEqual(["51 - 46"]);
+  });
+
+  it("the calendar modal builds a score from numeric fields with spaces too", async () => {
+    await mount();
+    const states = structuredClone(STATES);
+    states["sensor.ujsbp_u13m_poule"].attributes.calendar = [
+      { round: 1, home_team: T, away_team: "MAGESCQ BASKET", home_score: 65, away_score: 60, is_played: true },
+    ];
+    el.hass = { states, locale: { language: "fr-FR" } };
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    expect(el.shadowRoot.querySelector(".cal-score").textContent.trim()).toBe("65 - 60");
+  });
+
+  it("the calendar modal shows the right crest per team and no other club's crest", async () => {
+    await mount();
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const srcs = [...el.shadowRoot.querySelectorAll(".cal-mini-logo")].map((i) => i.getAttribute("src"));
+    expect(srcs).toEqual([
+      MY, MAGESCQ,
+      BIAUDOS, MY,
+      DEFAULT_FALLBACK_LOGO, MY,
+    ]);
+  });
+
+  it("the calendar modal marks my rows and the next match", async () => {
+    await mount();
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const rows = el.shadowRoot.querySelectorAll(".calendar-row");
+    expect(rows).toHaveLength(3);
+    expect([...rows].every((r) => r.classList.contains("highlight-row"))).toBe(true);
+    expect([...rows].map((r) => r.classList.contains("next-match-row"))).toEqual([false, true, false]);
+  });
+
+  it("a broken crest URL is swapped once for the default and never loops", async () => {
+    await mount();
+    await goTo(0);
+    const img = el.shadowRoot.querySelector("img.logo");
+    img.dispatchEvent(new Event("error"));
+    expect(img.src.endsWith(DEFAULT_FALLBACK_LOGO)).toBe(true);
+    const after = img.src;
+    img.dispatchEvent(new Event("error"));
+    expect(img.src).toBe(after);
+  });
+});
