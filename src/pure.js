@@ -121,7 +121,6 @@ export function findOpponentRank(opponentName, standings) {
     return null;
   }
 
-  // 1. Strict exact equality pass
   let found = standings.find((item) => {
     if (!item) return false;
     const team = item.team_name || item.name;
@@ -129,7 +128,6 @@ export function findOpponentRank(opponentName, standings) {
     return Boolean(itemClean && itemClean === oppClean);
   });
 
-  // 2. Substring fallback pass
   if (!found) {
     found = standings.find((item) => {
       if (!item) return false;
@@ -191,13 +189,11 @@ export function findUrlInStandings(teamName, standings, urlKeys) {
     return null;
   }
 
-  // 1. Strict exact equality pass
   let match = standings.find((item) => {
     const itemClean = cleanForMatch(item?.team_name || item?.name || "");
     return Boolean(itemClean && itemClean === targetClean);
   });
 
-  // 2. Substring fallback pass
   if (!match) {
     match = standings.find((item) => {
       const itemClean = cleanForMatch(item?.team_name || item?.name || "");
@@ -252,7 +248,7 @@ export function extractCalendarMatches(entities, configuredEntity) {
 }
 
 /**
- * Resolve a raw URL-ish attribute value into a safe absolute http(s) URL.
+ * Resolve a raw URL-ish attribute value into a safe absolute http(s) URL or local path.
  */
 export function sanitizeUrl(u) {
   if (!u || typeof u !== "string") {
@@ -260,6 +256,9 @@ export function sanitizeUrl(u) {
   }
   const trimmed = u.trim();
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/local/") || trimmed.startsWith("/api/")) {
     return trimmed;
   }
   if (trimmed.startsWith("/")) {
@@ -550,6 +549,76 @@ export function findTeamUrl({
 }
 
 /**
+ * Resolve a team logo for a calendar match row.
+ * Prioritizes direct match object logo, then team sensor logo (if my team),
+ * then opponent sensor logo (if matching next/last opponent),
+ * then standings table lookup, and falls back to DEFAULT_FALLBACK_LOGO.
+ */
+export function resolveCalendarTeamLogo({
+  teamName = "",
+  matchLogo = null,
+  isMyTeam = false,
+  myTeamLogo = null,
+  nextOpponentState = null,
+  nextOpponentLogo = null,
+  lastOpponentState = null,
+  lastOpponentLogo = null,
+  standings = null,
+} = {}) {
+  const safeDirect = sanitizeUrl(matchLogo);
+  if (safeDirect) {
+    return safeDirect;
+  }
+
+  if (isMyTeam && myTeamLogo && myTeamLogo !== DEFAULT_FALLBACK_LOGO) {
+    return myTeamLogo;
+  }
+
+  const targetClean = cleanForMatch(teamName);
+  if (!targetClean) {
+    return DEFAULT_FALLBACK_LOGO;
+  }
+
+  const nextClean = cleanForMatch(nextOpponentState || "");
+  if (nextClean && (nextClean === targetClean || nextClean.includes(targetClean) || targetClean.includes(nextClean))) {
+    const safeOpp = sanitizeUrl(nextOpponentLogo);
+    if (safeOpp) {
+      return safeOpp;
+    }
+  }
+
+  const lastClean = cleanForMatch(lastOpponentState || "");
+  if (lastClean && (lastClean === targetClean || lastClean.includes(targetClean) || targetClean.includes(lastClean))) {
+    const safeLastOpp = sanitizeUrl(lastOpponentLogo);
+    if (safeLastOpp) {
+      return safeLastOpp;
+    }
+  }
+
+  if (Array.isArray(standings) && standings.length > 0) {
+    const foundInStandings = findUrlInStandings(teamName, standings, [
+      "team_logo_url",
+      "opponent_logo_url",
+      "logo_url",
+      "logo",
+      "url_logo",
+      "team_logo",
+      "club_logo",
+      "crest",
+    ]);
+    if (foundInStandings) {
+      return foundInStandings;
+    }
+  }
+
+  if (isMyTeam && myTeamLogo) {
+    return myTeamLogo;
+  }
+
+  return DEFAULT_FALLBACK_LOGO;
+}
+
+/**
  * Pure view-model derivation: turns raw entity state + configuration into the
  * flat set of structured values the template requires.
  */
@@ -560,8 +629,6 @@ export function computeViewModel({
   matchIndex = null,
   states = {},
   lang = "fr",
-  // Full locale (e.g. "en-GB") and 12/24h choice used ONLY for dates and times;
-  // `lang` (2 letters) keeps driving translations and ordinals.
   locale = null,
   hour12 = undefined,
   t = (k, fallback = "") => fallback,
@@ -757,7 +824,6 @@ export function computeViewModel({
   const formSequence = entities.form?.state;
   const hasValidForm = isValidState(formSequence);
 
-  // Form letters are always French (V = win, D = loss, N = draw), see the form modal.
   const displayFormSequence = hasValidForm ? formSequence : (isPreview ? "V-V-D-V-N" : "");
   const displayFormStreak = hasValidForm ? formStreak : (isPreview ? "2V" : "");
   const showFormBlock = config.show_form && (hasValidForm || isPreview);
