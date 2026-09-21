@@ -709,6 +709,8 @@ export const cardStyles = css`
     align-items: center;
     gap: 8px;
     padding: 5px 8px;
+    min-height: 44px;
+    box-sizing: border-box;
     border-radius: 8px;
     background: var(--secondary-background-color, rgba(255, 255, 255, 0.04));
     cursor: pointer;
@@ -791,14 +793,19 @@ export const cardStyles = css`
     color: var(--ffbb-accent-color, #ff6b00);
   }
   .calendar-col-meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
     text-align: right;
-    min-width: 56px;
+    min-width: 58px;
   }
   .cal-score {
     font-weight: 800;
-    font-size: 0.92em;
+    font-size: 1.15em;
     color: var(--primary-text-color);
-    line-height: 1.2;
+    line-height: 1;
+    letter-spacing: 0.5px;
   }
   .cal-date {
     font-size: 0.76em;
