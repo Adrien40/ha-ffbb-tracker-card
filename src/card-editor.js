@@ -122,7 +122,10 @@ class FFBBCardEditor extends LitElement {
       {
         name: "title",
         label: this._t("editor.title", "Title"),
-        helper: this._t("editor.title_helper", 'Leave blank for a dynamic default title ("Next match" / "Live match" / "Last match")'),
+        helper: this._t(
+          "editor.title_helper",
+          'Leave blank for a dynamic default title ("Next match" / "Live match" / "Last match"). If filled in, it is shown as a prefix before that dynamic title.'
+        ),
         selector: { text: {} },
       },
       {
@@ -257,6 +260,16 @@ class FFBBCardEditor extends LitElement {
                     },
                   },
                 },
+                {
+                  name: "standings_popup_detailed",
+                  label: this._t("editor.standings_popup_detailed", "Detailed standings in popup"),
+                  helper: this._t(
+                    "editor.standings_popup_detailed_helper",
+                    "Show the full table (same columns as the secondary standings card) instead of the simple one."
+                  ),
+                  default: false,
+                  selector: { boolean: {} },
+                },
               ]
             : []),
         ],
@@ -276,7 +289,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "standings_card",
         type: "expandable",
-        title: this._t("editor.standings_card_section", "Standings card"),
+        title: this._t("editor.standings_card_section", "Standalone standings card"),
         icon: "mdi:card-multiple-outline",
         flatten: true,
         schema: [

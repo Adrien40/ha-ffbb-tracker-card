@@ -85,7 +85,11 @@ export const DETAILED_COLUMNS = {
   ],
 };
 
-function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
+// Exported so the standings popup (opened from the rank badges, in
+// ha-ffbb-tracker-card.js) can render the exact same detailed table when
+// the user turns on "standings_popup_detailed" -- one table implementation,
+// used in two places, instead of a second copy that could drift.
+export function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
   const { matches, singles, penalties, points } = DETAILED_COLUMNS;
   const label = (col) => t(`card.${col.key}`, col.fb);
   const title = (col) => t(`card.${col.full}`, col.fullFb);
@@ -212,6 +216,19 @@ export const standingsBlockStyles = css`
   .standings-card-header ha-icon {
     color: var(--ffbb-accent-color, #ff6b00);
     --mdc-icon-size: 20px;
+  }
+  /* Standing alone as the only card on the dashboard (display_mode
+     "standings", compact === false), the title reads at the exact same
+     size/weight as the match card's own header (.card-header in styles.js:
+     1.7em, weight 600, 28px icon) instead of the smaller size used when
+     this card sits under the match card ("both", compact === true). */
+  .standings-card:not(.standings-compact) .standings-card-header {
+    padding: 16px 16px 0 16px;
+    font-size: 1.7em;
+    font-weight: 600;
+  }
+  .standings-card:not(.standings-compact) .standings-card-header ha-icon {
+    --mdc-icon-size: 28px;
   }
   .standings-card-subtitle {
     padding: 0 16px 6px;

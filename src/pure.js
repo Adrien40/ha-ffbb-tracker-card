@@ -168,6 +168,29 @@ export function formatRank(rank, lang) {
 }
 
 /**
+ * Split a post-match score string ("51 - 46") into { my, opponent }, so the
+ * card can style its own team's number distinctly from the opponent's
+ * (quick "am I winning?" reading, instead of two identical-looking numbers).
+ *
+ * The FFBB score string is always formatted "home - away" (see the
+ * "UJSBP U13M" fixture in pure.test.js: is_home true + score "51 - 46" means
+ * the home team, ours, scored 51) -- `isHome` is the same flag already used
+ * everywhere else in this file to order left/right, so no new data source is
+ * needed here.
+ *
+ * Returns null (never guesses) when the string isn't a clean "NN - NN" pair
+ * -- forfeits, walkovers, or a missing score ("-") all fall back to plain
+ * text in the caller.
+ */
+export function splitScore(score, isHome) {
+  if (typeof score !== "string") return null;
+  const match = score.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+  if (!match) return null;
+  const [, first, second] = match;
+  return isHome ? { my: first, opponent: second } : { my: second, opponent: first };
+}
+
+/**
  * Find a team's url-ish attribute by fuzzy name match against a standings
  * array, trying each key in `urlKeys` in order on the matched row.
  * Strictly prioritizes exact match before substring inclusion.
@@ -962,7 +985,11 @@ export function computeViewModel({
   } else if (isPostMatch) {
     defaultTitle = t("card.last_title", "Last match");
   }
-  const titleText = configuredTitle || defaultTitle;
+  // A custom title is shown as a PREFIX in front of the dynamic status
+  // ("Next match" / "Live match" / "Last match"), the same way a custom
+  // standings_title is a prefix in front of the pool name below -- instead
+  // of replacing it outright and losing that live-status information.
+  const titleText = configuredTitle ? `${configuredTitle} • ${defaultTitle}` : defaultTitle;
   const titleIcon = config.icon !== undefined ? config.icon : "mdi:basketball";
   const logoSizeClass = `logo-box-${config.logo_size || "medium"}`;
 
@@ -1001,6 +1028,7 @@ export function computeViewModel({
 
   const displayedScore = currentCalMatch?.score || entities.lastScore?.state || "-";
   const displayedResult = currentCalMatch?.result || entities.lastResult?.state || "draw";
+  const scoreParts = splitScore(displayedScore, isHome);
 
   return {
     isValidState,
@@ -1019,6 +1047,7 @@ export function computeViewModel({
     calendarMatches,
     displayedScore,
     displayedResult,
+    scoreParts,
     isPostMatch,
     isGameDay,
     currentOpponentSensor,

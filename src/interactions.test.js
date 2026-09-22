@@ -1112,9 +1112,67 @@ describe("default title follows the displayed view", () => {
     expect(titleOf(await mount(states))).toBe("Live match");
   });
 
-  it("a configured title always wins", async () => {
+  it("a configured title is shown as a prefix in front of the dynamic status", async () => {
     const el = await mount(STATES, { view: "last", config: { title: "Mon équipe" } });
-    expect(titleOf(el)).toBe("Mon équipe");
+    expect(titleOf(el)).toBe("Mon équipe • Last match");
+  });
+});
+
+describe("post-match score: my number is visually distinct from the opponent's", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  // Same fixture as the title tests above: score "80 - 75", no explicit
+  // is_home attribute, which defaults to true -- so 80 is ours, 75 is AS Dax's.
+  const STATES = {
+    "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+    "sensor.basket_landes_prochain_match_date": { state: "2099-09-19T20:00:00" },
+    "sensor.basket_landes_dernier_match_score": { state: "80 - 75" },
+    "sensor.basket_landes_dernier_match_adversaire": { state: "AS Dax" },
+    "sensor.basket_landes_dernier_match_date": { state: "2026-09-12T20:00:00" },
+    "binary_sensor.basket_landes_match_en_cours": { state: "off" },
+  };
+
+  async function mount(states, { view } = {}) {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.hass = { language: "en", locale: { language: "en" }, states };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    if (view) {
+      el._setManualView(view);
+      await el.updateComplete;
+    }
+    return el;
+  }
+
+  it("puts the home score (ours, is_home defaults true) in .score-mine and the opponent's in .score-theirs", async () => {
+    const el = await mount(STATES, { view: "last" });
+    expect(el.shadowRoot.querySelector(".score-mine")?.textContent.trim()).toBe("80");
+    expect(el.shadowRoot.querySelector(".score-theirs")?.textContent.trim()).toBe("75");
+  });
+
+  it("swaps which number is 'mine' when the match was away (is_home: false)", async () => {
+    const states = {
+      ...STATES,
+      "sensor.basket_landes_dernier_match_score": { state: "80 - 75", attributes: { is_home: false } },
+    };
+    const el = await mount(states, { view: "last" });
+    expect(el.shadowRoot.querySelector(".score-mine")?.textContent.trim()).toBe("75");
+    expect(el.shadowRoot.querySelector(".score-theirs")?.textContent.trim()).toBe("80");
+  });
+
+  it("still shows the full score as plain text (no split) when it isn't a clean 'NN - NN' pair", async () => {
+    const states = {
+      ...STATES,
+      "sensor.basket_landes_dernier_match_score": { state: "Forfait" },
+    };
+    const el = await mount(states, { view: "last" });
+    expect(el.shadowRoot.querySelector(".score-mine")).toBeNull();
+    expect(el.shadowRoot.querySelector(".score-theirs")).toBeNull();
+    expect(el.shadowRoot.querySelector(".score-display")?.textContent.trim()).toBe("Forfait");
   });
 });
 
@@ -1272,6 +1330,66 @@ describe("standings modal highlighting", () => {
   });
 });
 
+describe("standings_popup_detailed", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  async function mountAndOpen(config = {}) {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire", ...config });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "AS Dax" },
+        "sensor.basket_landes_poule": { state: "Poule A", attributes: { team: "Basket Landes" } },
+        "sensor.basket_landes_classement": {
+          state: "1",
+          attributes: {
+            standings: [
+              { position: 1, team_name: "Basket Landes", points: 10, played: 5, wins: 5, losses: 0, draws: 0, irregularities: 0 },
+              { position: 2, team_name: "AS Dax", points: 8, played: 5, wins: 4, losses: 1, draws: 0, irregularities: 1 },
+            ],
+          },
+        },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    el.shadowRoot.querySelector(".clickable-badge").click();
+    await el.updateComplete;
+    return el;
+  }
+
+  it("defaults to the simple table (#, team, Pts, J G P N) when left off", async () => {
+    const el = await mountAndOpen();
+    expect(el.shadowRoot.querySelector(".modal-card .standings-table-detailed")).toBeNull();
+    const headerCount = el.shadowRoot.querySelectorAll(".modal-card .standings-table thead th").length;
+    expect(headerCount).toBe(7);
+  });
+
+  it("standings_popup_detailed: true swaps in the same detailed table as the standalone standings card", async () => {
+    const el = await mountAndOpen({ standings_popup_detailed: true });
+    const table = el.shadowRoot.querySelector(".modal-card .standings-table-detailed");
+    expect(table).not.toBeNull();
+    // The detailed table has many more columns (Games J G P N, I, penalties,
+    // forfeits, defaults, referee/coach penalties, points scored/conceded/diff)
+    // than the simple popup table's 7 -- a loose but robust way to tell them
+    // apart without hard-coding every FFBB column label.
+    const cellCount = el.shadowRoot.querySelectorAll(".modal-card .standings-table-detailed tbody tr:first-child td").length;
+    expect(cellCount).toBeGreaterThan(7);
+  });
+
+  it("still shows the simple table when the standings modal isn't the active one (no crash from the new branch)", async () => {
+    const el = await mountAndOpen({ standings_popup_detailed: true });
+    el.shadowRoot.querySelector(".modal-close-btn").click();
+    await el.updateComplete;
+    expect(el.shadowRoot.querySelector(".modal-card")).toBeNull();
+  });
+});
+
 describe("card-editor.js section titles come from the translation files", () => {
   afterEach(() => {
     document.body.innerHTML = "";
@@ -1287,18 +1405,18 @@ describe("card-editor.js section titles come from the translation files", () => 
     return el.shadowRoot.querySelector("ha-form").schema;
   }
 
-  it("English UI shows 'Logos', 'Ranking' and 'Standings card' (not the hard-coded French fallback)", async () => {
+  it("English UI shows 'Logos', 'Ranking' and 'Standalone standings card' (not the hard-coded French fallback)", async () => {
     const schema = await schemaFor("en");
     expect(schema.find((f) => f.name === "logo").title).toBe("Logos");
     expect(schema.find((f) => f.name === "ranking").title).toBe("Ranking");
-    expect(schema.find((f) => f.name === "standings_card").title).toBe("Standings card");
+    expect(schema.find((f) => f.name === "standings_card").title).toBe("Standalone standings card");
   });
 
-  it("French UI shows 'Logos', 'Classement' and 'Carte classement'", async () => {
+  it("French UI shows 'Logos', 'Classement' and 'Carte classement indépendante'", async () => {
     const schema = await schemaFor("fr");
     expect(schema.find((f) => f.name === "logo").title).toBe("Logos");
     expect(schema.find((f) => f.name === "ranking").title).toBe("Classement");
-    expect(schema.find((f) => f.name === "standings_card").title).toBe("Carte classement");
+    expect(schema.find((f) => f.name === "standings_card").title).toBe("Carte classement indépendante");
   });
 });
 

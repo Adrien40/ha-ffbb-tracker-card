@@ -23,6 +23,7 @@ import {
   DEFAULT_FALLBACK_LOGO,
   resolveDisplayMode,
   estimateCardSize,
+  splitScore,
 } from "./pure.js";
 import { getTranslations, translate } from "./translations.js";
 
@@ -162,6 +163,30 @@ describe("formatRank", () => {
 
   it("accepts numeric strings, same as sensor state", () => {
     expect(formatRank("5", "en")).toBe("5th");
+  });
+});
+
+describe("splitScore", () => {
+  it("puts the home number first as 'my' when isHome is true", () => {
+    expect(splitScore("51 - 46", true)).toEqual({ my: "51", opponent: "46" });
+  });
+
+  it("puts the away number first as 'my' when isHome is false (the home number is the opponent's)", () => {
+    expect(splitScore("51 - 46", false)).toEqual({ my: "46", opponent: "51" });
+  });
+
+  it("tolerates extra/missing whitespace around the dash", () => {
+    expect(splitScore("80-75", true)).toEqual({ my: "80", opponent: "75" });
+    expect(splitScore("80   -   75", true)).toEqual({ my: "80", opponent: "75" });
+  });
+
+  it("returns null for anything that isn't a clean 'NN - NN' score (walkover, missing score, non-string)", () => {
+    expect(splitScore("-", true)).toBeNull();
+    expect(splitScore("", true)).toBeNull();
+    expect(splitScore(undefined, true)).toBeNull();
+    expect(splitScore(null, true)).toBeNull();
+    expect(splitScore("Forfeit", true)).toBeNull();
+    expect(splitScore("20 - 0 (forfait)", true)).toBeNull();
   });
 });
 
@@ -767,8 +792,15 @@ describe("computeViewModel default title", () => {
     expect(run({ entities: live }).titleText).toBe("Live match");
   });
 
-  it("a configured title overrides the default in every view", () => {
-    expect(run({ manualView: "last", config: { entity: "sensor.x", title: "  Mon titre " } }).titleText).toBe("Mon titre");
+  it("a configured title is shown as a prefix in front of the dynamic status, in every view", () => {
+    expect(run({ manualView: "last", config: { entity: "sensor.x", title: "  Mon titre " } }).titleText).toBe("Mon titre • Last match");
+    expect(run({ manualView: "next", config: { entity: "sensor.x", title: "Mon titre" } }).titleText).toBe("Mon titre • Next match");
+    const live = { ...entities, matchInProgress: { state: "on" } };
+    expect(run({ entities: live, config: { entity: "sensor.x", title: "Mon titre" } }).titleText).toBe("Mon titre • Live match");
+  });
+
+  it("with no configured title, is just the dynamic status (unchanged, no dangling separator)", () => {
+    expect(run({ manualView: "last" }).titleText).toBe("Last match");
   });
 
   it("uses real translations: fr.json defines live_title / last_title", () => {
@@ -1145,6 +1177,12 @@ describe("carousel with a real FFBB dataset (UJSBP U13M)", () => {
     expect([vm.leftLogo, vm.rightLogo]).toEqual([MY, MAGESCQ]);
     expect([vm.leftUrl, vm.rightUrl]).toEqual([team(1), team(4)]);
     expect(vm.isPostMatch).toBe(true);
+  });
+
+  it("J1: scoreParts puts our own 51 first (home) as 'my', MAGESCQ's 46 as 'opponent'", () => {
+    const vm = at(0);
+    expect(vm.displayedScore).toBe("51 - 46");
+    expect(vm.scoreParts).toEqual({ my: "51", opponent: "46" });
   });
 
   it("J2 (next match, away): the opponent sits on the left with its own crest", () => {

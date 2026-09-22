@@ -16,7 +16,7 @@ import {
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
-import { renderStandingsBlock, standingsBlockStyles } from "./standings-block.js";
+import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable } from "./standings-block.js";
 import "./card-editor.js";
 
 class FFBBCard extends LitElement {
@@ -315,6 +315,11 @@ class FFBBCard extends LitElement {
       const standingNames = standings.map((item) => item.team_name || item.name || "");
       const isMyTeamRow = createTeamMatcher(standingNames, teamName);
       const isOpponentRow = createTeamMatcher(standingNames, opponentName);
+      // Opt-in (config: standings_popup_detailed): show the exact same
+      // detailed table as the standalone standings card, instead of the
+      // simple one below, for people who never add that second card but
+      // still want the full FFBB columns from the popup.
+      const showDetailed = Boolean(this._config?.standings_popup_detailed);
 
       return html`
         <div
@@ -347,8 +352,20 @@ class FFBBCard extends LitElement {
             </div>
             ${competition ? html`<div class="modal-subtitle">${competition}</div>` : ""}
             <div class="modal-body" tabindex="0">
-              ${standings.length > 0
+              ${standings.length === 0
                 ? html`
+                    <div class="modal-empty-text">
+                      ${this._t("card.no_standings", "No standings data available.")}
+                    </div>
+                  `
+                : showDetailed
+                ? renderDetailedTable({
+                    rows: standings,
+                    teamName,
+                    displayTeamName,
+                    t: (key, fallback) => this._t(key, fallback),
+                  })
+                : html`
                     <table class="standings-table">
                       <thead>
                         <tr>
@@ -385,11 +402,6 @@ class FFBBCard extends LitElement {
                         })}
                       </tbody>
                     </table>
-                  `
-                : html`
-                    <div class="modal-empty-text">
-                      ${this._t("card.no_standings", "No standings data available.")}
-                    </div>
                   `}
             </div>
           </div>
@@ -884,7 +896,13 @@ class FFBBCard extends LitElement {
               : isPostMatch
               ? html`
                   <div class="score-display">
-                    ${vm.displayedScore}
+                    ${vm.scoreParts
+                      ? html`
+                          <span class="score-mine">${vm.scoreParts.my}</span
+                          ><span class="score-sep"> - </span
+                          ><span class="score-theirs">${vm.scoreParts.opponent}</span>
+                        `
+                      : vm.displayedScore}
                   </div>
                   <div class="badge badge-${vm.displayedResult}">
                     ${this._t(`card.${vm.displayedResult}`)}

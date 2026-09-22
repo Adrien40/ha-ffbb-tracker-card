@@ -353,6 +353,24 @@ export const cardStyles = css`
     letter-spacing: 1px;
     margin-bottom: 4px;
   }
+  /* My own score reads at a glance: bold + the card's accent color. The
+     opponent's stays visibly secondary (lighter weight, muted color) so
+     the two numbers are never confused at a quick glance. */
+  .score-mine {
+    color: var(--ffbb-accent-color, #ff6b00);
+    font-weight: 900;
+  }
+  .score-theirs {
+    color: var(--secondary-text-color);
+    font-weight: 600;
+    opacity: 0.82;
+  }
+  .score-sep {
+    color: var(--secondary-text-color);
+    font-weight: 400;
+    opacity: 0.55;
+    margin: 0 1px;
+  }
   .badge {
     display: inline-flex;
     align-items: center;

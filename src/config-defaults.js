@@ -28,6 +28,7 @@ export const DEFAULT_CONFIG = {
   display_mode: "match",
   standings_title: "",
   standings_icon: "mdi:format-list-numbered",
+  standings_popup_detailed: false,
   show_form: true,
   show_venue: true,
   show_watermark: true,

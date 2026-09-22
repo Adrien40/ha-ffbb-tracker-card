@@ -186,7 +186,7 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
   // (podium colors, etc.) -- it must not be mixed with the separate
   // "standings_card" section below, which is about the second, standalone
   // card. Two different concepts, two different expandable groups.
-  it("only ever contains show_rank and rank_badge_style -- never the standings-card fields", async () => {
+  it("only ever contains show_rank, rank_badge_style and standings_popup_detailed -- never the standings-card fields", async () => {
     for (const overrides of [{}, { show_rank: false }, { display_mode: "both" }]) {
       const el = await mountEditor(overrides);
       const names = groupSchema(el, "ranking").map((f) => f.name);
@@ -196,13 +196,13 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     }
   });
 
-  it("nests show_rank and rank_badge_style when show_rank is true (the default)", async () => {
+  it("nests show_rank, rank_badge_style and standings_popup_detailed when show_rank is true (the default)", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "ranking").map((f) => f.name);
-    expect(names).toEqual(["show_rank", "rank_badge_style"]);
+    expect(names).toEqual(["show_rank", "rank_badge_style", "standings_popup_detailed"]);
   });
 
-  it("omits rank_badge_style (but keeps show_rank) when show_rank is false", async () => {
+  it("omits rank_badge_style and standings_popup_detailed (but keeps show_rank) when show_rank is false", async () => {
     const el = await mountEditor({ show_rank: false });
     const names = groupSchema(el, "ranking").map((f) => f.name);
     expect(names).toEqual(["show_rank"]);
@@ -221,6 +221,17 @@ describe("card-editor.js schema -- \"ranking\" expandable section", () => {
     const values = field.selector.select.options.map((o) => o.value);
     expect(values).toEqual(["none", "outline", "solid"]);
   });
+
+  // The popup opened from the rank badges normally shows the simple table
+  // (#, team, Pts, J G P N). This toggle swaps it for the same detailed
+  // table (all FFBB columns) used by the standalone standings card, for
+  // people who never add that second card but still want the full detail.
+  it("gives standings_popup_detailed a boolean selector defaulting to false", async () => {
+    const el = await mountEditor();
+    const field = groupSchema(el, "ranking").find((f) => f.name === "standings_popup_detailed");
+    expect(field.default).toBe(false);
+    expect(field.selector).toEqual({ boolean: {} });
+  });
 });
 
 describe("card-editor.js schema -- \"standings_card\" expandable section", () => {
@@ -228,7 +239,7 @@ describe("card-editor.js schema -- \"standings_card\" expandable section", () =>
     const el = await mountEditor();
     const group = schemaOf(el).find((f) => f.name === "standings_card");
     expect(group.type).toBe("expandable");
-    expect(group.title).toBe("Carte classement");
+    expect(group.title).toBe("Carte classement indépendante");
     expect(group.icon).toBeTruthy();
     expect(group.flatten).toBe(true);
     expect(group.name).not.toBe("ranking");

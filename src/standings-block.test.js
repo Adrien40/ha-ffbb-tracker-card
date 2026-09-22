@@ -208,6 +208,44 @@ describe("ffbb-tracker-card with display_mode", () => {
     expect(card.classList.contains("standings-compact")).toBe(false);
   });
 
+  // Regression test for the standalone header size (previously always
+  // 1.05em/700 like the compact "both" mode, even with display_mode
+  // "standings" alone). jsdom/happy-dom don't compute layout, so this reads
+  // the CSS text directly rather than getComputedStyle -- same approach as
+  // styles.test.js.
+  describe("standalone header size matches the match card's own .card-header", () => {
+    function declarationsFor(selector) {
+      const css = standingsBlockStyles.cssText.replace(/\/\*[\s\S]*?\*\//g, "");
+      const merged = {};
+      for (const [, selectors, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const list = selectors.split(",").map((s) => s.trim());
+        if (!list.includes(selector)) continue;
+        for (const decl of body.split(";")) {
+          const idx = decl.indexOf(":");
+          if (idx === -1) continue;
+          merged[decl.slice(0, idx).trim()] = decl.slice(idx + 1).trim();
+        }
+      }
+      return merged;
+    }
+
+    it("bumps the header to the match card's 1.7em / weight 600 when NOT compact", () => {
+      const decl = declarationsFor(".standings-card:not(.standings-compact) .standings-card-header");
+      expect(decl["font-size"]).toBe("1.7em");
+      expect(decl["font-weight"]).toBe("600");
+    });
+
+    it("bumps the header icon to the match card's 28px when NOT compact", () => {
+      const decl = declarationsFor(".standings-card:not(.standings-compact) .standings-card-header ha-icon");
+      expect(decl["--mdc-icon-size"]).toBe("28px");
+    });
+
+    it("leaves the smaller 1.05em header alone for the compact (\"both\") case", () => {
+      const decl = declarationsFor(".standings-card-header");
+      expect(decl["font-size"]).toBe("1.05em");
+    });
+  });
+
   it("shows an empty-state message (not a vanished card) when the pool has no standings data", async () => {
     const states = { ...STATES, "sensor.basket_landes_classement": { state: "1", attributes: {} } };
     const el = await mountCard({ display_mode: "both" }, states);
