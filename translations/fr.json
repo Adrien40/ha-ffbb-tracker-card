@@ -12,6 +12,8 @@
     "win": "Victoire",
     "loss": "Défaite",
     "draw": "Nul",
+    "your_score": "Notre score",
+    "opponent_score": "Score adversaire",
     "form": "Forme",
     "preview_example": "exemple",
     "open_maps": "Ouvrir dans Google Maps",
