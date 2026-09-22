@@ -26,7 +26,7 @@ If you find this project useful, you can support its development 🙏
 * 🔄 **Dynamic Match Carousel:** Step through every match of the season with the navigation chevrons (or tap a row of the season schedule to jump straight to it). Without a calendar, the chevrons toggle between the last and the next match.
 * ⏱️ **Adaptive Match Display:**
   * **Pre-match:** Day, date, and tip-off time, plus a "Game day" badge on the day of the match (a "Postponed" badge replaces it when the fixture is postponed).
-  * **Post-match:** Large final score display and high-contrast solid outcome badge (**Win**, **Loss**, or **Draw**).
+  * **Post-match:** Large final score display — your own team's number is bold and in the accent color so it's readable at a glance, the opponent's stays muted — plus a high-contrast solid outcome badge (**Win**, **Loss**, or **Draw**).
   * **Live:** "Live" badge with pulsing white dot and kickoff time display.
 * 🥇 **Podium Rank Badges:** Automatic visual highlight for Top 3 rankings (gold, silver, bronze) with customizable styles: subtle glowing outline (default), beveled metallic solid, or neutral without podium colors.
 * 🎨 **Configurable Accent Color:** Use default basketball orange, your active Home Assistant theme primary color, or any custom HEX code to match your club's jersey colors.
@@ -126,13 +126,14 @@ show_watermark: true
 | `accent_color` | `string` | `default` | Accent color source: `default` (basketball orange), `theme` (HA primary color), or `custom`. |
 | `custom_accent_color` | `string` | `""` | Custom HEX color code when `accent_color: custom` (e.g., `#1e88e5`). |
 | `show_title` | `boolean` | `true` | Toggles the card title header. |
-| `title` | `string` | `""` | Custom title. Leave blank for a dynamic default that follows the match state: "Next match", "Live match", or "Last match". |
+| `title` | `string` | `""` | Custom title, shown as a prefix in front of the dynamic default that follows the match state ("Next match", "Live match", "Last match"). Leave blank to show just that dynamic default. |
 | `icon` | `string` | `mdi:basketball` | Icon displayed beside the title. |
 | `show_header` | `boolean` | `true` | Displays competition, pool name, and clickable round header. |
 | `show_rank` | `boolean` | `true` | Displays interactive rank badges for each team. |
 | `rank_badge_style` | `string` | `outline` | Rank badge visual style: `outline` (gold/silver/bronze border by default), `solid` (metallic fill), or `none` (neutral without podium colors). |
-| `display_mode` | `string` | `match` | Which card(s) to show: `match` (only the match card, as today), `standings` (only the standings card), or `both`. The standings card shows the same columns as the official FFBB page: Pts, Games (J G P N), I, Pen., Forf., Def., Penalties (Ref / Coach) and Points (scored / conceded / difference) — only your own team is highlighted; on a narrow screen the table scrolls sideways with the rank and team columns pinned. If there is no standings data yet, the card still shows with a "no standings available" message instead of disappearing. With `both`, the table keeps a compact font size aligned with the popup; with `standings` alone, it reads at a normal card's text size. The simple standings stays in the popup opened from the rank badges. |
-| `standings_title` | `string` | `""` | Custom title for the standings card (defaults to translated "Standings" if left blank). Only used when `display_mode` is `standings` or `both`. |
+| `standings_popup_detailed` | `boolean` | `false` | Shows the full detailed table (same columns as the standalone standings card) in the popup opened from the rank badges, instead of the simple one (#, team, Pts, J G P N). |
+| `display_mode` | `string` | `match` | Which card(s) to show: `match` (only the match card, as today), `standings` (only the standalone standings card), or `both`. The standings card shows the same columns as the official FFBB page: Pts, Games (J G P N), I, Pen., Forf., Def., Penalties (Ref / Coach) and Points (scored / conceded / difference) — only your own team is highlighted; on a narrow screen the table scrolls sideways with the rank and team columns pinned. If there is no standings data yet, the card still shows with a "no standings available" message instead of disappearing. With `both`, the table keeps a compact font size aligned with the popup, and the card's title reads at that same smaller size; with `standings` alone, both the table and the title read at the match card's normal size. The simple standings stays in the popup opened from the rank badges, unless `standings_popup_detailed` is turned on. |
+| `standings_title` | `string` | `""` | Custom title for the standalone standings card (defaults to translated "Standings" if left blank). Only used when `display_mode` is `standings` or `both`. |
 | `standings_icon` | `string` | `mdi:format-list-numbered` | Icon displayed beside the standings card title. |
 | `show_form` | `boolean` | `true` | Displays recent form streak indicator (last 5 games). |
 | `show_venue` | `boolean` | `true` | Displays venue details with GPS navigation link in footer. |
