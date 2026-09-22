@@ -12,6 +12,7 @@ import {
   DEFAULT_FALLBACK_LOGO,
   createTeamMatcher,
   resolveCalendarTeamLogo,
+  estimateCardSize,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
@@ -51,7 +52,8 @@ class FFBBCard extends LitElement {
   }
 
   getCardSize() {
-    return 3;
+    const entities = this._config ? this._resolveEntities() : null;
+    return estimateCardSize({ config: this._config, standings: entities?.rank?.attributes?.standings });
   }
 
   getGridOptions() {

@@ -21,6 +21,8 @@ import {
   isValidCssColor,
   resolveCalendarTeamLogo,
   DEFAULT_FALLBACK_LOGO,
+  resolveDisplayMode,
+  estimateCardSize,
 } from "./pure.js";
 import { getTranslations, translate } from "./translations.js";
 
@@ -1347,5 +1349,64 @@ describe("carousel with the calendar rows as the integration really sends them (
       expect(vm.leftLogo).not.toBe(DEFAULT_FALLBACK_LOGO);
       expect(vm.rightLogo).not.toBe(DEFAULT_FALLBACK_LOGO);
     }
+  });
+});
+
+describe("resolveDisplayMode()", () => {
+  it.each([
+    [{ display_mode: "match" }, "match"],
+    [{ display_mode: "standings" }, "standings"],
+    [{ display_mode: "both" }, "both"],
+  ])("keeps a valid display_mode: %o -> %s", (config, expected) => {
+    expect(resolveDisplayMode(config)).toBe(expected);
+  });
+
+  it.each([undefined, {}, { display_mode: undefined }, { display_mode: "bogus" }, { display_mode: 3 }])(
+    "falls back to \"match\" for anything else: %o",
+    (config) => {
+      expect(resolveDisplayMode(config)).toBe("match");
+    }
+  );
+});
+
+describe("estimateCardSize() -- getCardSize() units for the masonry view (1 unit = 50px)", () => {
+  it("match mode always returns the flat estimate, regardless of standings data", () => {
+    expect(estimateCardSize({ config: { display_mode: "match" }, standings: Array(20).fill({}) })).toBe(3);
+    expect(estimateCardSize({ config: { display_mode: "match" } })).toBe(3);
+    expect(estimateCardSize({})).toBe(3);
+    expect(estimateCardSize()).toBe(3);
+  });
+
+  it("standings mode grows with the pool size, and shrinks back down with it", () => {
+    const sizeFor = (teamCount) =>
+      estimateCardSize({ config: { display_mode: "standings" }, standings: Array(teamCount).fill({}) });
+    expect(sizeFor(0)).toBe(3);
+    expect(sizeFor(8)).toBe(7);
+    expect(sizeFor(14)).toBe(10);
+    expect(sizeFor(20)).toBe(13);
+    // never gets smaller as more teams are added
+    const sizes = [0, 4, 8, 12, 16, 20].map(sizeFor);
+    expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
+  });
+
+  it("missing or malformed standings data counts as an empty pool, not a crash", () => {
+    const size = (standings) => estimateCardSize({ config: { display_mode: "standings" }, standings });
+    expect(size(undefined)).toBe(3);
+    expect(size(null)).toBe(3);
+    expect(size("not an array")).toBe(3);
+    expect(size([])).toBe(3);
+  });
+
+  it("both mode is the match card size plus the standings card size, not a separate flat guess", () => {
+    const teamCount = 12;
+    const standings = Array(teamCount).fill({});
+    const matchOnly = estimateCardSize({ config: { display_mode: "match" }, standings });
+    const standingsOnly = estimateCardSize({ config: { display_mode: "standings" }, standings });
+    const both = estimateCardSize({ config: { display_mode: "both" }, standings });
+    expect(both).toBe(matchOnly + standingsOnly);
+  });
+
+  it("an invalid display_mode is estimated exactly like \"match\"", () => {
+    expect(estimateCardSize({ config: { display_mode: "nope" }, standings: Array(20).fill({}) })).toBe(3);
   });
 });

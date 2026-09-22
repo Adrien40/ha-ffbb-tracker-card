@@ -359,6 +359,51 @@ export function computeIsPostMatch({
 /**
  * Sort standings array numerically by position (or rank) ascending.
  */
+// Which card(s) the person wants to see: the match card, the standings
+// card, or both. Falls back to "match" for anything unset or invalid, since
+// that is the card's original, single-card behaviour.
+export const DISPLAY_MODES = ["match", "standings", "both"];
+
+export function resolveDisplayMode(config) {
+  return DISPLAY_MODES.includes(config?.display_mode) ? config.display_mode : "match";
+}
+
+// getCardSize() units for Home Assistant's masonry view, where 1 unit is
+// roughly 50 pixels (see https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/#sizing-in-masonry-view).
+//
+// The match card's own layout does not depend on live data -- the two team
+// panels, the timer and the footer are always roughly the same height -- so
+// it keeps the flat estimate the card has always used.
+//
+// The standings card, on the other hand, grows with the size of the pool: a
+// table for a 20-team pool is nowhere near the same height as an 8-team
+// one, so a single flat constant left it badly undersized in masonry view
+// once display_mode could show it (alone, or under the match card).
+const MATCH_CARD_SIZE = 3;
+// Card header + optional subtitle + the two-row FFBB column group header.
+const STANDINGS_HEADER_SIZE = 3;
+// A body row is roughly half a size unit tall, so every 2 teams add 1 unit.
+const TEAMS_PER_SIZE_UNIT = 2;
+
+export function estimateStandingsCardSize(teamCount) {
+  const rows = Number.isFinite(teamCount) && teamCount > 0 ? teamCount : 0;
+  return STANDINGS_HEADER_SIZE + Math.ceil(rows / TEAMS_PER_SIZE_UNIT);
+}
+
+/**
+ * Estimates getCardSize() for the whole card, given the config (for
+ * display_mode) and the standings array the standings card would render
+ * (entities.rank?.attributes?.standings) -- the exact same source of truth
+ * render() uses, so the estimate never drifts from what is actually shown.
+ */
+export function estimateCardSize({ config, standings } = {}) {
+  const mode = resolveDisplayMode(config);
+  const teamCount = Array.isArray(standings) ? standings.length : 0;
+  if (mode === "match") return MATCH_CARD_SIZE;
+  if (mode === "standings") return estimateStandingsCardSize(teamCount);
+  return MATCH_CARD_SIZE + estimateStandingsCardSize(teamCount);
+}
+
 export function sortStandings(standings) {
   if (!Array.isArray(standings)) {
     return [];
@@ -924,7 +969,7 @@ export function computeViewModel({
   // Which card(s) the person wants to see: the match card, the standings
   // card, or both (default). Each card keeps its own title/icon below --
   // this only decides whether it is rendered at all.
-  const displayMode = ["match", "standings", "both"].includes(config.display_mode) ? config.display_mode : "match";
+  const displayMode = resolveDisplayMode(config);
   const configuredStandingsTitle = config.standings_title?.trim();
   const standingsTitle = configuredStandingsTitle || t("card.standings_title", "Standings");
   const standingsIcon = config.standings_icon !== undefined ? config.standings_icon : "mdi:format-list-numbered";

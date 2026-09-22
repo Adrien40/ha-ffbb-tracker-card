@@ -2023,3 +2023,58 @@ describe("carousel and calendar modal on a real FFBB dataset", () => {
     expect(img.src).toBe(after);
   });
 });
+
+describe("getCardSize() (masonry view sizing)", () => {
+  const ENTITY = "sensor.ujsbp_prochain_match_adversaire";
+
+  function statesFor(displayMode, teamCount) {
+    return {
+      [ENTITY]: { state: "BASKET BIAUDOS ST MARTIN DE SEIG", attributes: {} },
+      "sensor.ujsbp_prochain_match_date": { state: "2026-09-26T14:00:00+00:00", attributes: { round: 2 } },
+      "sensor.ujsbp_poule": { state: "D2 Poule B", attributes: { team: "UJSBP", competition: "D2" } },
+      "sensor.ujsbp_classement": {
+        state: "1",
+        attributes: {
+          standings: Array.from({ length: teamCount }, (_, i) => ({ team_name: `Team ${i + 1}`, position: i + 1 })),
+        },
+      },
+    };
+  }
+
+  async function mountCard(displayMode, teamCount) {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: ENTITY, display_mode: displayMode });
+    el.hass = { states: statesFor(displayMode, teamCount), locale: { language: "fr-FR" } };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    return el;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("a card with no config and no hass falls back to the flat match-card estimate", () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    expect(new Card().getCardSize()).toBe(3);
+  });
+
+  it("match mode stays flat regardless of how many teams are in the pool", async () => {
+    const el = await mountCard("match", 20);
+    expect(el.getCardSize()).toBe(3);
+  });
+
+  it("standings mode grows with the pool actually rendered by this card's own entities", async () => {
+    const small = await mountCard("standings", 6);
+    const large = await mountCard("standings", 18);
+    expect(small.getCardSize()).toBeGreaterThan(3);
+    expect(large.getCardSize()).toBeGreaterThan(small.getCardSize());
+  });
+
+  it("both mode is bigger than standings alone, by exactly the match card's own size", async () => {
+    const standingsOnly = await mountCard("standings", 10);
+    const both = await mountCard("both", 10);
+    expect(both.getCardSize()).toBe(standingsOnly.getCardSize() + 3);
+  });
+});
