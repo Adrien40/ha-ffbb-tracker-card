@@ -1174,6 +1174,26 @@ describe("post-match score: my number is visually distinct from the opponent's",
     expect(el.shadowRoot.querySelector(".score-theirs")).toBeNull();
     expect(el.shadowRoot.querySelector(".score-display")?.textContent.trim()).toBe("Forfait");
   });
+
+  // Accessibility: color/bold alone convey nothing to a screen reader, so a
+  // visually-hidden (.sr-only) label spells out which number is ours, and
+  // the visible, colored numbers are hidden from assistive tech (aria-hidden)
+  // to avoid the score being announced twice.
+  it("gives screen readers an explicit 'our score / opponent score' label instead of just '80 - 75'", async () => {
+    const el = await mount(STATES, { view: "last" });
+    const srLabel = el.shadowRoot.querySelector(".score-display .sr-only")?.textContent.trim();
+    expect(srLabel).toBe("Our score: 80 — Opponent score: 75");
+    expect(el.shadowRoot.querySelector(".score-display [aria-hidden='true']")).not.toBeNull();
+  });
+
+  it("skips the sr-only label when the score can't be split (falls back to the plain text, already readable as-is)", async () => {
+    const states = {
+      ...STATES,
+      "sensor.basket_landes_dernier_match_score": { state: "Forfait" },
+    };
+    const el = await mount(states, { view: "last" });
+    expect(el.shadowRoot.querySelector(".score-display .sr-only")).toBeNull();
+  });
 });
 
 describe("live match DOM rendering", () => {
@@ -2255,6 +2275,18 @@ describe("carousel and calendar modal on a real FFBB dataset", () => {
     expect(scores).toEqual(["51 - 46"]);
   });
 
+  // Round 1: home_team is T (us), score "51 - 46" -- same mine/opponent
+  // split and coloring as the main "last match" score display, for
+  // consistency across the whole card.
+  it("colors the calendar score the same way as the main score display: mine highlighted, theirs plain", async () => {
+    await mount();
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const row = el.shadowRoot.querySelector(".cal-score");
+    expect(row.querySelector(".score-mine")?.textContent.trim()).toBe("51");
+    expect(row.querySelector(".score-theirs")?.textContent.trim()).toBe("46");
+  });
+
   it("the calendar modal builds a score from numeric fields with spaces too", async () => {
     await mount();
     const states = structuredClone(STATES);
@@ -2265,6 +2297,20 @@ describe("carousel and calendar modal on a real FFBB dataset", () => {
     el._activeModal = "calendar";
     await el.updateComplete;
     expect(el.shadowRoot.querySelector(".cal-score").textContent.trim()).toBe("65 - 60");
+  });
+
+  it("swaps which calendar number is 'mine' for an away match (we're away_team, not home_team)", async () => {
+    await mount();
+    const states = structuredClone(STATES);
+    states["sensor.ujsbp_u13m_poule"].attributes.calendar = [
+      { round: 2, home_team: "BASKET BIAUDOS ST MARTIN DE SEIG", away_team: T, score: "60 - 65", is_played: true },
+    ];
+    el.hass = { states, locale: { language: "fr-FR" } };
+    el._activeModal = "calendar";
+    await el.updateComplete;
+    const row = el.shadowRoot.querySelector(".cal-score");
+    expect(row.querySelector(".score-mine")?.textContent.trim()).toBe("65");
+    expect(row.querySelector(".score-theirs")?.textContent.trim()).toBe("60");
   });
 
   it("the calendar modal shows the right crest per team and no other club's crest", async () => {

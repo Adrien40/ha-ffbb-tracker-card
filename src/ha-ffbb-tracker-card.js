@@ -13,6 +13,7 @@ import {
   createTeamMatcher,
   resolveCalendarTeamLogo,
   estimateCardSize,
+  splitScore,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
@@ -627,7 +628,25 @@ class FFBBCard extends LitElement {
                             </div>
                             <div class="calendar-col-meta">
                               ${score
-                                ? html`<div class="cal-score">${score}</div>`
+                                ? html`
+                                    <div class="cal-score">
+                                      ${(() => {
+                                        // isHomeMyTeam already tells us whether OUR team is the
+                                        // home side on this row -- exactly what splitScore needs
+                                        // to know which of the two numbers is ours. Guarded by
+                                        // isMyTeamInvolved: every row of this season schedule
+                                        // should involve our team, but if a row somehow doesn't,
+                                        // we can't say which number is "ours" -- fall back to
+                                        // the plain, uncolored score instead of guessing.
+                                        const rowScoreParts = isMyTeamInvolved ? splitScore(score, isHomeMyTeam) : null;
+                                        return rowScoreParts
+                                          ? html`<span class="score-mine">${rowScoreParts.my}</span
+                                              ><span class="score-sep"> - </span
+                                              ><span class="score-theirs">${rowScoreParts.opponent}</span>`
+                                          : score;
+                                      })()}
+                                    </div>
+                                  `
                                 : dateFormatted
                                 ? html`
                                     <div class="cal-date">${dateFormatted.day}</div>
@@ -898,9 +917,14 @@ class FFBBCard extends LitElement {
                   <div class="score-display">
                     ${vm.scoreParts
                       ? html`
-                          <span class="score-mine">${vm.scoreParts.my}</span
-                          ><span class="score-sep"> - </span
-                          ><span class="score-theirs">${vm.scoreParts.opponent}</span>
+                          <span class="sr-only">${
+                            `${this._t("card.your_score", "Our score")}: ${vm.scoreParts.my} — ${this._t("card.opponent_score", "Opponent score")}: ${vm.scoreParts.opponent}`
+                          }</span
+                          ><span aria-hidden="true"
+                            ><span class="score-mine">${vm.scoreParts.my}</span
+                            ><span class="score-sep"> - </span
+                            ><span class="score-theirs">${vm.scoreParts.opponent}</span></span
+                          >
                         `
                       : vm.displayedScore}
                   </div>
