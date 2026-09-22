@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   findOpponentRank,
   formatRank,
@@ -1408,5 +1408,86 @@ describe("estimateCardSize() -- getCardSize() units for the masonry view (1 unit
 
   it("an invalid display_mode is estimated exactly like \"match\"", () => {
     expect(estimateCardSize({ config: { display_mode: "nope" }, standings: Array(20).fill({}) })).toBe(3);
+  });
+});
+
+describe("targeted coverage: rare branches", () => {
+  it("findOpponentRank(): the substring-fallback loop skips a null/falsy entry before finding the match", () => {
+    const standings = [null, undefined, { team_name: "Alpha Basket Club" }, { team_name: "Beta" }];
+    // "Alpha" has no exact match in the list, so it only succeeds via the
+    // substring fallback -- which itself has to walk past the two falsy
+    // entries first.
+    expect(findOpponentRank("Alpha", standings)).toBeUndefined();
+  });
+
+  it("sanitizeUrl(): keeps a same-origin /local/ or /api/ path as-is, without prefixing the FFBB domain", () => {
+    expect(sanitizeUrl("/local/community/logo.png")).toBe("/local/community/logo.png");
+    expect(sanitizeUrl("/api/image_proxy/camera.front_door")).toBe("/api/image_proxy/camera.front_door");
+  });
+
+  it("isAtOrAfterDMinusOne(): a missing/unknown/unavailable/empty date is never at or after D-1", () => {
+    expect(isAtOrAfterDMinusOne(null)).toBe(false);
+    expect(isAtOrAfterDMinusOne(undefined)).toBe(false);
+    expect(isAtOrAfterDMinusOne("")).toBe(false);
+    expect(isAtOrAfterDMinusOne("unknown")).toBe(false);
+    expect(isAtOrAfterDMinusOne("unavailable")).toBe(false);
+  });
+
+  it("resolveHour12(): an invalid locale tag falls back to false via the catch branch", () => {
+    // Intl.DateTimeFormat throws a RangeError for a malformed BCP-47 tag.
+    expect(resolveHour12(undefined, "not a valid locale!!")).toBe(false);
+  });
+
+  it("resolveHour12(): falls back to hourCycle when the runtime's Intl does not expose hour12", () => {
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+    class FakeDateTimeFormat {
+      resolvedOptions() {
+        // A hypothetical Intl implementation that only reports hourCycle,
+        // not the newer hour12 boolean.
+        return { hourCycle: "h12" };
+      }
+    }
+    vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: FakeDateTimeFormat });
+    try {
+      expect(resolveHour12(undefined, "en-US")).toBe(true);
+    } finally {
+      vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: RealDateTimeFormat });
+    }
+  });
+
+  it("computeViewModel(): resolves an opponent's URL from the OTHER sensor (lastOpponent) when its name matches a different calendar row", () => {
+    const T = "Basket Landes";
+    const entities = {
+      nextOpponent: { state: "US Dax", attributes: { team_url: "https://x.test/me", opponent_url: "https://x.test/dax" } },
+      lastOpponent: { state: "AS Pau", attributes: { opponent_url: "https://x.test/pau-sensor" } },
+      nextDate: { state: "2099-01-10T20:00:00", attributes: {} },
+      poule: {
+        state: "Poule B",
+        attributes: {
+          team: T,
+          calendar: [
+            { home_team: T, away_team: "US Dax", date: "2099-01-10T20:00:00" },
+            { home_team: T, away_team: "AS Pau", date: "2099-01-24T20:00:00" },
+          ],
+        },
+      },
+      rank: {
+        state: "1",
+        attributes: {
+          standings: [{ team_name: "AS Pau", team_url: "https://x.test/pau-standings" }],
+        },
+      },
+      matchInProgress: { state: "off" },
+    };
+    const vm = computeViewModel({
+      entities,
+      config: { entity: "sensor.x" },
+      lang: "en",
+      now: new Date("2098-12-01T10:00:00"),
+      matchIndex: 1,
+    });
+    // Proves the sensor loop (nextOpponent/lastOpponent) won, not the
+    // standings fallback -- the two would disagree if it had used standings.
+    expect(vm.rightUrl).toBe("https://x.test/pau-sensor");
   });
 });

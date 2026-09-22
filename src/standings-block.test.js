@@ -477,3 +477,28 @@ describe("ffbb-tracker-card second card = detailed standings", () => {
     expect(el.shadowRoot.querySelector(".modal-card .standings-table-detailed")).toBeNull();
   });
 });
+
+describe("targeted coverage: rare branches", () => {
+  it("signedCell(): a non-finite value (not a real number) is shown as-is, not coerced to \"-\"", () => {
+    const host = renderBlock({
+      standings: [{ position: 1, team_name: "X", points_diff: "N/A" }],
+    });
+    const diffCell = host.querySelector("tbody tr td:last-child");
+    expect(diffCell.textContent.trim()).toBe("N/A");
+  });
+
+  it("a non-highlighted row keeps its official name even when displayTeamName is set for someone else", () => {
+    const host = renderBlock({
+      teamName: "Nowhere Team", // matches no row -> nothing is highlighted
+      displayTeamName: "Les Panthères",
+    });
+    expect(host.querySelector(".highlight-row")).toBeNull();
+    expect(host.textContent).not.toContain("Les Panthères");
+    expect(host.textContent).toContain("Equipe 3");
+  });
+
+  it("hides the header icon entirely when icon is explicitly empty", () => {
+    const host = renderBlock({ icon: "" });
+    expect(host.querySelector(".standings-card-header ha-icon")).toBeNull();
+  });
+});

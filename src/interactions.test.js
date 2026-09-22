@@ -469,6 +469,38 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     expect(elNone.shadowRoot.querySelector(".rank-badge").classList.contains("rank-gold")).toBe(false);
   });
 
+  it("keyboard-activating the OPPONENT's rank badge (the second one) also opens standings", async () => {
+    const el = await mountCard({
+      entity: ENTITY,
+    });
+    // The default fixture only ranks the user's own team; give the
+    // opponent a rank too so its badge actually renders (it renders only
+    // when rightRank/leftRank is truthy).
+    el.hass = {
+      ...el.hass,
+      states: {
+        ...HASS_STATES,
+        "sensor.basket_landes_classement": {
+          state: "1",
+          attributes: {
+            standings: [
+              { team_name: "Basket Landes", position: 1 },
+              { team_name: "US Mont-de-Marsan", position: 2 },
+            ],
+          },
+        },
+      },
+    };
+    await el.updateComplete;
+
+    const badges = el.shadowRoot.querySelectorAll(".rank-badge.clickable-badge");
+    expect(badges.length).toBe(2);
+
+    badges[1].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el._activeModal).toBe("standings");
+  });
+
   it("keyboard-activating the rank badge (Enter/Space) opens standings, same as a click", async () => {
     const el = await mountCard();
     await el.updateComplete;
@@ -750,6 +782,157 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
       const badge = el.shadowRoot.querySelector(".badge-postponed");
       expect(badge.parentElement.classList.contains("center-meta")).toBe(true);
     });
+  });
+
+  it("keyboard-activating the header round bar (Enter) opens the calendar modal, same as a click", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const roundBar = el.shadowRoot.querySelector(".header-round.clickable-round");
+    roundBar.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el._activeModal).toBe("calendar");
+  });
+
+  it("keyboard-activating the left logo box (Enter) falls back to hass-more-info, same as a click", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const moreInfoSpy = vi.fn();
+    el.addEventListener("hass-more-info", moreInfoSpy);
+
+    // This fixture has no resolvable team URL, so activating the logo (by
+    // click or by keyboard) falls back to hass-more-info -- same code path
+    // as the existing click test, just reached via the keyboard this time.
+    el.shadowRoot.querySelector(".logo-box").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+    );
+    expect(moreInfoSpy).toHaveBeenCalledTimes(1);
+    expect(moreInfoSpy.mock.calls[0][0].detail.entityId).toBe(ENTITY);
+  });
+
+  it("keyboard-activating the right logo box (Space) reaches _handleLogoClick too", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const spy = vi.spyOn(el, "_handleLogoClick");
+    const [, rightLogoBox] = el.shadowRoot.querySelectorAll(".logo-box");
+    rightLogoBox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("logo boxes are not keyboard-activatable at all when logo_click_action is \"none\"", async () => {
+    const el = await mountCard({ logo_click_action: "none" });
+    await el.updateComplete;
+
+    const [leftLogoBox] = el.shadowRoot.querySelectorAll(".logo-box");
+    expect(leftLogoBox.getAttribute("tabindex")).toBeNull();
+    expect(leftLogoBox.getAttribute("role")).toBeNull();
+  });
+
+  it("keyboard-activating the nav chevrons (Enter) navigates, same as a click", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const spy = vi.spyOn(el, "_handleChevronClick");
+    const rightChevron = el.shadowRoot.querySelector(".nav-chevron-right");
+    rightChevron.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(spy).toHaveBeenCalledWith("next", expect.anything());
+
+    const leftChevron = el.shadowRoot.querySelector(".nav-chevron-left");
+    leftChevron.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(spy).toHaveBeenCalledWith("prev", expect.anything());
+  });
+
+  it("clicking the center meta (upcoming match, not live/post-match) opens Google Calendar", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const centerMeta = el.shadowRoot.querySelector(".center-meta.clickable");
+    expect(centerMeta, "expected the upcoming match's center-meta to be clickable").not.toBeNull();
+    centerMeta.click();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy.mock.calls[0][0]).toContain("calendar.google.com");
+    openSpy.mockRestore();
+  });
+
+  it("keyboard-activating the center meta (Enter) also opens Google Calendar", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const centerMeta = el.shadowRoot.querySelector(".center-meta.clickable");
+    centerMeta.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    openSpy.mockRestore();
+  });
+
+  it("keyboard-activating the form footer (Enter) opens the form modal, same as a click", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const formBlock = el.shadowRoot.querySelector(".footer-form");
+    formBlock.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el._activeModal).toBe("form");
+  });
+
+  it("keyboard-activating the venue footer (Enter) opens Google Maps, same as a click", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const venueBlock = el.shadowRoot.querySelector(".footer-venue");
+    venueBlock.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy.mock.calls[0][0]).toContain("google.com/maps");
+    openSpy.mockRestore();
+  });
+
+  it("swaps a broken RIGHT-side logo for the default brand logo too (not just the left one)", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    const logos = el.shadowRoot.querySelectorAll(".logo");
+    expect(logos.length).toBe(2);
+    const rightLogo = logos[1];
+    rightLogo.dispatchEvent(new Event("error"));
+    await el.updateComplete;
+    expect(rightLogo.src.endsWith(DEFAULT_FALLBACK_LOGO)).toBe(true);
+  });
+
+  it("swaps a broken logo inside a calendar-modal row (home AND away mini-logos)", async () => {
+    const el = await mountCard();
+    await el.updateComplete;
+
+    el.shadowRoot.querySelector(".header-round.clickable-round").click();
+    await el.updateComplete;
+
+    const miniLogos = el.shadowRoot.querySelectorAll(".cal-mini-logo");
+    expect(miniLogos.length).toBeGreaterThanOrEqual(2);
+    for (const logo of miniLogos) {
+      logo.dispatchEvent(new Event("error"));
+    }
+    await el.updateComplete;
+    for (const logo of el.shadowRoot.querySelectorAll(".cal-mini-logo")) {
+      expect(logo.src.endsWith(DEFAULT_FALLBACK_LOGO)).toBe(true);
+    }
+  });
+
+  it("getConfigElement() returns the visual editor custom element", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const editor = await Card.getConfigElement();
+    expect(editor.tagName.toLowerCase()).toBe("ffbb-tracker-card-editor");
+  });
+
+  it("renders nothing before hass/config are set (no ha-card, no content)", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot.querySelector("ha-card")).toBeNull();
+    expect(el.shadowRoot.textContent.trim()).toBe("");
   });
 });
 

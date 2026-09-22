@@ -82,3 +82,12 @@ describe("fr.json / en.json key parity", () => {
     expect(missingInEn, `keys in fr.json missing from en.json: ${missingInEn}`).toEqual([]);
   });
 });
+
+describe("targeted coverage: rare branches", () => {
+  it("translate(): a key that resolves to a non-string (e.g. a nested object) returns the fallback", () => {
+    const dict = { card: { title: "Match" } };
+    // "card" itself is an object, not a leaf string -- must not be handed
+    // back as if it were a usable label.
+    expect(translate(dict, "card", "Fallback")).toBe("Fallback");
+  });
+});

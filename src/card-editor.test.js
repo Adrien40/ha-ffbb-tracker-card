@@ -372,3 +372,64 @@ describe("card-editor.js _valueChanged()", () => {
     expect(event.composed).toBe(true);
   });
 });
+
+describe("targeted coverage: rare branches", () => {
+  it("ha-form's computeLabel falls back to the schema's title when there is no label", async () => {
+    const el = await mountEditor();
+    const form = el.shadowRoot.querySelector("ha-form");
+    expect(form.computeLabel({ label: "Explicit label", title: "Title" })).toBe("Explicit label");
+    expect(form.computeLabel({ title: "Title only" })).toBe("Title only");
+  });
+
+  it("ha-form's computeHelper reads a field's helper text", async () => {
+    const el = await mountEditor();
+    const form = el.shadowRoot.querySelector("ha-form");
+    expect(form.computeHelper({ helper: "Some helper text" })).toBe("Some helper text");
+    expect(form.computeHelper({})).toBeUndefined();
+  });
+
+  it("willUpdate() re-resolves translations when hass changes to a new language", async () => {
+    const el = await mountEditor();
+    const before = el._t("editor.display_mode", "Display");
+
+    el.hass = { ...el.hass, locale: { language: "en" } };
+    await el.updateComplete;
+    const after = el._t("editor.display_mode", "Display");
+
+    // French and English labels for this field genuinely differ, so this
+    // also proves willUpdate() picked up the new hass and re-resolved.
+    expect(after).not.toBe(before);
+  });
+
+  it("willUpdate() is a no-op when hass is set but the language hasn't changed", async () => {
+    const el = await mountEditor();
+    const before = el._t("editor.display_mode", "Display");
+
+    // Same language, just a new hass object reference -- must not crash or
+    // change anything.
+    el.hass = { ...el.hass };
+    await el.updateComplete;
+
+    expect(el._t("editor.display_mode", "Display")).toBe(before);
+  });
+
+  it("the accent_color helper only warns about an invalid custom color, not a valid or empty one", async () => {
+    // happy-dom's CSS.supports() is too lenient to reject "bleu" on its
+    // own, so use the same regex-fallback path pure.test.js relies on by
+    // temporarily removing the CSS engine.
+    const realCSS = globalThis.CSS;
+    vi.stubGlobal("CSS", undefined);
+    const invalid = await mountEditor({ accent_color: "custom", custom_accent_color: "bleu" });
+    vi.stubGlobal("CSS", realCSS);
+
+    const valid = await mountEditor({ accent_color: "custom", custom_accent_color: "#ff6b00" });
+    const empty = await mountEditor({ accent_color: "custom", custom_accent_color: "" });
+
+    const helperOf = (el) => fieldNames(el).includes("custom_accent_color")
+      ? schemaOf(el).find((f) => f.name === "custom_accent_color").helper
+      : undefined;
+    expect(helperOf(invalid)).toContain("⚠");
+    expect(helperOf(valid)).not.toContain("⚠");
+    expect(helperOf(empty)).not.toContain("⚠");
+  });
+});
