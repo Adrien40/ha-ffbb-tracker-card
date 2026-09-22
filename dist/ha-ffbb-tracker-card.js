@@ -361,9 +361,8 @@ var Ae=globalThis,Se=Ae.ShadowRoot&&(Ae.ShadyCSS===void 0||Ae.ShadyCSS.nativeSha
     font-weight: 900;
   }
   .score-theirs {
-    color: var(--secondary-text-color);
+    color: var(--primary-text-color, #fff);
     font-weight: 600;
-    opacity: 0.82;
   }
   .score-sep {
     color: var(--secondary-text-color);
