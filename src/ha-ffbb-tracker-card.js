@@ -17,7 +17,7 @@ import {
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
-import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable } from "./standings-block.js";
+import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable, renderStandingsCrest } from "./standings-block.js";
 import "./card-editor.js";
 
 class FFBBCard extends LitElement {
@@ -403,7 +403,7 @@ class FFBBCard extends LitElement {
                           return html`
                             <tr class=${isRowHighlighted ? "highlight-row" : ""}>
                               <td class="pos-cell">${item.position || item.rank || "-"}</td>
-                              <td class="col-team">${displayedTeamLabel}</td>
+                              <td class="col-team">${renderStandingsCrest(item.logo_url)}<span>${displayedTeamLabel}</span></td>
                               <td class="pts-cell">${item.points ?? item.pts ?? "-"}</td>
                               <td>${item.played ?? "-"}</td>
                               <td>${item.wins ?? item.won ?? "-"}</td>

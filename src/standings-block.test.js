@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { renderStandingsBlock, standingsBlockStyles, isHighlightedRow, renderDetailedTable, DETAILED_COLUMNS } from "./standings-block.js";
 import { cardStyles } from "./styles.js";
+import { DEFAULT_FALLBACK_LOGO } from "./pure.js";
 import "./ha-ffbb-tracker-card.js";
 
 const t = (_key, fallback) => fallback;
@@ -155,6 +156,11 @@ describe("standings-block.js styles -- no scrollbar", () => {
 
   it("keeps a gap between the match card and the standings card", () => {
     expect(css).toMatch(/\.standings-card\s*{[^}]*margin-top:\s*\d+px/);
+  });
+
+  it("the team crest is small enough to add to a row without growing it (16px)", () => {
+    expect(css).toMatch(/\.col-team-logo\s*{[^}]*width:\s*16px/);
+    expect(css).toMatch(/\.col-team-logo\s*{[^}]*height:\s*16px/);
   });
 });
 
@@ -653,6 +659,42 @@ describe("targeted coverage: rare branches", () => {
     const rows = [...host.querySelectorAll("tbody tr")];
     expect(rows.map((r) => r.querySelector(".col-team").textContent.trim())).toEqual(["Equipe A", "Equipe B", "-"]);
     expect(rows.map((r) => r.querySelector(".pos-cell").textContent.trim())).toEqual(["1", "2", "-"]);
+  });
+
+  it("renderDetailedTable(): each row's crest uses that row's own logo_url, from the FFBB Tracker integration's standings data", () => {
+    const host = document.createElement("div");
+    render(
+      renderDetailedTable({
+        rows: [
+          { position: 1, team_name: "Equipe A", logo_url: "https://api.ffbb.app/assets/team-a-uuid" },
+          { position: 2, team_name: "Equipe B", logo_url: null }, // no logo registered with the federation
+        ],
+        teamName: "Equipe A",
+        t,
+      }),
+      host
+    );
+    const logos = [...host.querySelectorAll("tbody .col-team-logo")];
+    expect(logos).toHaveLength(2);
+    expect(logos[0].getAttribute("src")).toBe("https://api.ffbb.app/assets/team-a-uuid");
+    // No logo_url -> the same default crest used everywhere else in the
+    // card, not a broken image or a missing <img>.
+    expect(logos[1].getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
+  });
+
+  it("renderDetailedTable(): a broken crest URL (404, CORS...) falls back to the default crest via @error, same as the match-area logos", () => {
+    const host = document.createElement("div");
+    render(
+      renderDetailedTable({
+        rows: [{ position: 1, team_name: "Equipe A", logo_url: "https://api.ffbb.app/assets/broken-uuid" }],
+        teamName: "Equipe A",
+        t,
+      }),
+      host
+    );
+    const img = host.querySelector(".col-team-logo");
+    img.dispatchEvent(new Event("error"));
+    expect(img.src).toContain(DEFAULT_FALLBACK_LOGO);
   });
 
   it("renderDetailedTable(): the highlighted row still shows displayTeamName over the fallback chain", () => {

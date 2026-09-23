@@ -1376,8 +1376,8 @@ describe("standings_popup_detailed", () => {
           state: "1",
           attributes: {
             standings: [
-              { position: 1, team_name: "Basket Landes", points: 10, played: 5, wins: 5, losses: 0, draws: 0, irregularities: 0 },
-              { position: 2, team_name: "AS Dax", points: 8, played: 5, wins: 4, losses: 1, draws: 0, irregularities: 1 },
+              { position: 1, team_name: "Basket Landes", points: 10, played: 5, wins: 5, losses: 0, draws: 0, irregularities: 0, logo_url: "https://api.ffbb.app/assets/landes-uuid" },
+              { position: 2, team_name: "AS Dax", points: 8, played: 5, wins: 4, losses: 1, draws: 0, irregularities: 1, logo_url: null },
             ],
           },
         },
@@ -1395,6 +1395,17 @@ describe("standings_popup_detailed", () => {
     expect(el.shadowRoot.querySelector(".modal-card .standings-table-detailed")).toBeNull();
     const headerCount = el.shadowRoot.querySelectorAll(".modal-card .standings-table thead th").length;
     expect(headerCount).toBe(7);
+  });
+
+  it("the simple popup table also shows each row's crest, from the same logo_url field as the detailed table", async () => {
+    const el = await mountAndOpen();
+    const logos = [...el.shadowRoot.querySelectorAll(".modal-card .standings-table tbody .col-team-logo")];
+    expect(logos).toHaveLength(2);
+    expect(logos[0].getAttribute("src")).toBe("https://api.ffbb.app/assets/landes-uuid");
+    // AS Dax has logo_url: null in the fixture above (no logo registered
+    // with the federation) -- falls back to the default crest, not a
+    // broken image or no <img> at all.
+    expect(logos[1].getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
   });
 
   it("standings_popup_detailed: true swaps in the same detailed table as the standalone standings card", async () => {

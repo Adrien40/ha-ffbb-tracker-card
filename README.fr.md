@@ -36,7 +36,7 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 * 📅 **Ajout au calendrier :** un clic sur la date génère un événement Google Agenda prérempli avec l'horaire, les équipes et l'adresse de la salle.
 * 🌐 **Lien officiel du club :** un clic sur le blason ouvre la page officielle de l'équipe sur le site de la FFBB (activé par défaut).
 * 📊 **Modales interactives intégrées :**
-  * **Classement complet :** un clic sur la pastille de position (`1er`, `4e`...) ouvre le tableau complet de la poule (points, joués, victoires, défaites, nuls) avec surlignage de votre équipe et de l'adversaire.
+  * **Classement complet :** un clic sur la pastille de position (`1er`, `4e`...) ouvre le tableau complet de la poule (points, joués, victoires, défaites, nuls) avec surlignage de votre équipe et de l'adversaire. Chaque ligne affiche le blason de l'équipe quand le capteur source en fournit un (voir le changelog de l'intégration FFBB Tracker).
   * **Calendrier de la saison :** un clic sur l'en-tête « Journée » ouvre la liste ordonnée de tous les matchs de la poule avec les scores passés et les matchs à venir.
   * **Détail de la forme :** un clic sur la série (ex. `V-V-D-V-N`) affiche le récapitulatif détaillé et la série active.
 * 🖼️ **Logos en filigrane :** logos des clubs affichés en arrière-plan avec masque radial elliptique adouci pour donner du relief sans arête brute.

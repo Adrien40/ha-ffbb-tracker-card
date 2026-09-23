@@ -19,7 +19,7 @@
 // position and team columns stay pinned on the left).
 
 import { html, css, nothing } from "lit";
-import { cleanForMatch, sortStandings } from "./pure.js";
+import { cleanForMatch, sortStandings, DEFAULT_FALLBACK_LOGO } from "./pure.js";
 
 const INVALID_STATES = ["unknown", "unavailable"];
 
@@ -85,6 +85,28 @@ export const DETAILED_COLUMNS = {
   ],
 };
 
+// A small team crest for a standings row, shared by the detailed table
+// below and the simple popup table (ha-ffbb-tracker-card.js), so both use
+// the exact same markup, fallback, and error handling instead of two
+// copies that could drift. Deliberately tiny (see .col-team-logo further
+// down in this file's own css`...`): sized to fit inside the existing row
+// height, not to grow it -- the whole point was adding crests without
+// taller rows.
+export function renderStandingsCrest(logoUrl) {
+  return html`
+    <img
+      class="col-team-logo"
+      src=${logoUrl || DEFAULT_FALLBACK_LOGO}
+      alt=""
+      @error=${(e) => {
+        if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
+          e.target.src = DEFAULT_FALLBACK_LOGO;
+        }
+      }}
+    />
+  `;
+}
+
 // Exported so the standings popup (opened from the rank badges, in
 // ha-ffbb-tracker-card.js) can render the exact same detailed table when
 // the user turns on "standings_popup_detailed" -- one table implementation,
@@ -131,7 +153,7 @@ export function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
             return html`
               <tr class=${highlighted ? "highlight-row" : ""}>
                 <td class="pos-cell col-pos">${item.position || item.rank || "-"}</td>
-                <td class="col-team">${rowTeamLabel}</td>
+                <td class="col-team">${renderStandingsCrest(item.logo_url)}<span>${rowTeamLabel}</span></td>
                 <td class="pts-cell">${cell(item.points ?? item.pts)}</td>
                 ${matches.map((col) => body(col, item))}
                 ${singles.map((col) => body(col, item))}
@@ -296,6 +318,24 @@ export const standingsBlockStyles = css`
     white-space: nowrap;
     overflow: visible;
     text-overflow: clip;
+  }
+  /* Deliberately tiny and inline (not a flex layout on .col-team, which
+     would fight the sticky/scroll positioning rules above and below this
+     block): a 16px circle plus a small margin adds only ~2px to a
+     ~29-31px detailed-table row, and 0px to a table using this same class
+     elsewhere (styles.js's simple popup table) -- the point was adding
+     crests without growing any row. Shared with that simple table via
+     renderStandingsCrest() so both use one rule, not two that could drift. */
+  .col-team-logo {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 4px;
+    background: #ffffff;
+    padding: 1px;
+    box-sizing: border-box;
   }
   .standings-table-detailed .col-team,
   .standings-table-detailed .col-pos {

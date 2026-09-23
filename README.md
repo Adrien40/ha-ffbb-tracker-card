@@ -36,7 +36,7 @@ If you find this project useful, you can support its development 🙏
 * 📅 **Add to Calendar:** Tap the date to create a prefilled Google Calendar event with tip-off time, teams, and gym address.
 * 🌐 **Official Club Link:** Tap team crests to open the team's official page on the FFBB portal (enabled by default).
 * 📊 **Built-in Interactive Modals:**
-  * **Full Standings:** Tap rank badges (`1st`, `4th`...) to inspect the complete pool standings table (points, played, wins, losses, draws) with team and opponent highlights.
+  * **Full Standings:** Tap rank badges (`1st`, `4th`...) to inspect the complete pool standings table (points, played, wins, losses, draws) with team and opponent highlights. Each row shows the team's crest when the source sensor provides one (see the FFBB Tracker integration changelog).
   * **Season Schedule:** Tap the "Round" header to browse the ordered schedule of all pool matches with past scores and upcoming fixtures.
   * **Form Details:** Tap the recent form sequence (e.g. `W-W-L-W-D`) for match details and active streak counts.
 * 🖼️ **Watermark Crests:** Background club crests rendered with a smooth elliptical radial mask to eliminate visible straight edges.
