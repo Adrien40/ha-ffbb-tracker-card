@@ -2453,3 +2453,70 @@ describe("getCardSize() (masonry view sizing)", () => {
     expect(both.getCardSize()).toBe(standingsOnly.getCardSize() + 3);
   });
 });
+
+describe("targeted coverage: rare branches", () => {
+  describe("_handleChevronClick() without a usable calendar (last/next toggle only)", () => {
+    // vm is passed in directly by the caller (see _renderMatchHeader), so it
+    // can be exercised without mounting a whole card around a specific
+    // fixture -- the branch this covers only depends on vm.hasCalendar /
+    // vm.calendarMatches, both already-computed values.
+    it("hasCalendar: false falls back to toggling _manualView between last/next", () => {
+      const el = makeCard();
+      el._handleChevronClick("next", { hasCalendar: false, calendarMatches: [] });
+      expect(el._manualView).toBe("next");
+      expect(el._matchIndex).toBeNull();
+
+      el._handleChevronClick("prev", { hasCalendar: false, calendarMatches: [] });
+      expect(el._manualView).toBe("last");
+    });
+
+    it("hasCalendar: true but only 1 match (nothing to step through) also falls back to last/next", () => {
+      const el = makeCard();
+      el._handleChevronClick("next", { hasCalendar: true, calendarMatches: [{ round: 1 }] });
+      expect(el._manualView).toBe("next");
+      expect(el._matchIndex).toBeNull();
+    });
+  });
+
+  describe("_onModalKeydown() Tab trap with nothing focusable inside the dialog", () => {
+    it("keeps focus on the dialog itself instead of crashing on an empty focusables list", () => {
+      const el = makeCard();
+      const cardStub = { querySelectorAll: () => [], focus: vi.fn() };
+      const event = {
+        key: "Tab",
+        shiftKey: false,
+        currentTarget: { querySelector: () => cardStub },
+        preventDefault: vi.fn(),
+      };
+
+      el._onModalKeydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(cardStub.focus).toHaveBeenCalledTimes(1);
+    });
+
+    it("does nothing (no .modal-card found) rather than throwing", () => {
+      const el = makeCard();
+      const event = { key: "Tab", currentTarget: { querySelector: () => null } };
+      expect(() => el._onModalKeydown(event)).not.toThrow();
+    });
+  });
+
+  describe("_renderModal() with an unrecognised _activeModal value", () => {
+    it("renders nothing instead of throwing (defensive fallback, not reachable via the public API)", async () => {
+      const el = makeCard();
+      el.hass = { states: {}, locale: { language: "fr-FR" } };
+      document.body.appendChild(el);
+      await el.updateComplete;
+
+      // _activeModal is only ever set internally to "standings" / "calendar"
+      // / "form" (see _openModal call sites); this directly forces a value
+      // none of those branches match, to exercise the trailing catch-all.
+      el._activeModal = "some-future-modal-type";
+      await el.updateComplete;
+
+      expect(el.shadowRoot.querySelector(".modal-backdrop")).toBeNull();
+      document.body.removeChild(el);
+    });
+  });
+});

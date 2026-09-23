@@ -424,6 +424,30 @@ describe("targeted coverage: rare branches", () => {
     expect(el._t("editor.display_mode", "Display")).toBe(before);
   });
 
+  it("willUpdate() skips the hass/language check entirely on an update that doesn't touch hass", async () => {
+    const el = await mountEditor();
+    const before = el._t("editor.display_mode", "Display");
+
+    // setConfig() alone (no hass reassignment) still triggers an update via
+    // _config, but changedProperties.has("hass") must be false for that
+    // update -- confirms the outer guard, not just the inner language check.
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire", logo_size: "large" });
+    await el.updateComplete;
+
+    expect(el._t("editor.display_mode", "Display")).toBe(before);
+    expect(el._config.logo_size).toBe("large");
+  });
+
+  it("_customColorHelper() falls back cleanly when called before setConfig() (no _config yet)", () => {
+    const Editor = customElements.get("ffbb-tracker-card-editor");
+    const el = new Editor();
+    // this._config is undefined here -- exercises the `?? ""` fallback in
+    // `this._config?.custom_accent_color ?? ""`, never hit once setConfig()
+    // has run since DEFAULT_CONFIG always provides that key.
+    expect(() => el._customColorHelper()).not.toThrow();
+    expect(el._customColorHelper()).not.toContain("⚠");
+  });
+
   it("the accent_color helper only warns about an invalid custom color, not a valid or empty one", async () => {
     // happy-dom's CSS.supports() is too lenient to reject "bleu" on its
     // own, so use the same regex-fallback path pure.test.js relies on by

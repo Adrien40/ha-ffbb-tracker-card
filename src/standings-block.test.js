@@ -8,7 +8,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render } from "lit";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { renderStandingsBlock, standingsBlockStyles, isHighlightedRow, DETAILED_COLUMNS } from "./standings-block.js";
+import { renderStandingsBlock, standingsBlockStyles, isHighlightedRow, renderDetailedTable, DETAILED_COLUMNS } from "./standings-block.js";
 import "./ha-ffbb-tracker-card.js";
 
 const t = (_key, fallback) => fallback;
@@ -538,5 +538,39 @@ describe("targeted coverage: rare branches", () => {
   it("hides the header icon entirely when icon is explicitly empty", () => {
     const host = renderBlock({ icon: "" });
     expect(host.querySelector(".standings-card-header ha-icon")).toBeNull();
+  });
+
+  it("renderDetailedTable(): falls back from team_name to name to \"-\", and from position to rank to \"-\"", () => {
+    const host = document.createElement("div");
+    render(
+      renderDetailedTable({
+        rows: [
+          { position: 1, team_name: "Equipe A" }, // normal case
+          { rank: 2, name: "Equipe B" }, // team_name missing -> name; position missing -> rank
+          {}, // both missing -> "-" for both
+        ],
+        teamName: "Equipe A",
+        t,
+      }),
+      host
+    );
+    const rows = [...host.querySelectorAll("tbody tr")];
+    expect(rows.map((r) => r.querySelector(".col-team").textContent.trim())).toEqual(["Equipe A", "Equipe B", "-"]);
+    expect(rows.map((r) => r.querySelector(".pos-cell").textContent.trim())).toEqual(["1", "2", "-"]);
+  });
+
+  it("renderDetailedTable(): the highlighted row still shows displayTeamName over the fallback chain", () => {
+    const host = document.createElement("div");
+    render(
+      renderDetailedTable({
+        rows: [{ position: 1, team_name: "Officiel FC" }],
+        teamName: "Officiel FC",
+        displayTeamName: "Mon Équipe",
+        t,
+      }),
+      host
+    );
+    expect(host.querySelector("tbody .col-team").textContent.trim()).toBe("Mon Équipe");
+    expect(host.querySelector("tbody tr").classList.contains("highlight-row")).toBe(true);
   });
 });

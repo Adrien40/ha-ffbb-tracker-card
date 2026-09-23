@@ -714,6 +714,41 @@ describe("computeViewModel", () => {
     expect(vm.rightRank).toBe("5e");
   });
 
+  it("preview fallbacks are mirrored for an away fixture (isHome: false)", () => {
+    const minimalEntities = {
+      poule: { attributes: { team: "Custom Team" } },
+      nextVenue: { state: "away" }, // not "home" -> isHome resolves to false
+    };
+
+    const vm = computeViewModel({
+      entities: minimalEntities,
+      config: baseConfig,
+      isPreview: true,
+      lang: "fr",
+    });
+
+    expect(vm.leftRank).toBe("5e");
+    expect(vm.rightRank).toBe("2e");
+  });
+
+  it("preview mode does not override a rank that real entity data already provides", () => {
+    const entitiesWithRealRank = {
+      poule: { attributes: { team: "Custom Team" } },
+      nextVenue: { state: "home" },
+      rank: { state: "7", attributes: {} },
+    };
+
+    const vm = computeViewModel({
+      entities: entitiesWithRealRank,
+      config: baseConfig,
+      isPreview: true,
+      lang: "fr",
+    });
+
+    // The real rank ("7e") is used, not the preview placeholder ("2e").
+    expect(vm.leftRank).toBe("7e");
+  });
+
   it("respects custom team name override", () => {
     const vm = computeViewModel({
       entities: baseEntities,
@@ -1488,6 +1523,36 @@ describe("targeted coverage: rare branches", () => {
     vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: FakeDateTimeFormat });
     try {
       expect(resolveHour12(undefined, "en-US")).toBe(true);
+    } finally {
+      vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: RealDateTimeFormat });
+    }
+  });
+
+  it("resolveHour12(): \"h11\" (used by locales like ja/am for a 0-11 12-hour clock) also resolves to 12-hour", () => {
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+    class FakeDateTimeFormat {
+      resolvedOptions() {
+        return { hourCycle: "h11" };
+      }
+    }
+    vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: FakeDateTimeFormat });
+    try {
+      expect(resolveHour12(undefined, "ja-JP")).toBe(true);
+    } finally {
+      vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: RealDateTimeFormat });
+    }
+  });
+
+  it("resolveHour12(): \"h23\"/\"h24\" (24-hour clocks) resolve to false via the same hourCycle fallback", () => {
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+    class FakeDateTimeFormat {
+      resolvedOptions() {
+        return { hourCycle: "h23" };
+      }
+    }
+    vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: FakeDateTimeFormat });
+    try {
+      expect(resolveHour12(undefined, "fr-FR")).toBe(false);
     } finally {
       vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: RealDateTimeFormat });
     }
