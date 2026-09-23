@@ -65,7 +65,8 @@
     "no_form": "No recent form data available.",
     "live_title": "Live match",
     "last_title": "Last match",
-    "kickoff": "Kick-off"
+    "kickoff": "Kick-off",
+    "calendar_details": "FFBB match: {home} vs {away}"
   },
   "editor": {
     "entity": "FFBB team (sensor)",
@@ -77,6 +78,7 @@
     "logo_size_small": "Small",
     "logo_size_medium": "Medium (default)",
     "logo_size_large": "Large",
+    "logo_size_extra_large": "Extra Large",
     "logo_click_action": "Action on logo click",
     "logo_action_none": "No action",
     "logo_action_team_url": "Official FFBB team page",

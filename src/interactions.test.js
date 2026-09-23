@@ -567,6 +567,13 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     expect(el._activeModal).toBeNull();
   });
 
+  it("logo_size: extra_large applies the logo-box-extra_large class", async () => {
+    const el = await mountCard({ logo_size: "extra_large" });
+    const boxes = el.shadowRoot.querySelectorAll(".logo-box");
+    expect(boxes.length).toBeGreaterThan(0);
+    boxes.forEach((box) => expect(box.classList.contains("logo-box-extra_large")).toBe(true));
+  });
+
   it("clicking the left/right logo boxes calls window.open with each side's resolved URL", async () => {
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
     const el = await mountCard();
@@ -1780,10 +1787,49 @@ describe("form letters are French whatever the UI language (V = win, D = loss, N
 });
 
 describe("getGridOptions() (Sections view sizing)", () => {
-  it("is full width by default with a sensible minimum, and leaves the height to the content", () => {
-    const el = makeCard();
-    expect(el.getGridOptions()).toEqual({ columns: 12, min_columns: 9 });
-    expect("rows" in el.getGridOptions()).toBe(false);
+  it("is full width by default with a sensible minimum column count", () => {
+    const options = makeCard().getGridOptions();
+    expect(options.columns).toBe(12);
+    expect(options.min_columns).toBe(9);
+    expect("rows" in options).toBe(false);
+  });
+
+  it("match mode: min_rows grows with each optional block switched on", () => {
+    const allOff = makeCard({
+      entity: "sensor.x",
+      show_title: false,
+      show_header: false,
+      show_form: false,
+      show_venue: false,
+    }).getGridOptions().min_rows;
+    const allOn = makeCard({ entity: "sensor.x" }).getGridOptions().min_rows;
+    expect(allOff).toBe(3);
+    expect(allOn).toBeGreaterThan(allOff);
+  });
+
+  it("standings mode: min_rows grows with the number of teams in the pool", () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire", display_mode: "standings" });
+    el.hass = {
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
+        "sensor.basket_landes_classement": {
+          state: "1",
+          attributes: {
+            standings: Array.from({ length: 14 }, (_, i) => ({ position: i + 1, team_name: `Team ${i + 1}` })),
+          },
+        },
+      },
+    };
+    const withoutData = el.getGridOptions().min_rows;
+    expect(withoutData).toBeGreaterThan(0);
+  });
+
+  it("'both' mode: min_rows is at least the match card's own min_rows", () => {
+    const matchOnly = makeCard({ entity: "sensor.x" }).getGridOptions().min_rows;
+    const both = makeCard({ entity: "sensor.x", display_mode: "both" }).getGridOptions().min_rows;
+    expect(both).toBeGreaterThan(matchOnly);
   });
 });
 
@@ -2108,6 +2154,7 @@ describe("text built from several fields keeps its separators", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    document.body.innerHTML = "";
   });
 
   it("_openMaps() separates gym and city with a space", () => {
@@ -2122,11 +2169,21 @@ describe("text built from several fields keeps its separators", () => {
     expect(url.endsWith("%20")).toBe(false);
   });
 
-  it("_openCalendar() puts spaces around 'vs' in the title and the details", () => {
+  it("_openCalendar() puts spaces around 'vs' in the title and the details (English: no space before ':')", () => {
     makeCard()._openCalendar("2026-09-26T14:00:00Z", "BASKET BIAUDOS", "UJSBP", "SALLE DE BIAUDOS", "BIAUDOS");
     const url = openSpy.mock.calls[0][0];
     expect(url).toContain("text=BASKET%20BIAUDOS%20vs%20UJSBP");
     expect(url).toContain(`details=${encodeURIComponent("FFBB match: BASKET BIAUDOS vs UJSBP")}`);
+  });
+
+  it("_openCalendar() details are translated to 'Match FFBB' with a French no-break space before ':' in a French UI", async () => {
+    const el = makeCard();
+    el.hass = { language: "fr", locale: { language: "fr" } };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    el._openCalendar("2026-09-26T14:00:00Z", "BASKET BIAUDOS", "UJSBP", "SALLE DE BIAUDOS", "BIAUDOS");
+    const url = openSpy.mock.calls[0][0];
+    expect(url).toContain(`details=${encodeURIComponent("Match FFBB\u00a0: BASKET BIAUDOS vs UJSBP")}`);
   });
 
   it("_openCalendar() separates gym and city in the location", () => {

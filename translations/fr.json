@@ -65,7 +65,8 @@
     "no_form": "Aucune forme récente disponible.",
     "live_title": "Match en direct",
     "last_title": "Dernier match",
-    "kickoff": "Coup d'envoi"
+    "kickoff": "Coup d'envoi",
+    "calendar_details": "Match FFBB\u00a0: {home} vs {away}"
   },
   "editor": {
     "entity": "Équipe FFBB (capteur)",
@@ -77,6 +78,7 @@
     "logo_size_small": "Petite",
     "logo_size_medium": "Moyenne (par défaut)",
     "logo_size_large": "Grande",
+    "logo_size_extra_large": "Très grande",
     "logo_click_action": "Action au clic sur les logos",
     "logo_action_none": "Aucune action",
     "logo_action_team_url": "Page officielle FFBB de l'équipe",

@@ -13,6 +13,7 @@ import {
   createTeamMatcher,
   resolveCalendarTeamLogo,
   estimateCardSize,
+  estimateMinRows,
   splitScore,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
@@ -58,9 +59,15 @@ class FFBBCard extends LitElement {
   }
 
   getGridOptions() {
+    const entities = this._config ? this._resolveEntities() : null;
+    const min_rows = estimateMinRows({
+      config: this._config,
+      standings: entities?.rank?.attributes?.standings,
+    });
     return {
       columns: 12,
       min_columns: 9,
+      min_rows,
     };
   }
 
@@ -159,7 +166,9 @@ class FFBBCard extends LitElement {
     const toGCalIso = (d) => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
     const title = `${homeTeam} vs ${awayTeam}`;
     const location = `${gymName} ${gymCity}`.trim();
-    const details = `FFBB match: ${homeTeam} vs ${awayTeam}`;
+    const details = this._t("card.calendar_details", "FFBB match: {home} vs {away}")
+      .replace("{home}", homeTeam)
+      .replace("{away}", awayTeam);
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${toGCalIso(start)}/${toGCalIso(end)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
     window.open(url, "_blank", "noreferrer");
   }

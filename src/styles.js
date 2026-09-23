@@ -339,6 +339,12 @@ export const cardStyles = css`
     border-radius: 20px;
     padding: 8px;
   }
+  .logo-box-extra_large {
+    width: 136px;
+    height: 136px;
+    border-radius: 26px;
+    padding: 10px;
+  }
   .logo {
     max-width: 100%;
     max-height: 100%;

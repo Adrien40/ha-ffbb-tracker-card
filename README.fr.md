@@ -120,7 +120,7 @@ show_watermark: true
 | :--- | :--- | :--- | :--- |
 | `entity` | `string` | **Requis** | N'importe quelle entité capteur créée par l'intégration FFBB Tracker pour l'équipe. |
 | `custom_team_name` | `string` | `""` | Nom personnalisé affiché à la place du nom officiel FFBB (ex. : `Buglose Pontonx`). |
-| `logo_size` | `string` | `medium` | Taille des blasons d'équipes : `small`, `medium` ou `large`. |
+| `logo_size` | `string` | `medium` | Taille des blasons d'équipes : `small`, `medium`, `large` ou `extra_large`. |
 | `logo_click_action` | `string` | `team_url` | Action au clic sur un logo : `team_url` (page officielle FFBB), `more-info` (fiche détaillée HA) ou `none`. |
 | `default_match_view` | `string` | `auto` | Vue affichée initialement : `auto` (dernier match jusqu'à J+1), `next` (toujours le prochain) ou `last` (dernier match). |
 | `accent_color` | `string` | `default` | Style de la couleur d'accentuation : `default` (orange basket), `theme` (couleur primaire HA) ou `custom`. |
@@ -141,7 +141,7 @@ show_watermark: true
 
 ---
 
-### 🗑️ Désinstallation
+## 🗑️ Désinstallation
 
 1. Retirez la carte de vos tableaux de bord : passez chaque vue concernée en mode YAML (ou supprimez la carte via l'éditeur visuel) et supprimez le bloc `type: custom:ffbb-tracker-card` correspondant.
 2. Si installée via HACS : ouvrez **HACS**, trouvez la fiche **FFBB Tracker Card** (les dépôts téléchargés sont listés en premier, ou utilisez la recherche), ouvrez son menu à trois points, puis sélectionnez **Supprimer**. HACS retire automatiquement la ressource associée.
@@ -154,7 +154,7 @@ Cette carte ne crée aucun identifiant, jeton ou compte externe : il n'y a donc 
 
 ---
 
-### 🌐 Langues supportées
+## 🌐 Langues supportées
 
 La carte est entièrement disponible en **Français** <img src="https://hatscripts.github.io/circle-flags/flags/fr.svg" width="16" valign="middle"> et en **Anglais** <img src="https://hatscripts.github.io/circle-flags/flags/gb.svg" width="16" valign="middle"> (tous les libellés, modales et l'éditeur visuel).
 
@@ -162,7 +162,7 @@ Si vous souhaitez voir la carte traduite dans une autre langue ou contribuer à 
 
 ---
 
-### 🧑‍💻 Développement
+## 🧑‍💻 Développement
 
 Ce projet utilise [esbuild](https://esbuild.github.io/) pour regrouper la carte en un seul fichier autonome, et [Vitest](https://vitest.dev/) pour les tests unitaires.
 
@@ -179,12 +179,12 @@ npm run watch    # Rebuild automatique pendant le développement
 
 ---
 
-### 🤝 Contributions et support
+## 🤝 Contributions et support
 Pour tout bug ou demande d'amélioration, merci d'ouvrir une [Issue](https://github.com/Adrien40/ha-ffbb-tracker-card/issues) sur ce dépôt.
 
 ---
 
-### ⚖️ Licence et avertissement
+## ⚖️ Licence et avertissement
 Projet sous licence **GPLv3**. Il s'agit d'un projet indépendant et open source, sans aucun lien officiel avec la Fédération Française de BasketBall (FFBB). L'utilisation de ce logiciel se fait sous votre propre responsabilité.
 
 ---

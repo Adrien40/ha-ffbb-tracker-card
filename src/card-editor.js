@@ -157,6 +157,7 @@ class FFBBCardEditor extends LitElement {
                   { value: "small", label: this._t("editor.logo_size_small", "Small") },
                   { value: "medium", label: this._t("editor.logo_size_medium", "Medium (default)") },
                   { value: "large", label: this._t("editor.logo_size_large", "Large") },
+                  { value: "extra_large", label: this._t("editor.logo_size_extra_large", "Extra Large") },
                 ],
               },
             },
