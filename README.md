@@ -14,6 +14,8 @@ A **modern and interactive Lovelace card** for Home Assistant designed specifica
   <img src="https://raw.githubusercontent.com/Adrien40/ha-ffbb-tracker-card/refs/heads/main/docs/screenshots/card_preview.gif" width="485" alt="FFBB Tracker Card preview">
 </p>
 
+<p align="center">📸 <a href="docs/SCREENSHOTS.md">More screenshots</a></p>
+
 If you find this project useful, you can support its development 🙏
 
 <a href="https://www.buymeacoffee.com/adrien40"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="160"></a>
