@@ -99,4 +99,40 @@ describe("styles.js -- a one-line team name is vertically centred against a two-
   it(".team-name-cell overrides the grid's default top alignment with align-self: center", () => {
     expect(declarationsFor(".team-name-cell")["align-self"]).toBe("center");
   });
+
+  it(".team-name-cell also centres a one-line name within its own now-2-line-tall box", () => {
+    expect(declarationsFor(".team-name-cell")["align-items"]).toBe("center");
+  });
+});
+
+// Without a minimum, a one-line team name only reserves 1 line of height
+// while a two-line one reserves 2 -- so grid-row 2 (and the whole card's
+// vertical size) changed height match to match depending on how long the
+// two team names happened to be. Reserving 2 lines (line-height 1.25 x 2)
+// at all times keeps the card's height constant regardless of content.
+describe("styles.js -- team name always reserves 2 lines of height, so card height doesn't jump match to match", () => {
+  it(".team-title has a min-height of 2 lines (line-height 1.25 x 2 = 2.5em)", () => {
+    expect(declarationsFor(".team-title")["min-height"]).toBe("2.5em");
+  });
+
+  it("the 2-line cap (-webkit-line-clamp) is still in place, so a long name is still truncated, not just reserved-for", () => {
+    expect(declarationsFor(".team-title")["-webkit-line-clamp"]).toBe("2");
+  });
+});
+
+// The season-schedule modal's per-row team crests and date/time were small
+// enough to be barely legible (16px logos, 0.76em text) -- both bumped up a
+// notch. The date/time column has a fixed min-width (58px) independent of
+// font-size, so this doesn't risk wrapping or reflowing the row.
+describe("styles.js -- calendar modal rows: bigger crests and date/time", () => {
+  it(".cal-mini-logo grew from 16px to 22px", () => {
+    const decl = declarationsFor(".cal-mini-logo");
+    expect(decl.width).toBe("22px");
+    expect(decl.height).toBe("22px");
+  });
+
+  it(".cal-date and .cal-time grew from 0.76em to 0.82em", () => {
+    expect(declarationsFor(".cal-date")["font-size"]).toBe("0.82em");
+    expect(declarationsFor(".cal-time")["font-size"]).toBe("0.82em");
+  });
 });
