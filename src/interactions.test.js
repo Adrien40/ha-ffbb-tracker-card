@@ -927,8 +927,8 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     }
   });
 
-  it("show_list_logos: false removes the calendar-modal mini-logos entirely (not just hides them)", async () => {
-    const el = await mountCard({ show_list_logos: false });
+  it("show_calendar_logos: false removes the calendar-modal mini-logos entirely (not just hides them)", async () => {
+    const el = await mountCard({ show_calendar_logos: false });
     await el.updateComplete;
 
     el.shadowRoot.querySelector(".header-round.clickable-round").click();
@@ -1421,8 +1421,8 @@ describe("standings_popup_detailed", () => {
     expect(logos[1].getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
   });
 
-  it("show_list_logos: false removes the simple popup table's crests too, not just the calendar's", async () => {
-    const el = await mountAndOpen({ show_list_logos: false });
+  it("show_standings_logos: false removes the simple popup table's logos too, not just the calendar's", async () => {
+    const el = await mountAndOpen({ show_standings_logos: false });
     expect(el.shadowRoot.querySelectorAll(".modal-card .standings-table .col-team-logo").length).toBe(0);
     // Still shows the team names -- only the <img> is gone.
     expect(el.shadowRoot.querySelector(".modal-card .standings-table tbody").textContent).toContain("Basket Landes");

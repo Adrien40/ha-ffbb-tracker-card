@@ -10,14 +10,14 @@ Un aperçu rapide du rendu de la carte selon différentes configurations. Retour
   <img src="screenshots/gallery-overview.png" alt="FFBB Tracker Card -- cartes de match, match en direct, et classement">
 </p>
 
-> ⚠️ Ce screenshot date d'avant quelques ajustements visuels et n'est plus totalement à jour : les blasons dans les lignes du calendrier sont maintenant plus grands (22px, contre 16px), les noms d'équipe dans les tableaux de classement ne sont plus tronqués, les lignes du classement affichent maintenant aussi un petit blason, et les lignes du calendrier sont un peu plus compactes. Une capture à jour est bienvenue (voir plus bas).
+> ⚠️ Ce screenshot date d'avant quelques ajustements visuels et n'est plus totalement à jour : les logos dans les lignes du calendrier sont maintenant plus grands (22px, contre 16px), les noms d'équipe dans les tableaux de classement ne sont plus tronqués, les lignes du classement affichent maintenant aussi un petit logo, et les lignes du calendrier sont un peu plus compactes. Une capture à jour est bienvenue (voir plus bas).
 
 De gauche à droite :
 
-* **Prochain match** (`display_mode: match`, par défaut) -- blasons d'équipes, badge journée/poule cliquable, forme récente et lieu de la rencontre avec lien Google Maps.
+* **Prochain match** (`display_mode: match`, par défaut) -- logos d'équipes, badge journée/poule cliquable, forme récente et lieu de la rencontre avec lien Google Maps.
 * **Prochain match, une autre poule** -- même mise en page, avec un nom d'adversaire plus long tronqué pour tenir.
 * **Match en direct** -- une fois le match commencé, le compte à rebours est remplacé par le badge rouge "En direct" et l'heure du coup d'envoi.
-* **Classement** (`display_mode: standings`, carte en bas à gauche) -- le tableau complet de la poule, avec votre équipe mise en évidence, un petit blason par ligne, et un défilement horizontal sur petit écran.
+* **Classement** (`display_mode: standings`, carte en bas à gauche) -- le tableau complet de la poule, avec votre équipe mise en évidence, un petit logo par ligne, et un défilement horizontal sur petit écran.
 
 ## À venir
 

@@ -120,11 +120,11 @@ describe("styles.js -- team name always reserves 2 lines of height, so card heig
   });
 });
 
-// The season-schedule modal's per-row team crests and date/time were small
+// The season-schedule modal's per-row team logos and date/time were small
 // enough to be barely legible (16px logos, 0.76em text) -- both bumped up a
 // notch. The date/time column has a fixed min-width (58px) independent of
 // font-size, so this doesn't risk wrapping or reflowing the row.
-describe("styles.js -- calendar modal rows: bigger crests and date/time", () => {
+describe("styles.js -- calendar modal rows: bigger logos and date/time", () => {
   it(".cal-mini-logo grew from 16px to 22px", () => {
     const decl = declarationsFor(".cal-mini-logo");
     expect(decl.width).toBe("22px");

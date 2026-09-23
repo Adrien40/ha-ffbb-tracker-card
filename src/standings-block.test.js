@@ -158,7 +158,7 @@ describe("standings-block.js styles -- no scrollbar", () => {
     expect(css).toMatch(/\.standings-card\s*{[^}]*margin-top:\s*\d+px/);
   });
 
-  it("the team crest is small enough to add to a row without growing it (18px, measured safe against both the popup and detailed table's ~19px of already-reserved text height)", () => {
+  it("the team logo is small enough to add to a row without growing it (18px, measured safe against both the popup and detailed table's ~19px of already-reserved text height)", () => {
     expect(css).toMatch(/\.col-team-logo\s*{[^}]*width:\s*18px/);
     expect(css).toMatch(/\.col-team-logo\s*{[^}]*height:\s*18px/);
   });
@@ -661,7 +661,7 @@ describe("targeted coverage: rare branches", () => {
     expect(rows.map((r) => r.querySelector(".pos-cell").textContent.trim())).toEqual(["1", "2", "-"]);
   });
 
-  it("renderDetailedTable(): each row's crest uses that row's own logo_url, from the FFBB Tracker integration's standings data", () => {
+  it("renderDetailedTable(): each row's logo uses that row's own logo_url, from the FFBB Tracker integration's standings data", () => {
     const host = document.createElement("div");
     render(
       renderDetailedTable({
@@ -677,12 +677,12 @@ describe("targeted coverage: rare branches", () => {
     const logos = [...host.querySelectorAll("tbody .col-team-logo")];
     expect(logos).toHaveLength(2);
     expect(logos[0].getAttribute("src")).toBe("https://api.ffbb.app/assets/team-a-uuid");
-    // No logo_url -> the same default crest used everywhere else in the
+    // No logo_url -> the same default logo used everywhere else in the
     // card, not a broken image or a missing <img>.
     expect(logos[1].getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
   });
 
-  it("renderDetailedTable(): a broken crest URL (404, CORS...) falls back to the default crest via @error, same as the match-area logos", () => {
+  it("renderDetailedTable(): a broken logo URL (404, CORS...) falls back to the default logo via @error, same as the match-area logos", () => {
     const host = document.createElement("div");
     render(
       renderDetailedTable({
@@ -697,7 +697,7 @@ describe("targeted coverage: rare branches", () => {
     expect(img.src).toContain(DEFAULT_FALLBACK_LOGO);
   });
 
-  it("renderDetailedTable(): showLogos: false removes the crest entirely, defaults to showing it when omitted", () => {
+  it("renderDetailedTable(): showLogos: false removes the logo entirely, defaults to showing it when omitted", () => {
     const rows = [{ position: 1, team_name: "Equipe A", logo_url: "https://api.ffbb.app/assets/team-a-uuid" }];
 
     const shown = document.createElement("div");
@@ -707,7 +707,7 @@ describe("targeted coverage: rare branches", () => {
     const hidden = document.createElement("div");
     render(renderDetailedTable({ rows, teamName: "Equipe A", t, showLogos: false }), hidden);
     expect(hidden.querySelector(".col-team-logo")).toBeNull();
-    // Still shows the team name -- only the crest is gone.
+    // Still shows the team name -- only the logo is gone.
     expect(hidden.querySelector("tbody .col-team").textContent.trim()).toBe("Equipe A");
   });
 

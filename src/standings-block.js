@@ -85,14 +85,14 @@ export const DETAILED_COLUMNS = {
   ],
 };
 
-// A small team crest for a standings row, shared by the detailed table
+// A small team logo for a standings row, shared by the detailed table
 // below and the simple popup table (ha-ffbb-tracker-card.js), so both use
 // the exact same markup, fallback, and error handling instead of two
 // copies that could drift. Deliberately tiny (see .col-team-logo further
 // down in this file's own css`...`): sized to fit inside the existing row
-// height, not to grow it -- the whole point was adding crests without
+// height, not to grow it -- the whole point was adding logos without
 // taller rows.
-export function renderStandingsCrest(logoUrl, show = true) {
+export function renderStandingsLogo(logoUrl, show = true) {
   if (!show) return nothing;
   return html`
     <img
@@ -154,7 +154,7 @@ export function renderDetailedTable({ rows, teamName, displayTeamName, t, showLo
             return html`
               <tr class=${highlighted ? "highlight-row" : ""}>
                 <td class="pos-cell col-pos">${item.position || item.rank || "-"}</td>
-                <td class="col-team">${renderStandingsCrest(item.logo_url, showLogos)}<span>${rowTeamLabel}</span></td>
+                <td class="col-team">${renderStandingsLogo(item.logo_url, showLogos)}<span>${rowTeamLabel}</span></td>
                 <td class="pts-cell">${cell(item.points ?? item.pts)}</td>
                 ${matches.map((col) => body(col, item))}
                 ${singles.map((col) => body(col, item))}
@@ -326,12 +326,12 @@ export const standingsBlockStyles = css`
      block): a 16px circle plus a small margin adds only ~2px to a
      ~29-31px detailed-table row, and 0px to a table using this same class
      elsewhere (styles.js's simple popup table) -- the point was adding
-     crests without growing any row. Shared with that simple table via
-     renderStandingsCrest() so both use one rule, not two that could drift. */
+     logos without growing any row. Shared with that simple table via
+     renderStandingsLogo() so both use one rule, not two that could drift. */
   /* Measured against real screenshots (popup: 27px row / 8px padding;
      detailed table: 31px row / 12px padding), both landed on ~19px of
      already-reserved text content height regardless of table -- 18px
-     stays safely under that in both, so this grows the crest without
+     stays safely under that in both, so this grows the logo without
      growing either row. */
   .col-team-logo {
     width: 18px;

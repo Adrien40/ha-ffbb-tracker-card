@@ -74,7 +74,7 @@
     "custom_team_name": "Custom name for my team",
     "custom_team_name_helper": "Leave blank to keep official FFBB team name",
     "logo_section": "Logos",
-    "logo_size": "Team crest size",
+    "logo_size": "Team logo size",
     "logo_size_small": "Small",
     "logo_size_medium": "Medium (default)",
     "logo_size_large": "Large",
@@ -118,6 +118,7 @@
     "show_form": "Show recent form",
     "show_venue": "Show venue",
     "show_watermark": "Transparent background logos",
-    "show_list_logos": "Team crests in calendar and standings rows"
+    "show_calendar_logos": "Team logos in the calendar rows",
+    "show_standings_logos": "Team logos in standings rows (popup and standalone card)"
   }
 }

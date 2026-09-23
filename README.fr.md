@@ -34,9 +34,9 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 * 🎨 **Couleur d'accentuation personnalisable :** appliquez l'orange basket officiel par défaut, la couleur primaire de votre thème Home Assistant, ou n'importe quel code couleur hexadécimal (HEX) pour calquer la carte sur les couleurs réelles de votre club.
 * 🗺️ **Guidage GPS direct :** un clic sur le gymnase lance immédiatement l'itinéraire dans Google Maps.
 * 📅 **Ajout au calendrier :** un clic sur la date génère un événement Google Agenda prérempli avec l'horaire, les équipes et l'adresse de la salle.
-* 🌐 **Lien officiel du club :** un clic sur le blason ouvre la page officielle de l'équipe sur le site de la FFBB (activé par défaut).
+* 🌐 **Lien officiel du club :** un clic sur le logo ouvre la page officielle de l'équipe sur le site de la FFBB (activé par défaut).
 * 📊 **Modales interactives intégrées :**
-  * **Classement complet :** un clic sur la pastille de position (`1er`, `4e`...) ouvre le tableau complet de la poule (points, joués, victoires, défaites, nuls) avec surlignage de votre équipe et de l'adversaire. Chaque ligne affiche le blason de l'équipe quand le capteur source en fournit un (voir le changelog de l'intégration FFBB Tracker).
+  * **Classement complet :** un clic sur la pastille de position (`1er`, `4e`...) ouvre le tableau complet de la poule (points, joués, victoires, défaites, nuls) avec surlignage de votre équipe et de l'adversaire. Chaque ligne affiche le logo de l'équipe quand le capteur source en fournit un (voir le changelog de l'intégration FFBB Tracker).
   * **Calendrier de la saison :** un clic sur l'en-tête « Journée » ouvre la liste ordonnée de tous les matchs de la poule avec les scores passés et les matchs à venir.
   * **Détail de la forme :** un clic sur la série (ex. `V-V-D-V-N`) affiche le récapitulatif détaillé et la série active.
 * 🖼️ **Logos en filigrane :** logos des clubs affichés en arrière-plan avec masque radial elliptique adouci pour donner du relief sans arête brute.
@@ -44,7 +44,7 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 * 🔒 **100 % local & sécurisé :** aucune dépendance CDN distante - Lit est une dépendance npm suivie, intégrée au build.
 
 > [!NOTE]
-> **Blasons et liens d'équipe dans le carrousel.** Pour chaque match, la carte utilise le blason et le lien portés par la ligne correspondante de l'attribut `calendar` du capteur poule (`home_logo`, `away_logo`, `home_url`, `away_url`). Quand une ligne ne les fournit pas, elle se rabat sur les capteurs du prochain et du dernier adversaire si le nom du club correspond, puis sur le classement (liens uniquement). Sans aucune donnée, le blason par défaut s'affiche plutôt que celui d'un autre club.
+> **Logos et liens d'équipe dans le carrousel.** Pour chaque match, la carte utilise le logo et le lien portés par la ligne correspondante de l'attribut `calendar` du capteur poule (`home_logo`, `away_logo`, `home_url`, `away_url`). Quand une ligne ne les fournit pas, elle se rabat sur les capteurs du prochain et du dernier adversaire si le nom du club correspond, puis sur le classement (liens uniquement). Sans aucune donnée, le logo par défaut s'affiche plutôt que celui d'un autre club.
 
 ---
 
@@ -122,7 +122,7 @@ show_watermark: true
 | :--- | :--- | :--- | :--- |
 | `entity` | `string` | **Requis** | N'importe quelle entité capteur créée par l'intégration FFBB Tracker pour l'équipe. |
 | `custom_team_name` | `string` | `""` | Nom personnalisé affiché à la place du nom officiel FFBB (ex. : `Buglose Pontonx`). |
-| `logo_size` | `string` | `medium` | Taille des blasons d'équipes : `small`, `medium`, `large` ou `extra_large`. |
+| `logo_size` | `string` | `medium` | Taille des logos d'équipes : `small`, `medium`, `large` ou `extra_large`. |
 | `logo_click_action` | `string` | `team_url` | Action au clic sur un logo : `team_url` (page officielle FFBB), `more-info` (fiche détaillée HA) ou `none`. |
 | `default_match_view` | `string` | `auto` | Vue affichée initialement : `auto` (dernier match jusqu'à J+1), `next` (toujours le prochain) ou `last` (dernier match). |
 | `accent_color` | `string` | `default` | Style de la couleur d'accentuation : `default` (orange basket), `theme` (couleur primaire HA) ou `custom`. |
@@ -140,7 +140,8 @@ show_watermark: true
 | `show_form` | `boolean` | `true` | Affiche la pastille de forme récente (5 derniers matchs joués). |
 | `show_venue` | `boolean` | `true` | Affiche l'adresse de la salle avec le lien de navigation GPS en pied de carte. |
 | `show_watermark` | `boolean` | `true` | Affiche les logos des clubs en filigrane en arrière-plan. |
-| `show_list_logos` | `boolean` | `true` | Affiche un petit blason par ligne dans le calendrier et les tableaux de classement (popup et carte classement autonome). |
+| `show_calendar_logos` | `boolean` | `true` | Affiche un petit logo par ligne dans la modale du calendrier de la saison. |
+| `show_standings_logos` | `boolean` | `true` | Affiche un petit logo par ligne dans les tableaux de classement (popup et carte classement autonome). |
 
 ---
 

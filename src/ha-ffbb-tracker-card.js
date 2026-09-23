@@ -17,7 +17,7 @@ import {
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
-import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable, renderStandingsCrest } from "./standings-block.js";
+import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable, renderStandingsLogo } from "./standings-block.js";
 import "./card-editor.js";
 
 class FFBBCard extends LitElement {
@@ -376,7 +376,7 @@ class FFBBCard extends LitElement {
                     teamName,
                     displayTeamName,
                     t: (key, fallback) => this._t(key, fallback),
-                    showLogos: this._config.show_list_logos !== false,
+                    showLogos: this._config.show_standings_logos !== false,
                   })
                 : html`
                     <table class="standings-table">
@@ -404,7 +404,7 @@ class FFBBCard extends LitElement {
                           return html`
                             <tr class=${isRowHighlighted ? "highlight-row" : ""}>
                               <td class="pos-cell">${item.position || item.rank || "-"}</td>
-                              <td class="col-team">${renderStandingsCrest(item.logo_url, this._config.show_list_logos !== false)}<span>${displayedTeamLabel}</span></td>
+                              <td class="col-team">${renderStandingsLogo(item.logo_url, this._config.show_standings_logos !== false)}<span>${displayedTeamLabel}</span></td>
                               <td class="pts-cell">${item.points ?? item.pts ?? "-"}</td>
                               <td>${item.played ?? "-"}</td>
                               <td>${item.wins ?? item.won ?? "-"}</td>
@@ -612,7 +612,7 @@ class FFBBCard extends LitElement {
                             </div>
                             <div class="calendar-col-teams">
                               <div class="cal-team-line">
-                                ${this._config.show_list_logos !== false
+                                ${this._config.show_calendar_logos !== false
                                   ? html`
                                       <img
                                         class="cal-mini-logo"
@@ -629,7 +629,7 @@ class FFBBCard extends LitElement {
                                 <span class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${isHomeMyTeam && displayTeamName ? displayTeamName : home}</span>
                               </div>
                               <div class="cal-team-line">
-                                ${this._config.show_list_logos !== false
+                                ${this._config.show_calendar_logos !== false
                                   ? html`
                                       <img
                                         class="cal-mini-logo"
@@ -758,7 +758,7 @@ class FFBBCard extends LitElement {
             title: vm.standingsTitle,
             icon: vm.standingsIcon,
             compact: vm.displayMode === "both",
-            showLogos: this._config.show_list_logos !== false,
+            showLogos: this._config.show_standings_logos !== false,
             t: (key, fallback) => this._t(key, fallback),
           })
         : nothing}

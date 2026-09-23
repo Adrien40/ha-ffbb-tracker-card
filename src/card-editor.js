@@ -148,7 +148,7 @@ class FFBBCardEditor extends LitElement {
         schema: [
           {
             name: "logo_size",
-            label: this._t("editor.logo_size", "Team crest size"),
+            label: this._t("editor.logo_size", "Team logo size"),
             default: "medium",
             selector: {
               select: {
@@ -184,8 +184,14 @@ class FFBBCardEditor extends LitElement {
             selector: { boolean: {} },
           },
           {
-            name: "show_list_logos",
-            label: this._t("editor.show_list_logos", "Team crests in calendar and standings rows"),
+            name: "show_calendar_logos",
+            label: this._t("editor.show_calendar_logos", "Team logos in the calendar rows"),
+            default: true,
+            selector: { boolean: {} },
+          },
+          {
+            name: "show_standings_logos",
+            label: this._t("editor.show_standings_logos", "Team logos in standings rows (popup and standalone card)"),
             default: true,
             selector: { boolean: {} },
           },
@@ -327,6 +333,12 @@ class FFBBCardEditor extends LitElement {
                   name: "standings_icon",
                   label: this._t("editor.standings_icon", "Standings card icon"),
                   selector: { icon: {} },
+                },
+                {
+                  name: "show_standings_logos",
+                  label: this._t("editor.show_standings_logos", "Team logos in standings rows (popup and standalone card)"),
+                  default: true,
+                  selector: { boolean: {} },
                 },
               ]
             : []),

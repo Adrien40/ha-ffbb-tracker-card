@@ -816,7 +816,7 @@ export function computeViewModel({
     // The next/last opponent sensors describe the *next/last* match, not
     // necessarily the one the carousel is showing. Resolve each side by team
     // name (match logo -> sensor if the name matches -> standings) so a
-    // carousel row never inherits another opponent's crest.
+    // carousel row never inherits another opponent's logo.
     const sensorAttrs = (id) => entities[id]?.attributes;
     const myTeamSensorLogo =
       sensorAttrs("nextOpponent")?.team_logo_url ||

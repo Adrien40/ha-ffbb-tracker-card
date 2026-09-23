@@ -118,6 +118,7 @@
     "show_form": "Afficher la forme récente",
     "show_venue": "Afficher la salle",
     "show_watermark": "Logos en transparence en arrière-plan",
-    "show_list_logos": "Blasons dans les lignes calendrier et classement"
+    "show_calendar_logos": "Logos d'équipe dans les lignes du calendrier",
+    "show_standings_logos": "Logos d'équipe dans les lignes de classement (popup et carte autonome)"
   }
 }

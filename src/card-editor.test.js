@@ -122,17 +122,33 @@ describe("card-editor.js schema -- \"logo\" expandable section", () => {
     expect(group.flatten).toBe(true);
   });
 
-  it("nests logo_size, logo_click_action, show_watermark and show_list_logos inside, and nothing else", async () => {
+  it("nests logo_size, logo_click_action, show_watermark, show_calendar_logos and show_standings_logos inside, and nothing else", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "logo").map((f) => f.name);
-    expect(names).toEqual(["logo_size", "logo_click_action", "show_watermark", "show_list_logos"]);
+    expect(names).toEqual(["logo_size", "logo_click_action", "show_watermark", "show_calendar_logos", "show_standings_logos"]);
   });
 
-  it("puts the new crest-visibility toggle (show_list_logos) last in the section, after show_watermark", async () => {
+  it("puts the two logo-visibility toggles last in the section, after show_watermark", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "logo").map((f) => f.name);
-    expect(names.at(-1)).toBe("show_list_logos");
-    expect(names.at(-2)).toBe("show_watermark");
+    expect(names.at(-1)).toBe("show_standings_logos");
+    expect(names.at(-2)).toBe("show_calendar_logos");
+    expect(names.at(-3)).toBe("show_watermark");
+  });
+
+  it("show_standings_logos is duplicated into the \"Standalone standings card\" section too, once that card is in use -- someone configuring display_mode: standings shouldn't have to go hunting in the Logo section for it", async () => {
+    const matchOnly = await mountEditor({ display_mode: "match" });
+    // Not shown at all while only the match card is in play -- nothing to
+    // toggle it for yet, matches standings_title/standings_icon's own
+    // conditional visibility right above it.
+    expect(groupSchema(matchOnly, "standings_card").map((f) => f.name)).not.toContain("show_standings_logos");
+
+    const withStandings = await mountEditor({ display_mode: "standings" });
+    const names = groupSchema(withStandings, "standings_card").map((f) => f.name);
+    expect(names).toContain("show_standings_logos");
+    // Both fields read/write the exact same config key, so ha-form keeps
+    // them in sync automatically -- no separate state to fall out of sync.
+    expect(groupSchema(withStandings, "logo").map((f) => f.name)).toContain("show_standings_logos");
   });
 
   it("no longer lists show_watermark as a top-level field, and keeps its default: true", async () => {

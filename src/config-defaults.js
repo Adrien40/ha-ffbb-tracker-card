@@ -32,5 +32,6 @@ export const DEFAULT_CONFIG = {
   show_form: true,
   show_venue: true,
   show_watermark: true,
-  show_list_logos: true,
+  show_calendar_logos: true,
+  show_standings_logos: true,
 };

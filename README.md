@@ -34,17 +34,17 @@ If you find this project useful, you can support its development 🙏
 * 🎨 **Configurable Accent Color:** Use default basketball orange, your active Home Assistant theme primary color, or any custom HEX code to match your club's jersey colors.
 * 🗺️ **Direct GPS Navigation:** Tap the venue to launch direct turn-by-turn routing in Google Maps.
 * 📅 **Add to Calendar:** Tap the date to create a prefilled Google Calendar event with tip-off time, teams, and gym address.
-* 🌐 **Official Club Link:** Tap team crests to open the team's official page on the FFBB portal (enabled by default).
+* 🌐 **Official Club Link:** Tap team logos to open the team's official page on the FFBB portal (enabled by default).
 * 📊 **Built-in Interactive Modals:**
-  * **Full Standings:** Tap rank badges (`1st`, `4th`...) to inspect the complete pool standings table (points, played, wins, losses, draws) with team and opponent highlights. Each row shows the team's crest when the source sensor provides one (see the FFBB Tracker integration changelog).
+  * **Full Standings:** Tap rank badges (`1st`, `4th`...) to inspect the complete pool standings table (points, played, wins, losses, draws) with team and opponent highlights. Each row shows the team's logo when the source sensor provides one (see the FFBB Tracker integration changelog).
   * **Season Schedule:** Tap the "Round" header to browse the ordered schedule of all pool matches with past scores and upcoming fixtures.
   * **Form Details:** Tap the recent form sequence (e.g. `W-W-L-W-D`) for match details and active streak counts.
-* 🖼️ **Watermark Crests:** Background club crests rendered with a smooth elliptical radial mask to eliminate visible straight edges.
+* 🖼️ **Watermark Logos:** Background club logos rendered with a smooth elliptical radial mask to eliminate visible straight edges.
 * ⚙️ **Complete Visual Editor (`ha-form`):** Fully manageable through the Home Assistant UI, no mandatory YAML editing.
 * 🔒 **100% Local & Secure:** Zero external CDN calls - Lit is a tracked npm dependency, bundled in at build time.
 
 > [!NOTE]
-> **Crests and team links in the carousel.** For each match, the card uses the crest and link carried by the matching row of the pool sensor's `calendar` attribute (`home_logo`, `away_logo`, `home_url`, `away_url`). When a row doesn't provide them, it falls back to the next and last opponent sensors if the club name matches, then to the standings (links only). Without any data, the default crest is shown rather than another club's crest.
+> **Logos and team links in the carousel.** For each match, the card uses the logo and link carried by the matching row of the pool sensor's `calendar` attribute (`home_logo`, `away_logo`, `home_url`, `away_url`). When a row doesn't provide them, it falls back to the next and last opponent sensors if the club name matches, then to the standings (links only). Without any data, the default logo is shown rather than another club's logo.
 
 ---
 
@@ -122,7 +122,7 @@ show_watermark: true
 | :--- | :--- | :--- | :--- |
 | `entity` | `string` | **Required** | Any sensor entity created by the FFBB Tracker integration for the team. |
 | `custom_team_name` | `string` | `""` | Custom team label overriding official FFBB name (e.g., `Buglose Pontonx`). |
-| `logo_size` | `string` | `medium` | Team crest size: `small`, `medium`, `large`, or `extra_large`. |
+| `logo_size` | `string` | `medium` | Team logo size: `small`, `medium`, `large`, or `extra_large`. |
 | `logo_click_action` | `string` | `team_url` | Action on logo click: `team_url` (official FFBB page), `more-info` (HA dialog), or `none`. |
 | `default_match_view` | `string` | `auto` | Initial match view: `auto` (last match until D+1), `next` (always upcoming), or `last` (last match). |
 | `accent_color` | `string` | `default` | Accent color source: `default` (basketball orange), `theme` (HA primary color), or `custom`. |
@@ -139,8 +139,9 @@ show_watermark: true
 | `standings_icon` | `string` | `mdi:format-list-numbered` | Icon displayed beside the standings card title. |
 | `show_form` | `boolean` | `true` | Displays recent form streak indicator (last 5 games). |
 | `show_venue` | `boolean` | `true` | Displays venue details with GPS navigation link in footer. |
-| `show_watermark` | `boolean` | `true` | Shows faded team crest watermarks in background. |
-| `show_list_logos` | `boolean` | `true` | Shows a small team crest per row in calendar rows and standings tables (popup and standalone standings card). |
+| `show_watermark` | `boolean` | `true` | Shows faded team logo watermarks in background. |
+| `show_calendar_logos` | `boolean` | `true` | Shows a small team logo per row in the season calendar modal. |
+| `show_standings_logos` | `boolean` | `true` | Shows a small team logo per row in standings tables (popup and standalone standings card). |
 
 ---
 
