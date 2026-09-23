@@ -9,6 +9,7 @@ import { render } from "lit";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { renderStandingsBlock, standingsBlockStyles, isHighlightedRow, renderDetailedTable, DETAILED_COLUMNS } from "./standings-block.js";
+import { cardStyles } from "./styles.js";
 import "./ha-ffbb-tracker-card.js";
 
 const t = (_key, fallback) => fallback;
@@ -138,11 +139,106 @@ describe("standings-block.js styles -- no scrollbar", () => {
   });
 
   it("keeps team names on a single line instead of wrapping (not scoped to .standings-card, so the popup gets the same behavior)", () => {
-    expect(css).toMatch(/\.standings-table-detailed \.col-team\s*{[^}]*white-space:\s*nowrap/);
+    expect(css).toMatch(/\.standings-table\.standings-table-detailed \.col-team\s*{[^}]*white-space:\s*nowrap/);
+  });
+
+  it("the un-truncating rule outranks the base truncating rule on specificity alone, not source order", () => {
+    // 3 class components (.standings-table + .standings-table-detailed +
+    // .col-team, the first two compounded on the same element) vs the base
+    // rule's 2 (.standings-table .col-team in styles.js) -- must never
+    // regress back to equal specificity, which depends on a source order
+    // that turned out not to hold in practice (see the comment in
+    // standings-block.js above this rule).
+    const match = css.match(/\.standings-table\.standings-table-detailed \.col-team\s*{[^}]*max-width:\s*none/);
+    expect(match, "expected a compound .standings-table.standings-table-detailed selector").not.toBeNull();
   });
 
   it("keeps a gap between the match card and the standings card", () => {
     expect(css).toMatch(/\.standings-card\s*{[^}]*margin-top:\s*\d+px/);
+  });
+});
+
+// The two regex-based tests above check the CSS *text*, not what a real
+// browser actually resolves -- they would NOT have caught either of the two
+// real bugs this rule went through: (1) two selectors tied on specificity,
+// where the "later wins" assumption did not hold in practice, and (2) a
+// JS-style `//` comment accidentally placed inside the raw CSS of a css`...`
+// template (invalid CSS, silently drops the whole rule) -- both looked fine
+// as plain text. This mounts the real combined stylesheet in a shadow root
+// and asks the browser engine itself (via getComputedStyle) who actually
+// wins, which is the only check that would have caught either regression.
+describe("standings-block.js + styles.js combined: getComputedStyle (not just CSS text) confirms the popup's team name is not truncated", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("a long team name in the detailed table resolves to no max-width, visible overflow, no ellipsis", () => {
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    for (const sheet of [cardStyles, standingsBlockStyles]) {
+      const styleEl = document.createElement("style");
+      styleEl.textContent = sheet.cssText;
+      shadow.appendChild(styleEl);
+    }
+
+    const table = document.createElement("table");
+    table.className = "standings-table standings-table-detailed";
+    const td = document.createElement("td");
+    td.className = "col-team";
+    td.textContent = "BISCARROSSE OLYMPIQUE BASKET";
+    const tr = document.createElement("tr");
+    tr.appendChild(td);
+    table.appendChild(tr);
+    shadow.appendChild(table);
+    document.body.appendChild(host);
+
+    const computed = getComputedStyle(td);
+    expect(computed.maxWidth).not.toBe("140px");
+    expect(computed.overflow).not.toBe("hidden");
+    expect(computed.textOverflow).not.toBe("ellipsis");
+  });
+
+  it("the SIMPLE (non-detailed) popup table is untouched and still truncates -- only the detailed table changed", () => {
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    for (const sheet of [cardStyles, standingsBlockStyles]) {
+      const styleEl = document.createElement("style");
+      styleEl.textContent = sheet.cssText;
+      shadow.appendChild(styleEl);
+    }
+
+    // No "standings-table-detailed" class here -- the simple 7-column popup
+    // table, which is deliberately left truncating (see the previous
+    // conversation with the user: only the detailed table was reported and
+    // fixed).
+    const table = document.createElement("table");
+    table.className = "standings-table";
+    const td = document.createElement("td");
+    td.className = "col-team";
+    const tr = document.createElement("tr");
+    tr.appendChild(td);
+    table.appendChild(tr);
+    shadow.appendChild(table);
+    document.body.appendChild(host);
+
+    expect(getComputedStyle(td).maxWidth).toBe("140px");
+  });
+});
+
+// Both cardStyles (styles.js) and standingsBlockStyles (standings-block.js)
+// are raw CSS inside a `css\`...\`` tagged template -- a `//` there is not a
+// comment, it is invalid CSS text. This exact mistake silently dropped a
+// real rule earlier (see the two tests above); guard against it recurring
+// in either file, in any future edit.
+describe("css`...` templates never contain a JS-style // comment (invalid CSS, silently drops the rule)", () => {
+  it.each([
+    ["cardStyles (styles.js)", cardStyles],
+    ["standingsBlockStyles (standings-block.js)", standingsBlockStyles],
+  ])("%s", (_label, sheet) => {
+    const offendingLines = sheet.cssText
+      .split("\n")
+      .filter((line) => /(^|[^:])\/\//.test(line)); // allow "://" (e.g. a URL), not a bare "//"
+    expect(offendingLines).toEqual([]);
   });
 });
 

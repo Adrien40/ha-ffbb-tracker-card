@@ -272,12 +272,24 @@ export const standingsBlockStyles = css`
     white-space: nowrap;
     border-bottom: none;
   }
-  // Not scoped to .standings-card: this must un-truncate the team name
-  // wherever the detailed table renders -- the standalone standings card
-  // AND the popup opened from the rank badges (standings_popup_detailed) --
-  // so both look and behave identically (horizontal scroll via
-  // .standings-scroll, never wrapped, never an ellipsis).
-  .standings-table-detailed .col-team {
+  /* Not scoped to .standings-card: this must un-truncate the team name
+     wherever the detailed table renders -- the standalone standings card
+     AND the popup opened from the rank badges (standings_popup_detailed) --
+     so both look and behave identically (horizontal scroll via
+     .standings-scroll, never wrapped, never an ellipsis).
+
+     The compound selector (.standings-table.standings-table-detailed, both
+     classes on the same <table>) is deliberate, not just
+     ".standings-table-detailed .col-team": that has the SAME specificity
+     (0,0,2,0) as the truncating base rule (.standings-table .col-team in
+     styles.js), so it depends entirely on source order to win -- which, in
+     practice, it did not (regression: this broke the standalone card too,
+     which the old .standings-card .standings-table .col-team selector,
+     3 classes, had safely beaten on specificity alone regardless of order).
+     Three class components here (.standings-table + .standings-table-detailed
+     + .col-team) gives (0,0,3,0), reliably higher than the base rule's
+     (0,0,2,0), independent of stylesheet order. */
+  .standings-table.standings-table-detailed .col-team {
     text-align: left;
     min-width: 110px;
     max-width: none;
