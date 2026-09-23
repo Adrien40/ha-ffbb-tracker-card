@@ -192,12 +192,14 @@ var Ae=globalThis,Se=Ae.ShadowRoot&&(Ae.ShadyCSS===void 0||Ae.ShadyCSS.nativeSha
      grid's align-items: start, this item's own box only takes its content's
      height and sits at the top of shared row 2 -- align-self: center
      repositions that box within the row instead (row height still set by
-     the taller two-line side). The inner align-items only matters if this
-     ever gets more than one child. */
+     the taller two-line side). The inner align-items: center now matters
+     too: .team-title reserves 2 lines of height even for a one-line name
+     (see .team-title's min-height), so that name needs centering within
+     its own now-taller box, not just top-aligned inside it. */
   .team-name-cell {
     display: flex;
     align-self: center;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     padding: 0 4px;
   }
@@ -219,6 +221,11 @@ var Ae=globalThis,Se=Ae.ShadowRoot&&(Ae.ShadyCSS===void 0||Ae.ShadyCSS.nativeSha
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     text-align: center;
+    /* Always reserve the space for 2 lines (line-height 1.25 x 2), even for
+       a one-line name, so row 2's height -- and the whole card's vertical
+       size -- stays constant match to match instead of shrinking/growing
+       with how long the two team names happen to be. */
+    min-height: 2.5em;
   }
   .team-rank-cell {
     display: flex;
@@ -817,8 +824,8 @@ var Ae=globalThis,Se=Ae.ShadowRoot&&(Ae.ShadyCSS===void 0||Ae.ShadyCSS.nativeSha
     overflow: hidden;
   }
   .cal-mini-logo {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     object-fit: contain;
     flex-shrink: 0;
@@ -853,12 +860,12 @@ var Ae=globalThis,Se=Ae.ShadowRoot&&(Ae.ShadyCSS===void 0||Ae.ShadyCSS.nativeSha
     letter-spacing: 0.5px;
   }
   .cal-date {
-    font-size: 0.76em;
+    font-size: 0.82em;
     color: var(--secondary-text-color);
     line-height: 1.2;
   }
   .cal-time {
-    font-size: 0.76em;
+    font-size: 0.82em;
     font-weight: 600;
     line-height: 1.2;
   }
