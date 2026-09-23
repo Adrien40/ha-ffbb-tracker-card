@@ -92,7 +92,8 @@ export const DETAILED_COLUMNS = {
 // down in this file's own css`...`): sized to fit inside the existing row
 // height, not to grow it -- the whole point was adding crests without
 // taller rows.
-export function renderStandingsCrest(logoUrl) {
+export function renderStandingsCrest(logoUrl, show = true) {
+  if (!show) return nothing;
   return html`
     <img
       class="col-team-logo"
@@ -111,7 +112,7 @@ export function renderStandingsCrest(logoUrl) {
 // ha-ffbb-tracker-card.js) can render the exact same detailed table when
 // the user turns on "standings_popup_detailed" -- one table implementation,
 // used in two places, instead of a second copy that could drift.
-export function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
+export function renderDetailedTable({ rows, teamName, displayTeamName, t, showLogos = true }) {
   const { matches, singles, penalties, points } = DETAILED_COLUMNS;
   const label = (col) => t(`card.${col.key}`, col.fb);
   const title = (col) => t(`card.${col.full}`, col.fullFb);
@@ -153,7 +154,7 @@ export function renderDetailedTable({ rows, teamName, displayTeamName, t }) {
             return html`
               <tr class=${highlighted ? "highlight-row" : ""}>
                 <td class="pos-cell col-pos">${item.position || item.rank || "-"}</td>
-                <td class="col-team">${renderStandingsCrest(item.logo_url)}<span>${rowTeamLabel}</span></td>
+                <td class="col-team">${renderStandingsCrest(item.logo_url, showLogos)}<span>${rowTeamLabel}</span></td>
                 <td class="pts-cell">${cell(item.points ?? item.pts)}</td>
                 ${matches.map((col) => body(col, item))}
                 ${singles.map((col) => body(col, item))}
@@ -193,6 +194,7 @@ export function renderStandingsBlock({
   title,
   icon,
   compact,
+  showLogos = true,
   t,
 }) {
   const rows = sortStandings(standings);
@@ -210,7 +212,7 @@ export function renderStandingsBlock({
       ${competitionText ? html`<div class="standings-card-subtitle">${competitionText}</div>` : nothing}
       <div class="standings-card-body">
         ${rows.length > 0
-          ? renderDetailedTable({ rows, teamName, displayTeamName, t })
+          ? renderDetailedTable({ rows, teamName, displayTeamName, t, showLogos })
           : html`<div class="standings-empty-text">${t("card.no_standings", "No standings data available.")}</div>`}
       </div>
     </ha-card>
@@ -326,9 +328,14 @@ export const standingsBlockStyles = css`
      elsewhere (styles.js's simple popup table) -- the point was adding
      crests without growing any row. Shared with that simple table via
      renderStandingsCrest() so both use one rule, not two that could drift. */
+  /* Measured against real screenshots (popup: 27px row / 8px padding;
+     detailed table: 31px row / 12px padding), both landed on ~19px of
+     already-reserved text content height regardless of table -- 18px
+     stays safely under that in both, so this grows the crest without
+     growing either row. */
   .col-team-logo {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     object-fit: contain;
     vertical-align: middle;

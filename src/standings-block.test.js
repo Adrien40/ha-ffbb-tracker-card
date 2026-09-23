@@ -158,9 +158,9 @@ describe("standings-block.js styles -- no scrollbar", () => {
     expect(css).toMatch(/\.standings-card\s*{[^}]*margin-top:\s*\d+px/);
   });
 
-  it("the team crest is small enough to add to a row without growing it (16px)", () => {
-    expect(css).toMatch(/\.col-team-logo\s*{[^}]*width:\s*16px/);
-    expect(css).toMatch(/\.col-team-logo\s*{[^}]*height:\s*16px/);
+  it("the team crest is small enough to add to a row without growing it (18px, measured safe against both the popup and detailed table's ~19px of already-reserved text height)", () => {
+    expect(css).toMatch(/\.col-team-logo\s*{[^}]*width:\s*18px/);
+    expect(css).toMatch(/\.col-team-logo\s*{[^}]*height:\s*18px/);
   });
 });
 
@@ -695,6 +695,20 @@ describe("targeted coverage: rare branches", () => {
     const img = host.querySelector(".col-team-logo");
     img.dispatchEvent(new Event("error"));
     expect(img.src).toContain(DEFAULT_FALLBACK_LOGO);
+  });
+
+  it("renderDetailedTable(): showLogos: false removes the crest entirely, defaults to showing it when omitted", () => {
+    const rows = [{ position: 1, team_name: "Equipe A", logo_url: "https://api.ffbb.app/assets/team-a-uuid" }];
+
+    const shown = document.createElement("div");
+    render(renderDetailedTable({ rows, teamName: "Equipe A", t }), shown);
+    expect(shown.querySelector(".col-team-logo")).not.toBeNull();
+
+    const hidden = document.createElement("div");
+    render(renderDetailedTable({ rows, teamName: "Equipe A", t, showLogos: false }), hidden);
+    expect(hidden.querySelector(".col-team-logo")).toBeNull();
+    // Still shows the team name -- only the crest is gone.
+    expect(hidden.querySelector("tbody .col-team").textContent.trim()).toBe("Equipe A");
   });
 
   it("renderDetailedTable(): the highlighted row still shows displayTeamName over the fallback chain", () => {

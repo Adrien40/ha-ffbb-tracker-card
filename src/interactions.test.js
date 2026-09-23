@@ -927,6 +927,19 @@ describe("ha-ffbb-tracker-card.js full render (real hass, mounted in the DOM)", 
     }
   });
 
+  it("show_list_logos: false removes the calendar-modal mini-logos entirely (not just hides them)", async () => {
+    const el = await mountCard({ show_list_logos: false });
+    await el.updateComplete;
+
+    el.shadowRoot.querySelector(".header-round.clickable-round").click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot.querySelectorAll(".cal-mini-logo").length).toBe(0);
+    // The team names and everything else in the row must still render --
+    // this only removes the <img>, not the whole row.
+    expect(el.shadowRoot.querySelectorAll(".cal-team-line .cal-team").length).toBeGreaterThan(0);
+  });
+
   it("getConfigElement() returns the visual editor custom element", async () => {
     const Card = customElements.get("ffbb-tracker-card");
     const editor = await Card.getConfigElement();
@@ -1406,6 +1419,13 @@ describe("standings_popup_detailed", () => {
     // with the federation) -- falls back to the default crest, not a
     // broken image or no <img> at all.
     expect(logos[1].getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
+  });
+
+  it("show_list_logos: false removes the simple popup table's crests too, not just the calendar's", async () => {
+    const el = await mountAndOpen({ show_list_logos: false });
+    expect(el.shadowRoot.querySelectorAll(".modal-card .standings-table .col-team-logo").length).toBe(0);
+    // Still shows the team names -- only the <img> is gone.
+    expect(el.shadowRoot.querySelector(".modal-card .standings-table tbody").textContent).toContain("Basket Landes");
   });
 
   it("standings_popup_detailed: true swaps in the same detailed table as the standalone standings card", async () => {

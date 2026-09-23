@@ -33,6 +33,7 @@ describe("DEFAULT_CONFIG", () => {
       show_form: true,
       show_venue: true,
       show_watermark: true,
+      show_list_logos: true,
     });
   });
 

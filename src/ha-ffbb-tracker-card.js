@@ -376,6 +376,7 @@ class FFBBCard extends LitElement {
                     teamName,
                     displayTeamName,
                     t: (key, fallback) => this._t(key, fallback),
+                    showLogos: this._config.show_list_logos !== false,
                   })
                 : html`
                     <table class="standings-table">
@@ -403,7 +404,7 @@ class FFBBCard extends LitElement {
                           return html`
                             <tr class=${isRowHighlighted ? "highlight-row" : ""}>
                               <td class="pos-cell">${item.position || item.rank || "-"}</td>
-                              <td class="col-team">${renderStandingsCrest(item.logo_url)}<span>${displayedTeamLabel}</span></td>
+                              <td class="col-team">${renderStandingsCrest(item.logo_url, this._config.show_list_logos !== false)}<span>${displayedTeamLabel}</span></td>
                               <td class="pts-cell">${item.points ?? item.pts ?? "-"}</td>
                               <td>${item.played ?? "-"}</td>
                               <td>${item.wins ?? item.won ?? "-"}</td>
@@ -611,29 +612,37 @@ class FFBBCard extends LitElement {
                             </div>
                             <div class="calendar-col-teams">
                               <div class="cal-team-line">
-                                <img
-                                  class="cal-mini-logo"
-                                  src=${homeLogo}
-                                  alt=""
-                                  @error=${(e) => {
-                                    if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
-                                      e.target.src = DEFAULT_FALLBACK_LOGO;
-                                    }
-                                  }}
-                                />
+                                ${this._config.show_list_logos !== false
+                                  ? html`
+                                      <img
+                                        class="cal-mini-logo"
+                                        src=${homeLogo}
+                                        alt=""
+                                        @error=${(e) => {
+                                          if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
+                                            e.target.src = DEFAULT_FALLBACK_LOGO;
+                                          }
+                                        }}
+                                      />
+                                    `
+                                  : nothing}
                                 <span class="cal-team ${isHomeMyTeam ? "my-team-text" : ""}">${isHomeMyTeam && displayTeamName ? displayTeamName : home}</span>
                               </div>
                               <div class="cal-team-line">
-                                <img
-                                  class="cal-mini-logo"
-                                  src=${awayLogo}
-                                  alt=""
-                                  @error=${(e) => {
-                                    if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
-                                      e.target.src = DEFAULT_FALLBACK_LOGO;
-                                    }
-                                  }}
-                                />
+                                ${this._config.show_list_logos !== false
+                                  ? html`
+                                      <img
+                                        class="cal-mini-logo"
+                                        src=${awayLogo}
+                                        alt=""
+                                        @error=${(e) => {
+                                          if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
+                                            e.target.src = DEFAULT_FALLBACK_LOGO;
+                                          }
+                                        }}
+                                      />
+                                    `
+                                  : nothing}
                                 <span class="cal-team ${isAwayMyTeam ? "my-team-text" : ""}">${isAwayMyTeam && displayTeamName ? displayTeamName : away}</span>
                               </div>
                             </div>
@@ -749,6 +758,7 @@ class FFBBCard extends LitElement {
             title: vm.standingsTitle,
             icon: vm.standingsIcon,
             compact: vm.displayMode === "both",
+            showLogos: this._config.show_list_logos !== false,
             t: (key, fallback) => this._t(key, fallback),
           })
         : nothing}

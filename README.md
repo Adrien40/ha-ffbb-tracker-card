@@ -140,6 +140,7 @@ show_watermark: true
 | `show_form` | `boolean` | `true` | Displays recent form streak indicator (last 5 games). |
 | `show_venue` | `boolean` | `true` | Displays venue details with GPS navigation link in footer. |
 | `show_watermark` | `boolean` | `true` | Shows faded team crest watermarks in background. |
+| `show_list_logos` | `boolean` | `true` | Shows a small team crest per row in calendar rows and standings tables (popup and standalone standings card). |
 
 ---
 

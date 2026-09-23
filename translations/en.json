@@ -117,6 +117,7 @@
     "standings_icon": "Standings card icon",
     "show_form": "Show recent form",
     "show_venue": "Show venue",
-    "show_watermark": "Transparent background logos"
+    "show_watermark": "Transparent background logos",
+    "show_list_logos": "Team crests in calendar and standings rows"
   }
 }

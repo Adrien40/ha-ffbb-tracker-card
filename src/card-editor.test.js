@@ -122,16 +122,17 @@ describe("card-editor.js schema -- \"logo\" expandable section", () => {
     expect(group.flatten).toBe(true);
   });
 
-  it("nests logo_size, logo_click_action and show_watermark inside, and nothing else", async () => {
+  it("nests logo_size, logo_click_action, show_watermark and show_list_logos inside, and nothing else", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "logo").map((f) => f.name);
-    expect(names).toEqual(["logo_size", "logo_click_action", "show_watermark"]);
+    expect(names).toEqual(["logo_size", "logo_click_action", "show_watermark", "show_list_logos"]);
   });
 
-  it("puts the transparent background logos toggle (show_watermark) last in the section", async () => {
+  it("puts the new crest-visibility toggle (show_list_logos) last in the section, after show_watermark", async () => {
     const el = await mountEditor();
     const names = groupSchema(el, "logo").map((f) => f.name);
-    expect(names.at(-1)).toBe("show_watermark");
+    expect(names.at(-1)).toBe("show_list_logos");
+    expect(names.at(-2)).toBe("show_watermark");
   });
 
   it("no longer lists show_watermark as a top-level field, and keeps its default: true", async () => {

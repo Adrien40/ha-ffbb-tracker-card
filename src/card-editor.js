@@ -183,6 +183,12 @@ class FFBBCardEditor extends LitElement {
             default: true,
             selector: { boolean: {} },
           },
+          {
+            name: "show_list_logos",
+            label: this._t("editor.show_list_logos", "Team crests in calendar and standings rows"),
+            default: true,
+            selector: { boolean: {} },
+          },
         ],
       },
       {

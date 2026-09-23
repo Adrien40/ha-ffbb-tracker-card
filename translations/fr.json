@@ -117,6 +117,7 @@
     "standings_icon": "Icône de la carte classement",
     "show_form": "Afficher la forme récente",
     "show_venue": "Afficher la salle",
-    "show_watermark": "Logos en transparence en arrière-plan"
+    "show_watermark": "Logos en transparence en arrière-plan",
+    "show_list_logos": "Blasons dans les lignes calendrier et classement"
   }
 }

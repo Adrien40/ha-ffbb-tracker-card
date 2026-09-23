@@ -140,6 +140,7 @@ show_watermark: true
 | `show_form` | `boolean` | `true` | Affiche la pastille de forme récente (5 derniers matchs joués). |
 | `show_venue` | `boolean` | `true` | Affiche l'adresse de la salle avec le lien de navigation GPS en pied de carte. |
 | `show_watermark` | `boolean` | `true` | Affiche les logos des clubs en filigrane en arrière-plan. |
+| `show_list_logos` | `boolean` | `true` | Affiche un petit blason par ligne dans le calendrier et les tableaux de classement (popup et carte classement autonome). |
 
 ---
 
