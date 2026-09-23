@@ -244,12 +244,6 @@ export const standingsBlockStyles = css`
     color: var(--secondary-text-color);
     font-style: italic;
   }
-  .standings-card .standings-table .col-team {
-    max-width: none;
-    white-space: nowrap;
-    overflow: visible;
-    text-overflow: clip;
-  }
 
   /* ---- table layout --------------------------------------------------- */
   .standings-scroll {
@@ -278,9 +272,18 @@ export const standingsBlockStyles = css`
     white-space: nowrap;
     border-bottom: none;
   }
+  // Not scoped to .standings-card: this must un-truncate the team name
+  // wherever the detailed table renders -- the standalone standings card
+  // AND the popup opened from the rank badges (standings_popup_detailed) --
+  // so both look and behave identically (horizontal scroll via
+  // .standings-scroll, never wrapped, never an ellipsis).
   .standings-table-detailed .col-team {
     text-align: left;
     min-width: 110px;
+    max-width: none;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
   }
   .standings-table-detailed .col-team,
   .standings-table-detailed .col-pos {

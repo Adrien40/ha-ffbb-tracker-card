@@ -137,8 +137,8 @@ describe("standings-block.js styles -- no scrollbar", () => {
     expect(css).not.toMatch(/overflow(-y)?\s*:\s*(auto|scroll)/);
   });
 
-  it("keeps team names on a single line instead of wrapping", () => {
-    expect(css).toMatch(/\.standings-card \.standings-table \.col-team\s*{[^}]*white-space:\s*nowrap/);
+  it("keeps team names on a single line instead of wrapping (not scoped to .standings-card, so the popup gets the same behavior)", () => {
+    expect(css).toMatch(/\.standings-table-detailed \.col-team\s*{[^}]*white-space:\s*nowrap/);
   });
 
   it("keeps a gap between the match card and the standings card", () => {

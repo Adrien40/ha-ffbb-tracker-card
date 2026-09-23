@@ -760,7 +760,7 @@ export const cardStyles = css`
     grid-template-columns: 36px 1fr auto;
     align-items: center;
     gap: 8px;
-    padding: 5px 8px;
+    padding: 3px 8px;
     min-height: 44px;
     box-sizing: border-box;
     border-radius: 8px;
