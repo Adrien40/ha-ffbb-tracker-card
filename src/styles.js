@@ -187,8 +187,16 @@ export const cardStyles = css`
     cursor: default;
     pointer-events: none;
   }
+  /* align-self (not the inner align-items below) is what actually centres a
+     one-line team name against a two-line one on the other side: with the
+     grid's align-items: start, this item's own box only takes its content's
+     height and sits at the top of shared row 2 -- align-self: center
+     repositions that box within the row instead (row height still set by
+     the taller two-line side). The inner align-items only matters if this
+     ever gets more than one child. */
   .team-name-cell {
     display: flex;
+    align-self: center;
     align-items: flex-start;
     justify-content: center;
     padding: 0 4px;

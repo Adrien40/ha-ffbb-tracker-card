@@ -87,3 +87,16 @@ describe("styles.js -- center column (date/time/status) is vertically centred ag
     expect(declarationsFor(".match-area")["align-items"]).toBe("start");
   });
 });
+
+// A one-line team name (e.g. "UJSBP") next to a two-line one (e.g. "BASKET
+// BIAUDOS ST MARTIN DE SEIG") share grid-row 2, whose height is set by the
+// taller (two-line) side. .team-name-cell's own align-items controls where
+// the shorter name sits within that shared height -- "center" (not the grid's
+// "flex-start" default) is what makes the one-line name sit level with the
+// middle of the two-line one instead of clinging to the top with dead space
+// below it before the rank badge row.
+describe("styles.js -- a one-line team name is vertically centred against a two-line one on the other side", () => {
+  it(".team-name-cell overrides the grid's default top alignment with align-self: center", () => {
+    expect(declarationsFor(".team-name-cell")["align-self"]).toBe("center");
+  });
+});
