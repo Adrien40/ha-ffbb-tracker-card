@@ -71,3 +71,19 @@ describe("styles.js -- game day / postponed badge layout", () => {
     }
   });
 });
+
+// .match-area's own align-items is "start", shared by every row of that
+// grid (row 1: logos + center column; row 2: team names; row 3: rank
+// badges). It must stay "start" for row 2 -- when one team name wraps onto
+// 2 lines and the other doesn't, both should start reading at the same y,
+// not have the shorter one float mid-row. So the center column (row 1
+// only) needs its own override rather than a grid-wide change.
+describe("styles.js -- center column (date/time/status) is vertically centred against the logos", () => {
+  it(".center-meta-wrapper overrides the grid's align-items: start with its own align-self: center", () => {
+    expect(declarationsFor(".center-meta-wrapper")["align-self"]).toBe("center");
+  });
+
+  it(".match-area itself is untouched (still align-items: start, for the team-name row)", () => {
+    expect(declarationsFor(".match-area")["align-items"]).toBe("start");
+  });
+});

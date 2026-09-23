@@ -13,7 +13,6 @@ import {
   createTeamMatcher,
   resolveCalendarTeamLogo,
   estimateCardSize,
-  estimateMinRows,
   splitScore,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
@@ -58,16 +57,19 @@ class FFBBCard extends LitElement {
     return estimateCardSize({ config: this._config, standings: entities?.rank?.attributes?.standings });
   }
 
+  // min_rows only sets the floor a person can drag-resize the card down to
+  // in Home Assistant's sections view -- it is not an estimate of the
+  // card's actual (content-driven) height, which always adapts on its own
+  // regardless of this value. A flat, conservative 3 is used for every
+  // display_mode instead of a per-config/per-mode estimate: an earlier
+  // version tried to calibrate this against a repo screenshot, which
+  // turned out to be outdated -- chasing an exact content-height estimate
+  // here solves the wrong problem anyway.
   getGridOptions() {
-    const entities = this._config ? this._resolveEntities() : null;
-    const min_rows = estimateMinRows({
-      config: this._config,
-      standings: entities?.rank?.attributes?.standings,
-    });
     return {
       columns: 12,
       min_columns: 9,
-      min_rows,
+      min_rows: 3,
     };
   }
 

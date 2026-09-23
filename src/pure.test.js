@@ -23,7 +23,6 @@ import {
   DEFAULT_FALLBACK_LOGO,
   resolveDisplayMode,
   estimateCardSize,
-  estimateMinRows,
   splitScore,
 } from "./pure.js";
 import { getTranslations, translate } from "./translations.js";
@@ -1447,75 +1446,6 @@ describe("estimateCardSize() -- getCardSize() units for the masonry view (1 unit
 
   it("an invalid display_mode is estimated exactly like \"match\"", () => {
     expect(estimateCardSize({ config: { display_mode: "nope" }, standings: Array(20).fill({}) })).toBe(3);
-  });
-});
-
-describe("estimateMinRows() -- getGridOptions().min_rows for the sections view (1 row ~= 56px)", () => {
-  it("match mode: base is 3 rows with every optional block switched off", () => {
-    const config = {
-      display_mode: "match",
-      show_title: false,
-      show_header: false,
-      show_form: false,
-      show_venue: false,
-    };
-    expect(estimateMinRows({ config })).toBe(3);
-  });
-
-  it("match mode: each optional block adds exactly 1 row, independently of the others", () => {
-    const base = { display_mode: "match", show_title: false, show_header: false, show_form: false, show_venue: false };
-    expect(estimateMinRows({ config: { ...base, show_title: true } })).toBe(4);
-    expect(estimateMinRows({ config: { ...base, show_header: true } })).toBe(4);
-    expect(estimateMinRows({ config: { ...base, show_form: true } })).toBe(4);
-    expect(estimateMinRows({ config: { ...base, show_venue: true } })).toBe(4);
-  });
-
-  it("match mode: with every optional block on (the default config), all 4 stack up to 7", () => {
-    expect(estimateMinRows({ config: { display_mode: "match" } })).toBe(7);
-    expect(estimateMinRows({ config: {} })).toBe(7);
-    expect(estimateMinRows({})).toBe(7);
-    expect(estimateMinRows()).toBe(7);
-  });
-
-  it("standings mode: an empty or missing pool assumes a typical 8-team pool, not zero", () => {
-    const rowsFor = (standings) => estimateMinRows({ config: { display_mode: "standings" }, standings });
-    expect(rowsFor(undefined)).toBe(6);
-    expect(rowsFor(null)).toBe(6);
-    expect(rowsFor("not an array")).toBe(6);
-    expect(rowsFor([])).toBe(6);
-  });
-
-  it("standings mode: grows with the pool size, and never shrinks as it grows", () => {
-    const rowsFor = (teamCount) =>
-      estimateMinRows({ config: { display_mode: "standings" }, standings: Array(teamCount).fill({}) });
-    expect(rowsFor(1)).toBe(4);
-    expect(rowsFor(3)).toBe(4);
-    expect(rowsFor(6)).toBe(5);
-    // Deliberately starts at 1, not 0: an empty/unknown pool (teamCount 0) takes
-    // the "assume a typical pool" branch tested above, so it is not part of
-    // this monotonic-growth-with-real-data sequence.
-    const rows = [1, 3, 6, 9, 12, 16, 20].map(rowsFor);
-    expect(rows).toEqual([...rows].sort((a, b) => a - b));
-  });
-
-  it("standings mode: growth is capped at 12 teams so an oversized pool doesn't blow up min_rows", () => {
-    const rowsFor = (teamCount) =>
-      estimateMinRows({ config: { display_mode: "standings" }, standings: Array(teamCount).fill({}) });
-    expect(rowsFor(12)).toBe(7);
-    expect(rowsFor(20)).toBe(7);
-    expect(rowsFor(50)).toBe(7);
-  });
-
-  it("'both' mode is the match block's rows plus the standings block's rows, not a separate flat guess", () => {
-    const standings = Array(9).fill({});
-    const matchOnly = estimateMinRows({ config: { display_mode: "match" }, standings });
-    const standingsOnly = estimateMinRows({ config: { display_mode: "standings" }, standings });
-    const both = estimateMinRows({ config: { display_mode: "both" }, standings });
-    expect(both).toBe(matchOnly + standingsOnly);
-  });
-
-  it("an invalid display_mode is estimated exactly like \"match\"", () => {
-    expect(estimateMinRows({ config: { display_mode: "nope" } })).toBe(7);
   });
 });
 

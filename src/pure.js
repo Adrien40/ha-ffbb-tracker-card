@@ -413,45 +413,6 @@ export function estimateStandingsCardSize(teamCount) {
   return STANDINGS_HEADER_SIZE + Math.ceil(rows / TEAMS_PER_SIZE_UNIT);
 }
 
-// getGridOptions() min_rows for Home Assistant's sections view, where 1 row
-// is roughly 56px. Unlike MATCH_CARD_SIZE above (a flat masonry estimate),
-// the match block's real height varies with which optional blocks are
-// switched on, so min_rows grows with them instead of staying fixed --
-// otherwise the default config (every optional block on) clips at the
-// masonry-derived minimum. These are starting estimates only, meant to be
-// refined after visual testing on a real dashboard.
-const MATCH_BASE_MIN_ROWS = 3; // team panels + score/timer, always shown
-const STANDINGS_BASE_MIN_ROWS = 3; // header + column group header
-const STANDINGS_TEAMS_PER_ROW = 3;
-const STANDINGS_ROWS_CAP = 12; // don't let a huge pool blow up min_rows; the card grows past this itself
-
-function estimateMatchMinRows(config) {
-  let rows = MATCH_BASE_MIN_ROWS;
-  if (config?.show_title !== false) rows += 1;
-  if (config?.show_header !== false) rows += 1;
-  if (config?.show_form !== false) rows += 1;
-  if (config?.show_venue !== false) rows += 1;
-  return rows;
-}
-
-function estimateStandingsMinRows(teamCount) {
-  const rows = Number.isFinite(teamCount) && teamCount > 0 ? teamCount : 8; // assume a typical pool before data loads
-  return STANDINGS_BASE_MIN_ROWS + Math.ceil(Math.min(rows, STANDINGS_ROWS_CAP) / STANDINGS_TEAMS_PER_ROW);
-}
-
-/**
- * Estimates getGridOptions().min_rows for the whole card, given the config
- * (for display_mode and which optional blocks are shown) and the standings
- * array (entities.rank?.attributes?.standings), mirroring estimateCardSize()
- * above but for the sections-view grid instead of the masonry view.
- */
-export function estimateMinRows({ config, standings } = {}) {
-  const mode = resolveDisplayMode(config);
-  const teamCount = Array.isArray(standings) ? standings.length : 0;
-  if (mode === "match") return estimateMatchMinRows(config);
-  if (mode === "standings") return estimateStandingsMinRows(teamCount);
-  return estimateMatchMinRows(config) + estimateStandingsMinRows(teamCount);
-}
 
 /**
  * Estimates getCardSize() for the whole card, given the config (for

@@ -1787,49 +1787,20 @@ describe("form letters are French whatever the UI language (V = win, D = loss, N
 });
 
 describe("getGridOptions() (Sections view sizing)", () => {
-  it("is full width by default with a sensible minimum column count", () => {
-    const options = makeCard().getGridOptions();
-    expect(options.columns).toBe(12);
-    expect(options.min_columns).toBe(9);
-    expect("rows" in options).toBe(false);
-  });
-
-  it("match mode: min_rows grows with each optional block switched on", () => {
-    const allOff = makeCard({
-      entity: "sensor.x",
-      show_title: false,
-      show_header: false,
-      show_form: false,
-      show_venue: false,
-    }).getGridOptions().min_rows;
-    const allOn = makeCard({ entity: "sensor.x" }).getGridOptions().min_rows;
-    expect(allOff).toBe(3);
-    expect(allOn).toBeGreaterThan(allOff);
-  });
-
-  it("standings mode: min_rows grows with the number of teams in the pool", () => {
-    const Card = customElements.get("ffbb-tracker-card");
-    const el = new Card();
-    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire", display_mode: "standings" });
-    el.hass = {
-      states: {
-        "sensor.basket_landes_prochain_match_adversaire": { state: "Dax" },
-        "sensor.basket_landes_classement": {
-          state: "1",
-          attributes: {
-            standings: Array.from({ length: 14 }, (_, i) => ({ position: i + 1, team_name: `Team ${i + 1}` })),
-          },
-        },
-      },
-    };
-    const withoutData = el.getGridOptions().min_rows;
-    expect(withoutData).toBeGreaterThan(0);
-  });
-
-  it("'both' mode: min_rows is at least the match card's own min_rows", () => {
-    const matchOnly = makeCard({ entity: "sensor.x" }).getGridOptions().min_rows;
-    const both = makeCard({ entity: "sensor.x", display_mode: "both" }).getGridOptions().min_rows;
-    expect(both).toBeGreaterThan(matchOnly);
+  it("is full width with a sensible minimum column count, and a fixed min_rows floor regardless of config", () => {
+    const configs = [
+      { entity: "sensor.x" },
+      { entity: "sensor.x", display_mode: "standings" },
+      { entity: "sensor.x", display_mode: "both" },
+      { entity: "sensor.x", show_title: false, show_header: false, show_form: false, show_venue: false },
+    ];
+    for (const config of configs) {
+      const options = makeCard(config).getGridOptions();
+      expect(options.columns).toBe(12);
+      expect(options.min_columns).toBe(9);
+      expect(options.min_rows).toBe(3);
+      expect("rows" in options).toBe(false);
+    }
   });
 });
 

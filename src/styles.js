@@ -143,6 +143,7 @@ export const cardStyles = css`
   .center-meta-wrapper {
     grid-column: 2;
     grid-row: 1;
+    align-self: center;
     display: flex;
     align-items: center;
     justify-content: center;
