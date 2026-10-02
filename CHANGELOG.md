@@ -1,5 +1,22 @@
 # FFBB Tracker Card - Changelog
 
+## 0.8.1
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+This release makes the card's editor say so when the card's entity no longer exists, which is what happens when that entity is renamed.
+
+### ✨ New features
+- **The editor warns when the card's entity no longer exists, and suggests the one to pick.** Home Assistant doesn't update the entity IDs written in dashboards when an entity is renamed, so the entity picker only showed "Unknown entity" while the card kept working. A card configured on an entity that no longer exists can't ask the entity registry about it: it carries on by guessing the team's other entities from the old name, which works until that name no longer gives anything away. The text under the entity field now names the missing entity and suggests a sensor of the same team (the pool sensor first, sensors only). It goes back to the normal text as soon as the entity exists again, and says nothing for a new card or while Home Assistant's states aren't loaded yet.
+
+### 🧰 Maintenance
+- Test suite grown from 707 to 723 tests: the warning in both languages, the suggestion (pool sensor first, next match date otherwise, sensors only, none when nothing of the team is found), the return to the normal text once the entity exists again, a new card, states not loaded yet, and an entity ID that happens to be the name of an object property.
+
+### 📋 Upgrade notes
+- If a card's options show "Unknown entity" after you renamed an entity, open them and select the entity again (the editor now suggests which one). The card may look fine without that, but it then relies on guessing from the old name: an entity renamed to something unrelated would leave it showing nothing.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## 0.8.0
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

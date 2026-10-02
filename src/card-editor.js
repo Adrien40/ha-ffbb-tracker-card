@@ -2,7 +2,7 @@ import { LitElement, html, css } from "lit";
 import { CARD_VERSION } from "./version.js";
 import { DEFAULT_CONFIG } from "./config-defaults.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
-import { isValidCssColor } from "./pure.js";
+import { isValidCssColor, resolveEntities } from "./pure.js";
 
 class FFBBCardEditor extends LitElement {
   static get properties() {
@@ -68,6 +68,51 @@ class FFBBCardEditor extends LitElement {
     return example;
   }
 
+  // Helper text under the entity field. When the configured entity no longer
+  // exists -- typically because it was renamed, which Home Assistant doesn't
+  // propagate to the entity ids written in dashboards -- the picker only says
+  // "Unknown entity", and the card carries on by guessing the team's other
+  // entities from the old name. That works until the name no longer gives
+  // anything away, so say what happened and which entity to pick instead.
+  _entityHelper() {
+    const base = this._t("editor.entity_helper", "Select any sensor belonging to the team");
+    const entity = String(this._config?.entity ?? "").trim();
+    const states = this.hass?.states;
+    // No entity yet (new card), or states not loaded yet: nothing to judge.
+    if (!entity || !states || Object.keys(states).length === 0) {
+      return base;
+    }
+    if (Object.prototype.hasOwnProperty.call(states, entity)) {
+      return base;
+    }
+
+    const missing = this._t(
+      "editor.entity_missing",
+      '"{entity}" no longer exists (probably renamed): select it again.',
+    ).replace("{entity}", entity);
+    const suggestion = this._suggestEntity(entity, states);
+    if (!suggestion) {
+      return `⚠ ${missing}`;
+    }
+    const hint = this._t("editor.entity_suggestion", "Suggestion: {entity}").replace("{entity}", suggestion);
+    return `⚠ ${missing} ${hint}`;
+  }
+
+  // The sensor to pick instead of a missing one: another entity of the same
+  // team, found from the old name. The pool sensor describes the whole team, so
+  // it comes first; only sensors qualify, like the picker's own filter.
+  _suggestEntity(missing, states) {
+    // Never null here: it only is without an entity or without states, and
+    // _entityHelper() has ruled both out before asking.
+    const resolved = resolveEntities(missing, states, this.hass?.entities);
+    const candidates = [resolved.poule, resolved.nextDate, ...Object.values(resolved)];
+    return (
+      candidates
+        .map((state) => state?.entity_id)
+        .find((id) => typeof id === "string" && id.startsWith("sensor.")) ?? ""
+    );
+  }
+
   _valueChanged(ev) {
     if (!this._config || !this.hass) {
       return;
@@ -103,7 +148,7 @@ class FFBBCardEditor extends LitElement {
       {
         name: "entity",
         label: this._t("editor.entity", "FFBB team (sensor)"),
-        helper: this._t("editor.entity_helper", "Select any sensor belonging to the team"),
+        helper: this._entityHelper(),
         selector: {
           entity: {
             filter: {

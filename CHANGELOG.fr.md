@@ -1,5 +1,22 @@
 # FFBB Tracker Card - Journal des modifications
 
+## 0.8.1
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+Cette version fait dire à l'éditeur de la carte quand l'entité de la carte n'existe plus, ce qui arrive quand cette entité est renommée.
+
+### ✨ Nouveautés
+- **L'éditeur avertit quand l'entité de la carte n'existe plus, et propose celle à choisir.** Home Assistant ne met pas à jour les identifiants d'entités écrits dans les tableaux de bord quand une entité est renommée : le sélecteur d'entité affichait donc seulement « Entité inconnue » alors que la carte continuait de marcher. Une carte configurée sur une entité qui n'existe plus ne peut pas interroger le registre d'entités à son sujet : elle continue en devinant les autres entités de l'équipe d'après l'ancien nom, ce qui marche tant que ce nom trahit encore l'équipe. Le texte sous le champ d'entité nomme maintenant l'entité disparue et propose un capteur de la même équipe (le capteur de poule en premier, capteurs uniquement). Il revient au texte normal dès que l'entité existe de nouveau, et ne dit rien pour une nouvelle carte ou tant que les états de Home Assistant ne sont pas chargés.
+
+### 🧰 Maintenance
+- Suite de tests passée de 707 à 723 tests : l'avertissement dans les deux langues, la suggestion (capteur de poule d'abord, sinon date du prochain match, capteurs uniquement, aucune quand rien de l'équipe n'est retrouvé), le retour au texte normal quand l'entité existe de nouveau, une nouvelle carte, les états pas encore chargés, et un identifiant d'entité qui se trouve être le nom d'une propriété d'objet.
+
+### 📋 Notes de mise à jour
+- Si les options d'une carte affichent « Entité inconnue » après que vous avez renommé une entité, ouvrez-les et sélectionnez à nouveau l'entité (l'éditeur propose maintenant laquelle). La carte peut sembler normale sans cela, mais elle repose alors sur la devinette à partir de l'ancien nom : une entité renommée en quelque chose de sans rapport la laisserait sans rien afficher.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## 0.8.0
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

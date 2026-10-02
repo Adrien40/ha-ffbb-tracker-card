@@ -73,6 +73,8 @@
   "editor": {
     "entity": "Équipe FFBB (capteur)",
     "entity_helper": "Sélectionnez n'importe quel capteur de l'équipe",
+    "entity_missing": "« {entity} » n'existe plus (sans doute renommée) : sélectionnez-la à nouveau.",
+    "entity_suggestion": "Suggestion : {entity}",
     "custom_team_name": "Nom personnalisé de mon équipe",
     "custom_team_name_helper": "Laissez vide pour conserver le nom officiel FFBB",
     "logo_section": "Logos",

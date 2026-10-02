@@ -73,6 +73,8 @@
   "editor": {
     "entity": "FFBB team (sensor)",
     "entity_helper": "Select any sensor belonging to the team",
+    "entity_missing": "\"{entity}\" no longer exists (probably renamed): select it again.",
+    "entity_suggestion": "Suggestion: {entity}",
     "custom_team_name": "Custom name for my team",
     "custom_team_name_helper": "Leave blank to keep official FFBB team name",
     "logo_section": "Logos",
