@@ -9,6 +9,8 @@
     "live": "En direct",
     "gameday": "Jour de match",
     "postponed": "Reporté",
+    "result_pending": "Résultat en attente",
+    "result_pending_short": "En attente",
     "win": "Victoire",
     "loss": "Défaite",
     "draw": "Nul",

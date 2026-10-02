@@ -56,7 +56,7 @@ describe("translate", () => {
 });
 
 describe("fr.json / en.json key parity", () => {
-  // Local mirror of the CI check in validate.yml ("Translation JSON
+  // Local mirror of the CI check in validate.yaml ("Translation JSON
   // validity + parity"), which only runs on GitHub. Same comparison,
   // runnable with `npm test` (including watch mode) without needing a
   // Python environment or a push -- deliberate overlap with the CI check,

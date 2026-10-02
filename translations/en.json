@@ -9,6 +9,8 @@
     "live": "Live",
     "gameday": "Game day",
     "postponed": "Postponed",
+    "result_pending": "Result pending",
+    "result_pending_short": "Pending",
     "win": "Win",
     "loss": "Loss",
     "draw": "Draw",

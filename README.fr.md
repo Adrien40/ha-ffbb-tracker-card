@@ -4,7 +4,8 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/Adrien40/ha-ffbb-tracker-card)](https://github.com/Adrien40/ha-ffbb-tracker-card/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/Adrien40/ha-ffbb-tracker-card/blob/main/LICENSE)
-[![Validate](https://github.com/Adrien40/ha-ffbb-tracker-card/actions/workflows/validate.yml/badge.svg)](https://github.com/Adrien40/ha-ffbb-tracker-card/actions/workflows/validate.yml)
+[![Validate](https://github.com/Adrien40/ha-ffbb-tracker-card/actions/workflows/validate.yaml/badge.svg)](https://github.com/Adrien40/ha-ffbb-tracker-card/actions/workflows/validate.yaml)
+[![HACS](https://github.com/Adrien40/ha-ffbb-tracker-card/actions/workflows/hacs.yaml/badge.svg)](https://github.com/Adrien40/ha-ffbb-tracker-card/actions/workflows/hacs.yaml)
 
 Une **carte Lovelace moderne et interactive** pour Home Assistant, conçue spécialement pour afficher les rencontres, scores en direct, classements et statistiques de vos équipes suivies avec l'intégration [FFBB Tracker](https://github.com/Adrien40/ha-ffbb-tracker).
 

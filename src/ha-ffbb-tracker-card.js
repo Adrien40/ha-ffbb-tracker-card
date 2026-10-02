@@ -2,17 +2,19 @@ import { LitElement, html, nothing } from "lit";
 import { CARD_VERSION } from "./version.js";
 import { DEFAULT_CONFIG } from "./config-defaults.js";
 import {
-  extractCalendarMatches,
-  resolveEntities,
-  sortStandings,
-  formatDate,
-  resolveHour12,
-  isValidCssColor,
-  computeViewModel,
   DEFAULT_FALLBACK_LOGO,
+  computeViewModel,
   createTeamMatcher,
-  resolveCalendarTeamLogo,
   estimateCardSize,
+  extractCalendarMatches,
+  findNextMatchIndex,
+  formatDate,
+  isPendingResult,
+  isValidCssColor,
+  resolveCalendarTeamLogo,
+  resolveEntities,
+  resolveHour12,
+  sortStandings,
   splitScore,
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
@@ -509,9 +511,11 @@ class FFBBCard extends LitElement {
         m.away_team || "",
       ]);
       const isMyCalendarTeam = createTeamMatcher(calendarNames, teamName);
-      // First row with neither a score nor is_played: assumes the calendar
-      // is in chronological order, same assumption the API itself makes.
-      const nextMatchIndex = matches.findIndex((m) => !m.is_played && !m.score);
+      // The next match: first row without a result that isn't already
+      // waiting for one (same rule as the card's own match view), assuming
+      // the calendar is in chronological order like the API itself does.
+      const now = new Date();
+      const nextMatchIndex = findNextMatchIndex(matches, now);
       const myTeamLogo =
         entities.nextOpponent?.attributes?.team_logo_url ||
         entities.lastOpponent?.attributes?.team_logo_url ||
@@ -563,6 +567,7 @@ class FFBBCard extends LitElement {
                         const isMyTeamInvolved = isHomeMyTeam || isAwayMyTeam;
                         const isPlayed = Boolean(m.is_played || score);
                         const isNextMatch = index === nextMatchIndex;
+                        const isPending = isPendingResult(m, now);
 
                         const homeLogo = resolveCalendarTeamLogo({
                           teamName: home,
@@ -670,7 +675,9 @@ class FFBBCard extends LitElement {
                                 : dateFormatted
                                 ? html`
                                     <div class="cal-date">${dateFormatted.day}</div>
-                                    <div class="cal-time">${dateFormatted.time}</div>
+                                    ${isPending
+                                      ? html`<div class="cal-pending" title=${this._t("card.result_pending", "Result pending")}>${this._t("card.result_pending_short", "Pending")}</div>`
+                                      : html`<div class="cal-time">${dateFormatted.time}</div>`}
                                   `
                                 : html`<div class="cal-date">-</div>`}
                             </div>
@@ -960,8 +967,11 @@ class FFBBCard extends LitElement {
                         <div class="match-time">${dateFormatted.time}</div>
                       `
                     : html`<div class="match-time">-</div>`}
-                  ${isGameDay && !vm.isStale
+                  ${isGameDay && !vm.isStale && !vm.isResultPending
                     ? html`<div class="badge badge-gameday">${this._t("card.gameday", "Game day")}</div>`
+                    : ""}
+                  ${vm.isResultPending
+                    ? html`<div class="badge badge-pending">${this._t("card.result_pending", "Result pending")}</div>`
                     : ""}
                   ${vm.isStale
                     ? html`<div class="badge badge-postponed">${this._t("card.postponed", "Postponed")}</div>`

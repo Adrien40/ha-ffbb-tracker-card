@@ -50,7 +50,7 @@ export default [
     // globals (process, console, ...) win over that block's browser
     // globals for this one file: build.mjs runs under Node (via
     // `node build.mjs`), not in the browser.
-    files: ["build.mjs"],
+    files: ["build.mjs", "scripts/**/*.mjs"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",

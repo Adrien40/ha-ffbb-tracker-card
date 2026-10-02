@@ -340,6 +340,90 @@ export function isAtOrAfterDMinusOne(nextDateStr, now = new Date()) {
 }
 
 /**
+ * A match counts as "result pending" once it started more than this many
+ * hours ago and still has no score. This is the FFBB Tracker integration's own
+ * grace period for its next-match sensors, so the card and the entities agree
+ * on which match is "next": a match that just ended stays "next" for this
+ * long, then is waiting for its result rather than still to come.
+ */
+export const PENDING_RESULT_GRACE_HOURS = 3;
+
+// A calendar row has a result when it is flagged as played or carries a score.
+const hasResult = (match) => Boolean(match && (match.is_played || match.score));
+
+// Start time of a calendar row in ms, NaN when it has no usable date.
+const matchTime = (match) => Date.parse(match?.date ?? match?.datetime);
+
+/**
+ * True for a calendar row that started more than PENDING_RESULT_GRACE_HOURS
+ * ago and has neither a score nor the "played" flag: it is over, its result
+ * just isn't known yet (the club hasn't entered it, or it is delayed).
+ */
+export function isPendingResult(match, now = new Date()) {
+  if (!match || hasResult(match)) {
+    return false;
+  }
+  const started = matchTime(match);
+  if (Number.isNaN(started)) {
+    return false;
+  }
+  return now.getTime() - started > PENDING_RESULT_GRACE_HOURS * 3_600_000;
+}
+
+/** Index of the last calendar row that has a result, -1 if none. */
+export function findLastPlayedIndex(matches) {
+  if (!Array.isArray(matches)) {
+    return -1;
+  }
+  for (let i = matches.length - 1; i >= 0; i--) {
+    if (hasResult(matches[i])) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Index of the next match of the calendar: the first row without a result
+ * that is not already waiting for one. Rows waiting for a result are skipped
+ * (they are neither upcoming nor finished); only when nothing else is left
+ * does the first of them stand in, like the integration's own fallback.
+ */
+export function findNextMatchIndex(matches, now = new Date()) {
+  if (!Array.isArray(matches)) {
+    return -1;
+  }
+  const upcoming = matches.findIndex((m) => !hasResult(m) && !isPendingResult(m, now));
+  if (upcoming !== -1) {
+    return upcoming;
+  }
+  return matches.findIndex((m) => !hasResult(m));
+}
+
+/**
+ * Index of the calendar row an entity describes: by match number when both
+ * sides have one, otherwise by start time. -1 when nothing matches, so callers
+ * can fall back to their own rule.
+ */
+export function findCalendarIndex(matches, { matchNumber, dateStr } = {}) {
+  if (!Array.isArray(matches)) {
+    return -1;
+  }
+  const wanted = String(matchNumber ?? "").trim();
+  if (wanted) {
+    const byNumber = matches.findIndex((m) => String(m?.match_number ?? "").trim() === wanted);
+    if (byNumber !== -1) {
+      return byNumber;
+    }
+  }
+  const time = Date.parse(dateStr);
+  if (Number.isNaN(time)) {
+    return -1;
+  }
+  return matches.findIndex((m) => matchTime(m) === time);
+}
+
+/**
  * Resolve whether the card should display the last match (post-match / score view)
  * or the upcoming match view.
  */
@@ -717,17 +801,8 @@ export function computeViewModel({
   const calendarMatches = extractCalendarMatches(entities, selectedEntity);
   const hasCalendar = Array.isArray(calendarMatches) && calendarMatches.length > 0;
 
-  let lastPlayedIndex = -1;
-  let nextMatchIndex = -1;
-  if (hasCalendar) {
-    for (let i = calendarMatches.length - 1; i >= 0; i--) {
-      if (calendarMatches[i].is_played || calendarMatches[i].score) {
-        lastPlayedIndex = i;
-        break;
-      }
-    }
-    nextMatchIndex = calendarMatches.findIndex((m) => !m.is_played && !m.score);
-  }
+  const lastPlayedIndex = hasCalendar ? findLastPlayedIndex(calendarMatches) : -1;
+  const nextMatchIndex = hasCalendar ? findNextMatchIndex(calendarMatches, now) : -1;
 
   const defaultIsPostMatch = computeIsPostMatch({
     defaultView: config.default_match_view || "auto",
@@ -741,19 +816,36 @@ export function computeViewModel({
     now,
   });
 
+  // Until the user steps through the carousel, the card shows the match the
+  // last/next sensors describe -- which the integration picks by date. The
+  // chevrons navigate from currentIndex, so it has to be that very match:
+  // taking the calendar's first row without a score instead made "previous"
+  // skip a past match whose result was missing, and "next" land on it.
+  // Entities without a match number or a date matching a row (an older
+  // integration) fall back to the calendar-only rule.
+  const shownIndex = (sensorId) =>
+    hasCalendar
+      ? findCalendarIndex(calendarMatches, {
+          matchNumber: entities[sensorId]?.attributes?.match_number,
+          dateStr: entities[sensorId]?.state,
+        })
+      : -1;
+  const pickIndex = (preferred, fallback) => (preferred !== -1 ? preferred : fallback);
+
   let currentIndex;
   if (typeof matchIndex === "number" && hasCalendar) {
     currentIndex = Math.max(0, Math.min(matchIndex, calendarMatches.length - 1));
   } else if (manualView === "last") {
-    currentIndex = lastPlayedIndex !== -1 ? lastPlayedIndex : 0;
+    currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
   } else if (manualView === "next") {
-    currentIndex = nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1);
+    currentIndex = pickIndex(
+      shownIndex("nextDate"),
+      nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1),
+    );
+  } else if (defaultIsPostMatch) {
+    currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
   } else {
-    if (defaultIsPostMatch) {
-      currentIndex = lastPlayedIndex !== -1 ? lastPlayedIndex : 0;
-    } else {
-      currentIndex = nextMatchIndex !== -1 ? nextMatchIndex : 0;
-    }
+    currentIndex = pickIndex(shownIndex("nextDate"), nextMatchIndex !== -1 ? nextMatchIndex : 0);
   }
 
   const isCarouselMatch = typeof matchIndex === "number" && hasCalendar && Boolean(calendarMatches[currentIndex]);
@@ -1022,7 +1114,17 @@ export function computeViewModel({
     }
   }
 
-  const isCalendarClickable = !isLive && !isPostMatch && Boolean(targetDateStr);
+  // A past match still waiting for its result is shown with a "result
+  // pending" badge instead of as an upcoming one. A match the integration
+  // already flags as stale keeps its existing "postponed" badge.
+  const isResultPending =
+    Boolean(currentCalMatch) &&
+    !isPostMatch &&
+    !isLive &&
+    !isStale &&
+    isPendingResult(currentCalMatch, now);
+
+  const isCalendarClickable = !isLive && !isPostMatch && !isResultPending && Boolean(targetDateStr);
   const isLogoClickable = config.logo_click_action && config.logo_click_action !== "none";
   const hasStandingsData = Array.isArray(entities.rank?.attributes?.standings) && entities.rank.attributes.standings.length > 0;
   const accentColor = resolveAccentColor(config);
@@ -1107,5 +1209,6 @@ export function computeViewModel({
     hasStandingsData,
     accentColor,
     isStale,
+    isResultPending,
   };
 }

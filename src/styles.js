@@ -486,8 +486,13 @@ export const cardStyles = css`
     background-color: #ef6c00;
     color: #ffffff;
   }
+  .badge-pending {
+    background-color: #546e7a;
+    color: #ffffff;
+  }
   .badge-gameday,
-  .badge-postponed {
+  .badge-postponed,
+  .badge-pending {
     position: absolute;
     top: 100%;
     left: 50%;
@@ -868,6 +873,12 @@ export const cardStyles = css`
     font-size: 0.82em;
     font-weight: 600;
     line-height: 1.2;
+  }
+  .cal-pending {
+    font-size: 0.72em;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #546e7a;
   }
   .modal-empty-text {
     text-align: center;

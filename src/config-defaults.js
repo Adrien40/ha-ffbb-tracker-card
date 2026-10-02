@@ -5,7 +5,7 @@
 // their own copy of the same object, so adding, renaming, or removing a
 // config option only needs to happen in one place. Before this file
 // existed, the three copies could silently drift apart -- exactly the kind
-// of regression the CARD_VERSION check in validate.yml already guards
+// of regression the CARD_VERSION check in validate.yaml already guards
 // against for a different value.
 //
 // NOTE: `entity` is intentionally NOT included here. It has no sensible
