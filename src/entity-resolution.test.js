@@ -64,7 +64,7 @@ const resolvedKeys = (resolved) => Object.entries(resolved).filter(([, v]) => v)
 
 // ---------------------------------------------------------------------------
 describe("the translation key table", () => {
-  it("has one entry per entity the card uses, built from the English slugs", () => {
+  it("has one entry per entity the card uses", () => {
     expect(CARD_KEYS.sort()).toEqual([...Object.keys(SENSOR_SUFFIXES), ...Object.keys(BINARY_SENSOR_SUFFIXES)].sort());
     expect(TRANSLATION_KEYS.nextOpponent).toBe("next_match_opponent");
     expect(TRANSLATION_KEYS.poule).toBe("poule");
@@ -274,8 +274,11 @@ describe("resolveEntities() by name: prefixes containing a word that starts an e
   });
 
   it("works with the English entity names too, whichever entity is configured", () => {
+    // The real English entity names (the second slug of each list), not the
+    // translation keys, which differ for the pool, the form and the venue.
+    const english = (key) => (SENSOR_SUFFIXES[key] ?? BINARY_SENSOR_SUFFIXES[key])[1];
     const ids = Object.fromEntries(
-      Object.entries(TRANSLATION_KEYS).map(([key, translationKey]) => [key, `${sensorOrBinary(key)}.top_rank_u13m_${translationKey}`]),
+      CARD_KEYS.map((key) => [key, `${sensorOrBinary(key)}.top_rank_u13m_${english(key)}`]),
     );
     const { states } = team(ids);
 

@@ -1,5 +1,23 @@
 # FFBB Tracker Card - Changelog
 
+## 0.8.2
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+This release fixes the English entity names the card looks for, and checks every name it guesses against the integration's real ones.
+
+### 🐛 Bug fixes
+- **On a Home Assistant in English, the card could not find the pool, the recent form or the venue sensors by name.** When the entity registry isn't available (and for anything it doesn't provide), the card guesses entity IDs from the name of the one you picked. Three of its English guesses were wrong: the pool sensor is called `pool` (not `poule`), the recent form sensor `recent_form` (not `form`) and the next match venue sensor `next_match_venue` (not `next_match_venue_type`). The pool sensor carries the season schedule and the team and competition names, so a card in English could find no schedule to step through. The French names (13 out of 13) were right. The real names are now looked for first, and the old guesses are kept after them. Since 0.8.0 the entity registry finds these entities too when Home Assistant provides it.
+
+### 🧰 Maintenance
+- The translation keys the card uses to recognise entities through the entity registry are now written out in a table instead of being derived from the entity names. They are two different things, defined separately by the integration (the pool is called "Pool" in English but its key is `poule`, the form is "Recent form" but its key is `form`). Deriving one from the other, as 0.8.0 did, is how the wrong English guesses went unnoticed.
+- New tests compare every name and key the card expects with the integration's real ones, in French and in English, and resolve a whole team in each language from each of its entities. The names are a copy of the integration's (`src/integration-entity-names.fixture.js`), to update when the integration changes them. The previous tests only used French names, or used the translation keys as if they were English names. Test suite grown from 723 to 797 tests.
+
+### 📋 Upgrade notes
+- Nothing to do. French installations are unaffected. On an English installation the card now also finds the pool sensor, and with it the schedule, by name.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## 0.8.1
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

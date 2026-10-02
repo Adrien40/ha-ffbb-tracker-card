@@ -1,5 +1,23 @@
 # FFBB Tracker Card - Journal des modifications
 
+## 0.8.2
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+Cette version corrige les noms d'entités anglais que la carte recherche, et vérifie chaque nom qu'elle devine par rapport aux vrais noms de l'intégration.
+
+### 🐛 Corrections
+- **Sur un Home Assistant en anglais, la carte ne retrouvait pas par leur nom les capteurs de poule, de forme récente et de terrain.** Quand le registre d'entités n'est pas disponible (et pour tout ce qu'il ne fournit pas), la carte devine les identifiants d'entités d'après le nom de celle que vous avez choisie. Trois de ses suppositions anglaises étaient fausses : le capteur de poule s'appelle `pool` (et non `poule`), celui de la forme récente `recent_form` (et non `form`) et celui du terrain du prochain match `next_match_venue` (et non `next_match_venue_type`). Le capteur de poule porte le calendrier de la saison et les noms de l'équipe et de la compétition : une carte en anglais ne trouvait donc aucun calendrier à parcourir. Les noms français (13 sur 13) étaient justes. Les vrais noms sont maintenant cherchés en premier, et les anciennes suppositions sont conservées après eux. Depuis la 0.8.0, le registre d'entités retrouve aussi ces entités quand Home Assistant le fournit.
+
+### 🧰 Maintenance
+- Les clés de traduction que la carte utilise pour reconnaître les entités par le registre d'entités sont maintenant écrites dans une table, au lieu d'être déduites des noms d'entités. Ce sont deux choses différentes, définies séparément par l'intégration (la poule s'appelle « Pool » en anglais mais sa clé est `poule`, la forme s'appelle « Recent form » mais sa clé est `form`). Déduire l'une de l'autre, comme le faisait la 0.8.0, est ce qui a laissé passer les mauvaises suppositions anglaises.
+- De nouveaux tests comparent chaque nom et chaque clé que la carte attend aux vrais de l'intégration, en français et en anglais, et résolvent une équipe entière dans chaque langue à partir de chacune de ses entités. Les noms sont une copie de ceux de l'intégration (`src/integration-entity-names.fixture.js`), à mettre à jour quand l'intégration les change. Les tests précédents n'utilisaient que des noms français, ou utilisaient les clés de traduction comme s'il s'agissait de noms anglais. Suite de tests passée de 723 à 797 tests.
+
+### 📋 Notes de mise à jour
+- Rien à faire. Les installations en français ne sont pas concernées. Sur une installation en anglais, la carte retrouve maintenant aussi le capteur de poule, et avec lui le calendrier, par son nom.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## 0.8.1
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

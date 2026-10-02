@@ -30,14 +30,12 @@ describe("entity-names: the tables stay consistent with each other", () => {
     }
   });
 
-  it("lists French then English for every sensor that exists in both languages", () => {
+  it("lists a French slug and a different English slug for every sensor", () => {
+    // (Older guesses may follow them; the real names are checked in
+    // entity-names.integration.test.js.)
     for (const [key, suffixes] of Object.entries(SENSOR_SUFFIXES)) {
-      if (key === "poule") {
-        expect(suffixes).toEqual(["poule"]);
-        continue;
-      }
-      expect(suffixes, key).toHaveLength(2);
-      expect(suffixes[0]).not.toBe(suffixes[1]);
+      expect(suffixes.length, key).toBeGreaterThanOrEqual(2);
+      expect(suffixes[0], key).not.toBe(suffixes[1]);
     }
   });
 
@@ -101,17 +99,16 @@ describe("resolveEntities driven by entity-names.js", () => {
   it("finds every English sensor from any one of them", () => {
     const prefix = "my_team";
     const states = {};
+    // The English slug is the second one of each list.
     for (const suffixes of Object.values(SENSOR_SUFFIXES)) {
-      const s = suffixes[suffixes.length - 1];
-      states[`sensor.${prefix}_${s}`] = stateFor(s);
+      states[`sensor.${prefix}_${suffixes[1]}`] = stateFor(suffixes[1]);
     }
     for (const suffixes of Object.values(BINARY_SENSOR_SUFFIXES)) {
-      const s = suffixes[suffixes.length - 1];
-      states[`binary_sensor.${prefix}_${s}`] = stateFor(s);
+      states[`binary_sensor.${prefix}_${suffixes[1]}`] = stateFor(suffixes[1]);
     }
     const entities = resolveEntities("sensor.my_team_next_match_opponent", states);
     for (const [key, suffixes] of [...Object.entries(SENSOR_SUFFIXES), ...Object.entries(BINARY_SENSOR_SUFFIXES)]) {
-      expect(entities[key]?.state, key).toBe(suffixes[suffixes.length - 1]);
+      expect(entities[key]?.state, key).toBe(suffixes[1]);
     }
   });
 
