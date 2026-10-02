@@ -1184,6 +1184,21 @@ describe("post-match score: my number is visually distinct from the opponent's",
     expect(el.shadowRoot.querySelector(".score-theirs")?.textContent.trim()).toBe("80");
   });
 
+  it("draws our score on the left for a home match and on the right for an away match", async () => {
+    const home = await mount(STATES, { view: "last" });
+    const homeText = home.shadowRoot.querySelector(".score-display span[aria-hidden]").textContent.replace(/\s+/g, "");
+    expect(homeText).toBe("80-75");
+    const states = {
+      ...STATES,
+      "sensor.basket_landes_dernier_match_score": { state: "80 - 75", attributes: { is_home: false } },
+    };
+    const away = await mount(states, { view: "last" });
+    const awayText = away.shadowRoot.querySelector(".score-display span[aria-hidden]").textContent.replace(/\s+/g, "");
+    expect(awayText).toBe("80-75");
+    const spans = [...away.shadowRoot.querySelectorAll(".score-display .score-mine, .score-display .score-theirs")];
+    expect(spans.map((n) => n.className)).toEqual(["score-theirs", "score-mine"]);
+  });
+
   it("still shows the full score as plain text (no split) when it isn't a clean 'NN - NN' pair", async () => {
     const states = {
       ...STATES,
@@ -2370,6 +2385,9 @@ describe("carousel and calendar modal on a real FFBB dataset", () => {
     const row = el.shadowRoot.querySelector(".cal-score");
     expect(row.querySelector(".score-mine")?.textContent.trim()).toBe("65");
     expect(row.querySelector(".score-theirs")?.textContent.trim()).toBe("60");
+    // Away: the home number (the opponent's) is drawn first, ours last.
+    expect([...row.querySelectorAll(".score-mine, .score-theirs")].map((n) => n.className)).toEqual(["score-theirs", "score-mine"]);
+    expect(row.textContent.replace(/\s+/g, "")).toBe("60-65");
   });
 
   it("the calendar modal shows the right crest per team and no other club's crest", async () => {

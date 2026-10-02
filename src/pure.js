@@ -270,6 +270,10 @@ export function formatRank(rank, lang) {
  * everywhere else in this file to order left/right, so no new data source is
  * needed here.
  *
+ * The returned `mineFirst` flag tells the renderer in which order to draw the
+ * two numbers so they match the home - away order of the score and of the
+ * left / right team columns (our score goes on the right for away matches).
+ *
  * Returns null (never guesses) when the string isn't a clean "NN - NN" pair
  * -- forfeits, walkovers, or a missing score ("-") all fall back to plain
  * text in the caller.
@@ -279,7 +283,12 @@ export function splitScore(score, isHome) {
   const match = score.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
   if (!match) return null;
   const [, first, second] = match;
-  return isHome ? { my: first, opponent: second } : { my: second, opponent: first };
+  // `mineFirst` is true when our team is the home side, i.e. our number comes
+  // first in the "home - away" reading order. Away from home it is false and
+  // the display must put the opponent's (home) number on the left.
+  return isHome
+    ? { my: first, opponent: second, mineFirst: true }
+    : { my: second, opponent: first, mineFirst: false };
 }
 
 /**

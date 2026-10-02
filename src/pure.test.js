@@ -168,16 +168,16 @@ describe("formatRank", () => {
 
 describe("splitScore", () => {
   it("puts the home number first as 'my' when isHome is true", () => {
-    expect(splitScore("51 - 46", true)).toEqual({ my: "51", opponent: "46" });
+    expect(splitScore("51 - 46", true)).toEqual({ my: "51", opponent: "46", mineFirst: true });
   });
 
   it("puts the away number first as 'my' when isHome is false (the home number is the opponent's)", () => {
-    expect(splitScore("51 - 46", false)).toEqual({ my: "46", opponent: "51" });
+    expect(splitScore("51 - 46", false)).toEqual({ my: "46", opponent: "51", mineFirst: false });
   });
 
   it("tolerates extra/missing whitespace around the dash", () => {
-    expect(splitScore("80-75", true)).toEqual({ my: "80", opponent: "75" });
-    expect(splitScore("80   -   75", true)).toEqual({ my: "80", opponent: "75" });
+    expect(splitScore("80-75", true)).toEqual({ my: "80", opponent: "75", mineFirst: true });
+    expect(splitScore("80   -   75", true)).toEqual({ my: "80", opponent: "75", mineFirst: true });
   });
 
   it("returns null for anything that isn't a clean 'NN - NN' score (walkover, missing score, non-string)", () => {
@@ -1217,7 +1217,7 @@ describe("carousel with a real FFBB dataset (UJSBP U13M)", () => {
   it("J1: scoreParts puts our own 51 first (home) as 'my', MAGESCQ's 46 as 'opponent'", () => {
     const vm = at(0);
     expect(vm.displayedScore).toBe("51 - 46");
-    expect(vm.scoreParts).toEqual({ my: "51", opponent: "46" });
+    expect(vm.scoreParts).toEqual({ my: "51", opponent: "46", mineFirst: true });
   });
 
   it("J2 (next match, away): the opponent sits on the left with its own crest", () => {

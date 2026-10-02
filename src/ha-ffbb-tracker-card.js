@@ -316,6 +316,20 @@ class FFBBCard extends LitElement {
     return extractCalendarMatches(entities, configuredEntity);
   }
 
+  /**
+   * Draw a split score in "home - away" order. Our number keeps its accent
+   * style wherever it lands, but it goes on the right when we play away, so the
+   * score lines up with the left / right team columns.
+   */
+  _renderScoreParts(parts) {
+    const mine = html`<span class="score-mine">${parts.my}</span>`;
+    const theirs = html`<span class="score-theirs">${parts.opponent}</span>`;
+    const sep = html`<span class="score-sep"> - </span>`;
+    return parts.mineFirst === false
+      ? html`${theirs}${sep}${mine}`
+      : html`${mine}${sep}${theirs}`;
+  }
+
   _renderModal(entities, teamName, opponentName, displayTeamName) {
     if (!this._activeModal) {
       return html``;
@@ -665,9 +679,7 @@ class FFBBCard extends LitElement {
                                         // the plain, uncolored score instead of guessing.
                                         const rowScoreParts = isMyTeamInvolved ? splitScore(score, isHomeMyTeam) : null;
                                         return rowScoreParts
-                                          ? html`<span class="score-mine">${rowScoreParts.my}</span
-                                              ><span class="score-sep"> - </span
-                                              ><span class="score-theirs">${rowScoreParts.opponent}</span>`
+                                          ? this._renderScoreParts(rowScoreParts)
                                           : score;
                                       })()}
                                     </div>
@@ -948,10 +960,7 @@ class FFBBCard extends LitElement {
                           <span class="sr-only">${
                             `${this._t("card.your_score", "Our score")}: ${vm.scoreParts.my} — ${this._t("card.opponent_score", "Opponent score")}: ${vm.scoreParts.opponent}`
                           }</span
-                          ><span aria-hidden="true"
-                            ><span class="score-mine">${vm.scoreParts.my}</span
-                            ><span class="score-sep"> - </span
-                            ><span class="score-theirs">${vm.scoreParts.opponent}</span></span
+                          ><span aria-hidden="true">${this._renderScoreParts(vm.scoreParts)}</span
                           >
                         `
                       : vm.displayedScore}
