@@ -89,7 +89,7 @@ jobs:
 
       # Reads the source translations/ directory, not dist/translations/ --
       # this must pass on every push/PR regardless of whether dist/ has
-      # been rebuilt yet, since dist/ is only committed by build-dist.yml
+      # been rebuilt yet, since dist/ is only committed by build-dist.yaml
       # on pushes to main.
       - name: Validate JSON and compare en/fr keys
         run: |
