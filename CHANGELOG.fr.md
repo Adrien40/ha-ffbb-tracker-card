@@ -1,5 +1,26 @@
 # FFBB Tracker Card - Journal des modifications
 
+## 0.8.0
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+Cette version fait retrouver à la carte les entités d'une équipe par le registre d'entités de Home Assistant au lieu de deviner leurs noms : renommer une entité ne la casse plus.
+
+### 🐛 Corrections
+- **Renommer une entité cassait la carte.** La carte retrouvait les entités d'une équipe en devinant leurs identifiants à partir de celui que vous aviez choisi (noms français et anglais après un préfixe commun). Renommer une entité la faisait disparaître en silence de la carte (renommez la date du prochain match et cette date disparaît), et choisir une entité renommée comme entité de la carte ne laissait rien du tout. La carte demande maintenant au registre d'entités de Home Assistant toutes les entités du même appareil créées par l'intégration, reconnues par la clé de traduction que l'intégration donne à chacune : leur nom n'a plus d'importance. Les noms ne servent que pour ce que le registre ne fournit pas. C'est d'autant plus utile depuis FFBB Tracker 0.9.0, qui conserve les identifiants renommés quand une équipe est basculée sur ses nouveaux identifiants.
+- **Un nom d'équipe ou de compétition contenant « poule », « rank » ou « form » faisait que la carte ne trouvait rien.** Un identifiant d'entité se lit « <équipe et compétition>_<nom de l'entité> » et la carte le coupait au premier mot de ce genre, qui pouvait se trouver dans le nom de l'équipe. Elle essaie maintenant toutes les coupures possibles et garde celle qui retrouve le plus d'entités. Cela vaut aussi quand le registre n'est pas disponible.
+
+### 🧰 Maintenance
+- Suite de tests passée de 672 à 707 tests. La résolution est testée avec les cinq cas de renommage (une entité renommée, une carte configurée sur une entité renommée, un autre préfixe, une entité sans mot reconnaissable, et des noms avec un mot dans le préfixe), avec deux équipes sur des appareils différents, avec des entités d'une autre intégration sur le même appareil, avec un registre incomplet ou rempli de n'importe quoi, et par la carte rendue. Les clés de traduction attendues par la carte sont comparées à la liste de celles que l'intégration définit.
+
+### 📚 Documentation
+- README : la puce sur la détection automatique des entités explique maintenant comment elles sont retrouvées, et que les renommer ne pose pas de problème.
+
+### 📋 Notes de mise à jour
+- Rien à faire. Si votre Home Assistant ne fournit pas le registre d'entités aux cartes (`hass.entities`, avec l'appareil et la clé de traduction de chaque entité), la carte retrouve les entités par leur nom comme avant, en mieux pour les noms contenant les mots ci-dessus.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## 0.7.3
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

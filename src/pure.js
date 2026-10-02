@@ -5,7 +5,13 @@
 // exercised indirectly through render(). Anything that needs `this.hass` or
 // `this._config` takes it as an explicit argument instead.
 
-import { ENTITY_ID_PATTERN, SENSOR_SUFFIXES, BINARY_SENSOR_SUFFIXES } from "./entity-names.js";
+import {
+  BINARY_SENSOR_SUFFIXES,
+  CARD_KEY_BY_TRANSLATION_KEY,
+  ENTITY_ROOTS,
+  INTEGRATION_PLATFORM,
+  SENSOR_SUFFIXES,
+} from "./entity-names.js";
 
 // Crest shown when a team logo fails to load.
 //
@@ -31,25 +37,74 @@ export function cleanForMatch(s) {
 }
 
 /**
- * Resolve every FFBB Tracker sensor belonging to one team from a single
- * configured entity_id, by deriving the shared entity-id prefix and
- * probing both French and English suffix variants (listed in
- * entity-names.js: the integration's entity_id slugs follow the language
- * the entities were created under).
+ * Resolve every FFBB Tracker entity belonging to one team from a single
+ * configured entity_id. Two ways, the first one preferred:
+ *
+ * 1. The entity registry (`hass.entities`): every entity the integration
+ *    created on the same device as the configured one, recognised by its
+ *    translation key. It doesn't depend on what the entities are called, so
+ *    renaming an entity, a team or competition name containing a word such as
+ *    "poule", or the language Home Assistant runs in make no difference.
+ * 2. The entity_id itself: derive the shared prefix and probe the French and
+ *    English suffixes listed in entity-names.js. It fills in whatever the
+ *    registry didn't give, and does all the work when no registry is available
+ *    (an older Home Assistant, or an entity that isn't in it).
+ *
  * Returns null if `selected` or `states` is falsy.
  *
- * `states` is `hass.states` resolved by the caller; this stays pure by
- * taking it as a plain object instead of reading `this.hass`.
+ * `states` is `hass.states` and `registry` is `hass.entities`, both resolved by
+ * the caller; this stays pure by taking them as plain objects instead of
+ * reading `this.hass`.
  */
-export function resolveEntities(selected, states) {
+export function resolveEntities(selected, states, registry = null) {
   if (!selected || !states) {
     return null;
   }
 
-  const matched = selected.match(ENTITY_ID_PATTERN);
-  const prefix = matched ? `sensor.${matched[2]}_` : selected.substring(0, selected.lastIndexOf("_") + 1);
-  const binPrefix = matched ? `binary_sensor.${matched[2]}_` : prefix.replace("sensor.", "binary_sensor.");
+  const bySlug = resolveBySlug(selected, states);
+  const byRegistry = resolveByRegistry(selected, states, registry);
+  if (!byRegistry) {
+    return bySlug;
+  }
 
+  const resolved = {};
+  for (const key of Object.keys(bySlug)) {
+    resolved[key] = byRegistry[key] ?? bySlug[key];
+  }
+  return resolved;
+}
+
+/**
+ * The integration's entities on the same device as `selected`, by card key, or
+ * null when the registry can't say (no registry, `selected` not in it or not
+ * on a device, or an entity of another integration).
+ */
+function resolveByRegistry(selected, states, registry) {
+  const own = registry?.[selected];
+  if (!own?.device_id || (own.platform && own.platform !== INTEGRATION_PLATFORM)) {
+    return null;
+  }
+
+  const resolved = {};
+  let found = false;
+  for (const [entityId, entry] of Object.entries(registry)) {
+    if (entry?.device_id !== own.device_id) {
+      continue;
+    }
+    if (entry.platform && entry.platform !== INTEGRATION_PLATFORM) {
+      continue;
+    }
+    const key = CARD_KEY_BY_TRANSLATION_KEY.get(entry.translation_key);
+    if (key && states[entityId]) {
+      resolved[key] = states[entityId];
+      found = true;
+    }
+  }
+  return found ? resolved : null;
+}
+
+/** Probe `<prefix><suffix>` for every entity of the card, French slug first. */
+function resolveWithPrefixes(prefix, binPrefix, states) {
   const findState = (keys) => {
     for (const k of keys) {
       if (states[k]) {
@@ -67,6 +122,43 @@ export function resolveEntities(selected, states) {
     resolved[key] = findState(suffixes.map((suffix) => `${binPrefix}${suffix}`));
   }
   return resolved;
+}
+
+/**
+ * Resolve by name. The entity name is "<shared prefix>_<entity name>", and the
+ * prefix (team and competition) can itself contain a word that starts an entity
+ * name, such as "poule", "rank" or "form": splitting at the first one would cut
+ * the prefix short and find nothing. Every possible split is tried, and the one
+ * that finds the most entities wins (the first one on a tie, which is what a
+ * plain left-to-right search would pick).
+ */
+function resolveBySlug(selected, states) {
+  const objectId = selected.slice(selected.indexOf(".") + 1);
+
+  const prefixes = [];
+  for (let i = 1; i < objectId.length; i++) {
+    if (objectId[i] === "_" && ENTITY_ROOTS.some((root) => objectId.startsWith(root, i + 1))) {
+      const name = objectId.slice(0, i);
+      prefixes.push([`sensor.${name}_`, `binary_sensor.${name}_`]);
+    }
+  }
+  if (prefixes.length === 0) {
+    // No known entity name in it: assume the last word is the entity name.
+    const prefix = selected.substring(0, selected.lastIndexOf("_") + 1);
+    prefixes.push([prefix, prefix.replace("sensor.", "binary_sensor.")]);
+  }
+
+  let best = null;
+  let bestCount = -1;
+  for (const [prefix, binPrefix] of prefixes) {
+    const resolved = resolveWithPrefixes(prefix, binPrefix, states);
+    const count = Object.values(resolved).filter(Boolean).length;
+    if (count > bestCount) {
+      best = resolved;
+      bestCount = count;
+    }
+  }
+  return best;
 }
 
 /**

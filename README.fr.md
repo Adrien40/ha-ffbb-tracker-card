@@ -25,7 +25,7 @@ Si ce projet vous est utile, vous pouvez soutenir son développement 🙏
 
 ## ⚡ Fonctionnalités principales
 
-* 🏀 **Détection automatique des entités :** renseignez simplement n'importe quel capteur de l'équipe (prochain match, poule, classement...), la carte résout automatiquement l'ensemble des données associées.
+* 🏀 **Détection automatique des entités :** renseignez simplement n'importe quel capteur de l'équipe (prochain match, poule, classement...), la carte résout automatiquement l'ensemble des données associées. Elle les retrouve par le registre d'entités de Home Assistant (toutes les entités du même appareil), donc renommer des entités ou leur donner un identifiant personnalisé ne pose aucun problème ; quand le registre n'est pas fourni à la carte, elle se rabat sur la reconnaissance des noms d'entités.
 * 🔄 **Carrousel dynamique de match :** parcourez tous les matchs de la saison avec les chevrons de navigation (ou touchez une ligne du calendrier pour y accéder directement). Sans calendrier, les chevrons basculent entre le dernier et le prochain match.
 * ⏱️ **Affichage adaptatif de la rencontre :**
   * **Avant-match :** jour, date et heure du coup d'envoi, avec un badge « Jour de match » le jour de la rencontre (remplacé par « Reporté » si le match est reporté).

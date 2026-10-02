@@ -53,3 +53,24 @@ export const ENTITY_ROOTS = [
 export const ENTITY_ID_PATTERN = new RegExp(
   `^(sensor|binary_sensor)\\.([a-z0-9_]+?)_(${ENTITY_ROOTS.join("|")})`
 );
+
+// Name of the integration in the entity registry (an entity's `platform`).
+export const INTEGRATION_PLATFORM = "ffbb_tracker";
+
+// The translation key the integration gives each entity (`_attr_translation_key`
+// in its sensor.py / binary_sensor.py), by the key the card uses for it. Unlike
+// the entity_id, it doesn't depend on the language or on renaming: it is how an
+// entity is recognised through the entity registry. It is the last, English,
+// slug of each list above (which is also what the integration's own entity
+// names are built from).
+export const TRANSLATION_KEYS = Object.fromEntries(
+  [...Object.entries(SENSOR_SUFFIXES), ...Object.entries(BINARY_SENSOR_SUFFIXES)].map(
+    ([key, suffixes]) => [key, suffixes[suffixes.length - 1]],
+  ),
+);
+
+// The same, the other way round. A Map, so a registry entry whose translation
+// key happens to be "constructor" or "toString" can't match an object property.
+export const CARD_KEY_BY_TRANSLATION_KEY = new Map(
+  Object.entries(TRANSLATION_KEYS).map(([key, translationKey]) => [translationKey, key]),
+);

@@ -1,5 +1,26 @@
 # FFBB Tracker Card - Changelog
 
+## 0.8.0
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+This release makes the card find a team's entities through Home Assistant's entity registry instead of guessing their names, so renaming an entity no longer breaks it.
+
+### 🐛 Bug fixes
+- **Renaming an entity broke the card.** The card found a team's entities by guessing entity IDs from the one you picked (French and English names after a shared prefix). Renaming one entity made it silently disappear from the card (rename the next match date and that date is gone), and choosing a renamed entity as the card's entity left the card with nothing at all. The card now asks Home Assistant's entity registry for every entity of the same device that the integration created, recognised by the translation key the integration gives each of them, so what they are called no longer matters. The names are only used for what the registry doesn't provide. This matters more since FFBB Tracker 0.9.0, which keeps renamed entity IDs when a team is switched to its new IDs.
+- **A team or competition name containing "poule", "rank" or "form" made the card find nothing.** An entity ID reads "<team and competition>_<entity name>" and the card cut it at the first such word, which could be inside the team name. It now tries every possible cut and keeps the one that finds the most entities. This also applies when the registry isn't available.
+
+### 🧰 Maintenance
+- Test suite grown from 672 to 707 tests. The resolution is tested with the five renaming cases (a renamed entity, a card configured on a renamed entity, a different prefix, an entity without a recognisable word, and names with a word in the prefix), with two teams on different devices, with another integration's entities on the same device, with an incomplete or junk registry, and through the rendered card. The translation keys the card expects are checked against the list of keys the integration defines.
+
+### 📚 Documentation
+- README: the automatic entity resolution bullet now says how entities are found, and that renaming them is fine.
+
+### 📋 Upgrade notes
+- Nothing to do. If your Home Assistant doesn't provide the entity registry to cards (`hass.entities`, with each entity's device and translation key), the card finds entities by name as before, only better for names containing the words above.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## 0.7.3
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

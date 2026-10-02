@@ -25,7 +25,7 @@ If you find this project useful, you can support its development 🙏
 
 ## ⚡ Key Features
 
-* 🏀 **Automatic Entity Resolution:** Pick any single sensor belonging to the team (next match, pool, standings...), the card automatically detects and binds all related entities.
+* 🏀 **Automatic Entity Resolution:** Pick any single sensor belonging to the team (next match, pool, standings...), the card automatically detects and binds all related entities. It looks them up through Home Assistant's entity registry (every entity of the same device), so renaming entities or giving them custom entity IDs is fine; when the registry isn't available to the card, it falls back to recognising the entity names.
 * 🔄 **Dynamic Match Carousel:** Step through every match of the season with the navigation chevrons (or tap a row of the season schedule to jump straight to it). Without a calendar, the chevrons toggle between the last and the next match.
 * ⏱️ **Adaptive Match Display:**
   * **Pre-match:** Day, date, and tip-off time, plus a "Game day" badge on the day of the match (a "Postponed" badge replaces it when the fixture is postponed).

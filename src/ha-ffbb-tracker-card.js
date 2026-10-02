@@ -140,7 +140,7 @@ class FFBBCard extends LitElement {
   }
 
   _resolveEntities() {
-    return resolveEntities(this._config.entity, this.hass?.states);
+    return resolveEntities(this._config.entity, this.hass?.states, this.hass?.entities);
   }
 
   _localeInfo() {
