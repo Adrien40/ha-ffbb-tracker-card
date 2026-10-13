@@ -1,0 +1,1361 @@
+// Pure, side-effect-free helpers extracted from FFBBCard.
+//
+// These don't touch `this`, `hass`, or the DOM, so they're plain functions
+// that can be unit-tested directly (see pure.test.js) instead of only being
+// exercised indirectly through render(). Anything that needs `this.hass` or
+// `this._config` takes it as an explicit argument instead.
+
+import {
+  BINARY_SENSOR_SUFFIXES,
+  CARD_KEY_BY_TRANSLATION_KEY,
+  ENTITY_ROOTS,
+  INTEGRATION_PLATFORM,
+  SENSOR_SUFFIXES,
+} from "./entity-names.js";
+
+// Crest shown when a team logo fails to load.
+//
+// This path is intentional and correct -- it is NOT a missing asset. Do not
+// replace it with an inline data URI or flag it as fragile:
+//   - build.mjs copies brand/ to dist/brand/ (see copyStaticAssets there);
+//   - HACS ships that folder next to the JS bundle, and Home Assistant serves
+//     /config/www/community/<repository-name>/ as /local/community/<repository-name>/.
+//     Verified by the maintainer on a real HACS install.
+//   - "ha-ffbb-tracker-card" is the GitHub repository name (HACS uses it as the
+//     folder name). If the repository is ever renamed, update it here too.
+// The <img> error handler only swaps to this URL once (it checks the current
+// src first), so even if the file were missing there is no infinite error loop.
+export const DEFAULT_FALLBACK_LOGO = "/local/community/ha-ffbb-tracker-card/brand/icon.png";
+
+/** Normalize a string for fuzzy team-name matching: lowercase, diacritics removed, letters/digits only. */
+export function cleanForMatch(s) {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Resolve every FFBB Tracker entity belonging to one team from a single
+ * configured entity_id. Two ways, the first one preferred:
+ *
+ * 1. The entity registry (`hass.entities`): every entity the integration
+ *    created on the same device as the configured one, recognised by its
+ *    translation key. It doesn't depend on what the entities are called, so
+ *    renaming an entity, a team or competition name containing a word such as
+ *    "poule", or the language Home Assistant runs in make no difference.
+ * 2. The entity_id itself: derive the shared prefix and probe the French and
+ *    English suffixes listed in entity-names.js. It fills in whatever the
+ *    registry didn't give, and does all the work when no registry is available
+ *    (an older Home Assistant, or an entity that isn't in it).
+ *
+ * Returns null if `selected` or `states` is falsy.
+ *
+ * `states` is `hass.states` and `registry` is `hass.entities`, both resolved by
+ * the caller; this stays pure by taking them as plain objects instead of
+ * reading `this.hass`.
+ */
+export function resolveEntities(selected, states, registry = null) {
+  if (!selected || !states) {
+    return null;
+  }
+
+  const bySlug = resolveBySlug(selected, states);
+  const byRegistry = resolveByRegistry(selected, states, registry);
+  if (!byRegistry) {
+    return bySlug;
+  }
+
+  const resolved = {};
+  for (const key of Object.keys(bySlug)) {
+    resolved[key] = byRegistry[key] ?? bySlug[key];
+  }
+  return resolved;
+}
+
+/**
+ * The integration's entities on the same device as `selected`, by card key, or
+ * null when the registry can't say (no registry, `selected` not in it or not
+ * on a device, or an entity of another integration).
+ */
+function resolveByRegistry(selected, states, registry) {
+  const own = registry?.[selected];
+  if (!own?.device_id || (own.platform && own.platform !== INTEGRATION_PLATFORM)) {
+    return null;
+  }
+
+  const resolved = {};
+  let found = false;
+  for (const [entityId, entry] of Object.entries(registry)) {
+    if (entry?.device_id !== own.device_id) {
+      continue;
+    }
+    if (entry.platform && entry.platform !== INTEGRATION_PLATFORM) {
+      continue;
+    }
+    const key = CARD_KEY_BY_TRANSLATION_KEY.get(entry.translation_key);
+    if (key && states[entityId]) {
+      resolved[key] = states[entityId];
+      found = true;
+    }
+  }
+  return found ? resolved : null;
+}
+
+/** Probe `<prefix><suffix>` for every entity of the card, French slug first. */
+function resolveWithPrefixes(prefix, binPrefix, states) {
+  const findState = (keys) => {
+    for (const k of keys) {
+      if (states[k]) {
+        return states[k];
+      }
+    }
+    return null;
+  };
+
+  const resolved = {};
+  for (const [key, suffixes] of Object.entries(SENSOR_SUFFIXES)) {
+    resolved[key] = findState(suffixes.map((suffix) => `${prefix}${suffix}`));
+  }
+  for (const [key, suffixes] of Object.entries(BINARY_SENSOR_SUFFIXES)) {
+    resolved[key] = findState(suffixes.map((suffix) => `${binPrefix}${suffix}`));
+  }
+  return resolved;
+}
+
+/**
+ * Resolve by name. The entity name is "<shared prefix>_<entity name>", and the
+ * prefix (team and competition) can itself contain a word that starts an entity
+ * name, such as "poule", "rank" or "form": splitting at the first one would cut
+ * the prefix short and find nothing. Every possible split is tried, and the one
+ * that finds the most entities wins (the first one on a tie, which is what a
+ * plain left-to-right search would pick).
+ */
+function resolveBySlug(selected, states) {
+  const objectId = selected.slice(selected.indexOf(".") + 1);
+
+  const prefixes = [];
+  for (let i = 1; i < objectId.length; i++) {
+    if (objectId[i] === "_" && ENTITY_ROOTS.some((root) => objectId.startsWith(root, i + 1))) {
+      const name = objectId.slice(0, i);
+      prefixes.push([`sensor.${name}_`, `binary_sensor.${name}_`]);
+    }
+  }
+  if (prefixes.length === 0) {
+    // No known entity name in it: assume the last word is the entity name.
+    const prefix = selected.substring(0, selected.lastIndexOf("_") + 1);
+    prefixes.push([prefix, prefix.replace("sensor.", "binary_sensor.")]);
+  }
+
+  let best = null;
+  let bestCount = -1;
+  for (const [prefix, binPrefix] of prefixes) {
+    const resolved = resolveWithPrefixes(prefix, binPrefix, states);
+    const count = Object.values(resolved).filter(Boolean).length;
+    if (count > bestCount) {
+      best = resolved;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+/**
+ * Build a predicate telling whether a team name refers to `targetName`,
+ * given every name that appears in the same list (a standings table, a
+ * calendar...).
+ *
+ * If at least one name in the list matches the target EXACTLY (ignoring case,
+ * accents and punctuation), only exact matches count. That is what stops
+ * "US Dax" from also highlighting "US Dax 2". Only when nothing matches
+ * exactly does it fall back to substring matching, in either direction.
+ * Empty / "-" names never match.
+ */
+export function createTeamMatcher(names, targetName) {
+  const targetClean = cleanForMatch(targetName || "");
+  if (!targetClean) {
+    return () => false;
+  }
+  const hasExact = (Array.isArray(names) ? names : []).some((n) => {
+    const c = cleanForMatch(n || "");
+    return Boolean(c) && c === targetClean;
+  });
+  return (name) => {
+    const c = cleanForMatch(name || "");
+    if (!c) {
+      return false;
+    }
+    if (hasExact) {
+      return c === targetClean;
+    }
+    return c.includes(targetClean) || targetClean.includes(c);
+  };
+}
+
+/**
+ * Find an opponent's position in a standings table.
+ * Strictly prioritizes an exact match before falling back to substring inclusion.
+ * Returns null if there's no name, no standings array, or no valid match.
+ */
+export function findOpponentRank(opponentName, standings) {
+  if (!opponentName || !Array.isArray(standings)) {
+    return null;
+  }
+  const oppClean = cleanForMatch(opponentName);
+  if (!oppClean) {
+    return null;
+  }
+
+  let found = standings.find((item) => {
+    if (!item) return false;
+    const team = item.team_name || item.name;
+    const itemClean = cleanForMatch(team);
+    return Boolean(itemClean && itemClean === oppClean);
+  });
+
+  if (!found) {
+    found = standings.find((item) => {
+      if (!item) return false;
+      const team = item.team_name || item.name;
+      const itemClean = cleanForMatch(team);
+      return Boolean(itemClean && (itemClean.includes(oppClean) || oppClean.includes(itemClean)));
+    });
+  }
+
+  return found ? found.position : null;
+}
+
+/**
+ * Format a numeric rank as an ordinal string in the given language.
+ * `lang` is the already-resolved 2-letter language code (e.g. from
+ * `(hass.locale.language || hass.language || "en").substring(0, 2)`).
+ * Returns null for anything that isn't a positive integer.
+ */
+export function formatRank(rank, lang) {
+  if (rank === null || rank === undefined || rank === "" || isNaN(Number(rank))) {
+    return null;
+  }
+  const num = parseInt(rank, 10);
+  if (num <= 0) {
+    return null;
+  }
+
+  if (lang === "fr") {
+    return num === 1 ? "1er" : `${num}e`;
+  }
+
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) {
+    return `${num}st`;
+  }
+  if (j === 2 && k !== 12) {
+    return `${num}nd`;
+  }
+  if (j === 3 && k !== 13) {
+    return `${num}rd`;
+  }
+  return `${num}th`;
+}
+
+/**
+ * Split a post-match score string ("51 - 46") into { my, opponent }, so the
+ * card can style its own team's number distinctly from the opponent's
+ * (quick "am I winning?" reading, instead of two identical-looking numbers).
+ *
+ * `score` must be formatted "home - away", like the calendar rows' `score`
+ * (is_home true + "51 - 46" means the home team, ours, scored 51). The "last
+ * match score" sensor is NOT in that order ("ours - theirs"): convert it with
+ * sensorScoreToHomeAway() first. `isHome` is the same flag already used
+ * everywhere else in this file to order left/right.
+ *
+ * The returned `mineFirst` flag tells the renderer in which order to draw the
+ * two numbers so they match the home - away order of the score and of the
+ * left / right team columns (our score goes on the right for away matches).
+ *
+ * Returns null (never guesses) when the string isn't a clean "NN - NN" pair
+ * -- forfeits, walkovers, or a missing score ("-") all fall back to plain
+ * text in the caller.
+ */
+export function splitScore(score, isHome) {
+  if (typeof score !== "string") return null;
+  const match = score.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+  if (!match) return null;
+  const [, first, second] = match;
+  // `mineFirst` is true when our team is the home side, i.e. our number comes
+  // first in the "home - away" reading order. Away from home it is false and
+  // the display must put the opponent's (home) number on the left.
+  return isHome
+    ? { my: first, opponent: second, mineFirst: true }
+    : { my: second, opponent: first, mineFirst: false };
+}
+
+/**
+ * Turn the "last match score" sensor into the "home - away" string that
+ * splitScore() and the calendar rows use.
+ *
+ * That sensor is NOT written "home - away": the integration always writes
+ * "<our score> - <opponent score>" (sensor.py, FFBBLastMatchScoreSensor),
+ * whereas the calendar rows' `score` is "home - away". Reading the sensor as
+ * "home - away" swapped the two numbers for every away match (a 43-42 win
+ * away showed up as 43 - 42 with our 42 highlighted). The team_score /
+ * opponent_score attributes are preferred when present; otherwise the state
+ * is read as "ours - theirs". Anything that is not a clean pair is returned
+ * unchanged, so forfeits and "-" still fall back to plain text.
+ */
+export function sensorScoreToHomeAway(state, attributes, isHome) {
+  const toInt = (value) => (/^\d+$/.test(String(value ?? "").trim()) ? Number(value) : null);
+  let mine = toInt(attributes?.team_score);
+  let theirs = toInt(attributes?.opponent_score);
+  if (mine === null || theirs === null) {
+    const pair = typeof state === "string" ? state.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/) : null;
+    if (!pair) return state;
+    mine = Number(pair[1]);
+    theirs = Number(pair[2]);
+  }
+  return isHome ? `${mine} - ${theirs}` : `${theirs} - ${mine}`;
+}
+
+/**
+ * Find a team's url-ish attribute by fuzzy name match against a standings
+ * array, trying each key in `urlKeys` in order on the matched row.
+ * Strictly prioritizes exact match before substring inclusion.
+ * Returns null if there's no standings array, no match, or none of
+ * urlKeys resolves to a safe URL (see sanitizeUrl).
+ */
+export function findUrlInStandings(teamName, standings, urlKeys) {
+  if (!Array.isArray(standings)) {
+    return null;
+  }
+  const targetClean = cleanForMatch(teamName);
+  if (!targetClean) {
+    return null;
+  }
+
+  let match = standings.find((item) => {
+    const itemClean = cleanForMatch(item?.team_name || item?.name || "");
+    return Boolean(itemClean && itemClean === targetClean);
+  });
+
+  if (!match) {
+    match = standings.find((item) => {
+      const itemClean = cleanForMatch(item?.team_name || item?.name || "");
+      return Boolean(itemClean && (itemClean.includes(targetClean) || targetClean.includes(itemClean)));
+    });
+  }
+
+  if (!match) {
+    return null;
+  }
+
+  for (const key of urlKeys) {
+    if (match[key]) {
+      const url = sanitizeUrl(match[key]);
+      if (url) {
+        return url;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Pick the first non-empty match list among the poule sensor, the next-match
+ * sensor, the rank sensor, and (as a last resort) the configured entity
+ * itself.
+ */
+export function extractCalendarMatches(entities, configuredEntity) {
+  const fromPoule =
+    entities?.poule?.attributes?.calendar ||
+    entities?.poule?.attributes?.matches ||
+    entities?.poule?.attributes?.schedule;
+  if (Array.isArray(fromPoule) && fromPoule.length > 0) {
+    return fromPoule;
+  }
+  const fromNextDate =
+    entities?.nextDate?.attributes?.calendar || entities?.nextDate?.attributes?.matches;
+  if (Array.isArray(fromNextDate) && fromNextDate.length > 0) {
+    return fromNextDate;
+  }
+  const fromRank =
+    entities?.rank?.attributes?.calendar || entities?.rank?.attributes?.matches;
+  if (Array.isArray(fromRank) && fromRank.length > 0) {
+    return fromRank;
+  }
+  const fromConfigured =
+    configuredEntity?.attributes?.calendar || configuredEntity?.attributes?.matches;
+  if (Array.isArray(fromConfigured) && fromConfigured.length > 0) {
+    return fromConfigured;
+  }
+  return [];
+}
+
+/**
+ * Resolve a raw URL-ish attribute value into a safe absolute http(s) URL or local path.
+ */
+export function sanitizeUrl(u) {
+  if (!u || typeof u !== "string") {
+    return null;
+  }
+  const trimmed = u.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/local/") || trimmed.startsWith("/api/")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/")) {
+    return `https://competitions.ffbb.com${trimmed}`;
+  }
+  return null;
+}
+
+/**
+ * Check if dateStr corresponds to the same calendar day as now (in local time).
+ */
+export function isToday(dateStr, now = new Date()) {
+  if (!dateStr || dateStr === "unknown" || dateStr === "unavailable") {
+    return false;
+  }
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return false;
+  }
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+/**
+ * Check if `now` falls within the match day or the following calendar day (up to 23:59:59 of D+1).
+ */
+export function isWithinDPlusOne(lastDateStr, now = new Date()) {
+  if (!lastDateStr || lastDateStr === "unknown" || lastDateStr === "unavailable") {
+    return false;
+  }
+  const matchDate = new Date(lastDateStr);
+  if (isNaN(matchDate.getTime())) {
+    return false;
+  }
+  const startOfMatchDay = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+  const endOfDPlusOne = new Date(startOfMatchDay);
+  endOfDPlusOne.setDate(endOfDPlusOne.getDate() + 2);
+
+  const currentTime = now.getTime();
+  return currentTime >= matchDate.getTime() && currentTime < endOfDPlusOne.getTime();
+}
+
+/**
+ * Check if `now` is at or past midnight of D-1 (calendar day before upcoming match).
+ */
+export function isAtOrAfterDMinusOne(nextDateStr, now = new Date()) {
+  if (!nextDateStr || nextDateStr === "unknown" || nextDateStr === "unavailable") {
+    return false;
+  }
+  const matchDate = new Date(nextDateStr);
+  if (isNaN(matchDate.getTime())) {
+    return false;
+  }
+  const startOfMatchDay = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+  const startOfDMinusOne = new Date(startOfMatchDay);
+  startOfDMinusOne.setDate(startOfDMinusOne.getDate() - 1);
+
+  return now.getTime() >= startOfDMinusOne.getTime();
+}
+
+/**
+ * A match counts as "result pending" once it started more than this many
+ * hours ago and still has no score. This is the FFBB Tracker integration's own
+ * grace period for its next-match sensors, so the card and the entities agree
+ * on which match is "next": a match that just ended stays "next" for this
+ * long, then is waiting for its result rather than still to come.
+ */
+export const PENDING_RESULT_GRACE_HOURS = 3;
+
+// A calendar row has a result when it is flagged as played or carries a score.
+const hasResult = (match) => Boolean(match && (match.is_played || match.score));
+
+// Start time of a calendar row in ms, NaN when it has no usable date.
+const matchTime = (match) => Date.parse(match?.date ?? match?.datetime);
+
+/**
+ * True for a calendar row that started more than PENDING_RESULT_GRACE_HOURS
+ * ago and has neither a score nor the "played" flag: it is over, its result
+ * just isn't known yet (the club hasn't entered it, or it is delayed).
+ */
+export function isPendingResult(match, now = new Date()) {
+  if (!match || hasResult(match)) {
+    return false;
+  }
+  const started = matchTime(match);
+  if (Number.isNaN(started)) {
+    return false;
+  }
+  return now.getTime() - started > PENDING_RESULT_GRACE_HOURS * 3_600_000;
+}
+
+/** Index of the last calendar row that has a result, -1 if none. */
+export function findLastPlayedIndex(matches) {
+  if (!Array.isArray(matches)) {
+    return -1;
+  }
+  for (let i = matches.length - 1; i >= 0; i--) {
+    if (hasResult(matches[i])) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Index of the next match of the calendar: the first row without a result
+ * that is not already waiting for one. Rows waiting for a result are skipped
+ * (they are neither upcoming nor finished); only when nothing else is left
+ * does the first of them stand in, like the integration's own fallback.
+ */
+export function findNextMatchIndex(matches, now = new Date()) {
+  if (!Array.isArray(matches)) {
+    return -1;
+  }
+  const upcoming = matches.findIndex((m) => !hasResult(m) && !isPendingResult(m, now));
+  if (upcoming !== -1) {
+    return upcoming;
+  }
+  return matches.findIndex((m) => !hasResult(m));
+}
+
+/**
+ * Index of the calendar row an entity describes: by match number when both
+ * sides have one, otherwise by start time. -1 when nothing matches, so callers
+ * can fall back to their own rule.
+ */
+export function findCalendarIndex(matches, { matchNumber, dateStr } = {}) {
+  if (!Array.isArray(matches)) {
+    return -1;
+  }
+  const wanted = String(matchNumber ?? "").trim();
+  if (wanted) {
+    const byNumber = matches.findIndex((m) => String(m?.match_number ?? "").trim() === wanted);
+    if (byNumber !== -1) {
+      return byNumber;
+    }
+  }
+  const time = Date.parse(dateStr);
+  if (Number.isNaN(time)) {
+    return -1;
+  }
+  return matches.findIndex((m) => matchTime(m) === time);
+}
+
+/**
+ * Resolve whether the card should display the last match (post-match / score view)
+ * or the upcoming match view.
+ */
+export function computeIsPostMatch({
+  defaultView = "auto",
+  manualView = null,
+  isLive = false,
+  lastDate = null,
+  hasLastScore = false,
+  hasLastMatch = true,
+  nextDate = null,
+  hasNextMatch = false,
+  now = new Date(),
+} = {}) {
+  if (isLive || !hasLastMatch) {
+    return false;
+  }
+  if (manualView !== null) {
+    return manualView === "last";
+  }
+  if (defaultView === "next") {
+    return false;
+  }
+  if (defaultView === "last") {
+    if (!hasLastScore) {
+      return false;
+    }
+    if (hasNextMatch && isAtOrAfterDMinusOne(nextDate, now)) {
+      return false;
+    }
+    return true;
+  }
+
+  if (hasLastScore && isWithinDPlusOne(lastDate, now)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Sort standings array numerically by position (or rank) ascending.
+ */
+// Which card(s) the person wants to see: the match card, the standings
+// card, or both. Falls back to "match" for anything unset or invalid, since
+// that is the card's original, single-card behaviour.
+export const DISPLAY_MODES = ["match", "standings", "both"];
+
+export function resolveDisplayMode(config) {
+  return DISPLAY_MODES.includes(config?.display_mode) ? config.display_mode : "match";
+}
+
+// getCardSize() units for Home Assistant's masonry view, where 1 unit is
+// roughly 50 pixels (see https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/#sizing-in-masonry-view).
+//
+// The match card's own layout does not depend on live data -- the two team
+// panels, the timer and the footer are always roughly the same height -- so
+// it keeps the flat estimate the card has always used.
+//
+// The standings card, on the other hand, grows with the size of the pool: a
+// table for a 20-team pool is nowhere near the same height as an 8-team
+// one, so a single flat constant left it badly undersized in masonry view
+// once display_mode could show it (alone, or under the match card).
+const MATCH_CARD_SIZE = 3;
+// Card header + optional subtitle + the two-row FFBB column group header.
+const STANDINGS_HEADER_SIZE = 3;
+// A body row is roughly half a size unit tall, so every 2 teams add 1 unit.
+const TEAMS_PER_SIZE_UNIT = 2;
+
+export function estimateStandingsCardSize(teamCount) {
+  const rows = Number.isFinite(teamCount) && teamCount > 0 ? teamCount : 0;
+  return STANDINGS_HEADER_SIZE + Math.ceil(rows / TEAMS_PER_SIZE_UNIT);
+}
+
+
+/**
+ * Estimates getCardSize() for the whole card, given the config (for
+ * display_mode) and the standings array the standings card would render
+ * (entities.rank?.attributes?.standings) -- the exact same source of truth
+ * render() uses, so the estimate never drifts from what is actually shown.
+ */
+export function estimateCardSize({ config, standings } = {}) {
+  const mode = resolveDisplayMode(config);
+  const teamCount = Array.isArray(standings) ? standings.length : 0;
+  if (mode === "match") return MATCH_CARD_SIZE;
+  if (mode === "standings") return estimateStandingsCardSize(teamCount);
+  return MATCH_CARD_SIZE + estimateStandingsCardSize(teamCount);
+}
+
+export function sortStandings(standings) {
+  if (!Array.isArray(standings)) {
+    return [];
+  }
+  return [...standings].sort((a, b) => {
+    const parsePos = (item) => {
+      const num = parseInt(item?.position ?? item?.rank, 10);
+      return isNaN(num) ? 999 : num;
+    };
+    return parsePos(a) - parsePos(b);
+  });
+}
+
+function browserCssSupports(property, value) {
+  if (typeof CSS !== "undefined" && typeof CSS.supports === "function") {
+    return CSS.supports(property, value);
+  }
+  return null;
+}
+
+const COLOR_PATTERN =
+  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[\d.]+%?(deg)?\s*[,\s]\s*[\d.]+%?\s*[,\s]\s*[\d.]+%?(\s*[,/]\s*[\d.]+%?)?\s*\))$/i;
+
+/**
+ * Whether `value` is a usable CSS color (hex, rgb(), hsl(), a named color,
+ * var(--x)...). The browser's own CSS parser decides when available; anything
+ * that could break out of the style declaration is always rejected.
+ * `supports` is injectable so the logic can be tested without a browser.
+ */
+export function isValidCssColor(value, supports = browserCssSupports) {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const v = value.trim();
+  if (!v || /[;{}<>\\"']/.test(v)) {
+    return false;
+  }
+  const verdict = supports("color", v);
+  if (typeof verdict === "boolean") {
+    return verdict;
+  }
+  return COLOR_PATTERN.test(v);
+}
+
+/**
+ * Resolve theme, custom color, or default basketball accent color from configuration.
+ * An invalid custom color (e.g. "bleu" instead of "#1e88e5") falls back to the
+ * default orange instead of silently producing no accent at all.
+ */
+export function resolveAccentColor(config) {
+  const mode = config?.accent_color || "default";
+  if (mode === "theme") {
+    return "var(--primary-color)";
+  }
+  if (mode === "custom" && isValidCssColor(config?.custom_accent_color)) {
+    return config.custom_accent_color.trim();
+  }
+  return "#ff6b00";
+}
+
+/**
+ * Decide whether times should be shown in 12-hour (AM/PM) or 24-hour format,
+ * following the same rules as Home Assistant's own frontend.
+ *
+ * `timeFormat` is the user's profile setting, `hass.locale.time_format`:
+ *   - "12"     -> always 12-hour   ("am_pm" is accepted as an alias)
+ *   - "24"     -> always 24-hour   ("twenty_four" is accepted as an alias)
+ *   - "language" (default) -> whatever `language` uses by convention
+ *     (en-US -> 12-hour, en-GB / fr -> 24-hour)
+ *   - "system" -> whatever the browser / operating system prefers
+ * Anything unknown behaves like "language". Never throws; returns a boolean
+ * (true = 12-hour).
+ */
+export function resolveHour12(timeFormat, language) {
+  if (timeFormat === "12" || timeFormat === "am_pm") {
+    return true;
+  }
+  if (timeFormat === "24" || timeFormat === "twenty_four") {
+    return false;
+  }
+  const locale = timeFormat === "system" ? undefined : language;
+  try {
+    const resolved = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions();
+    if (typeof resolved.hour12 === "boolean") {
+      return resolved.hour12;
+    }
+    return resolved.hourCycle === "h12" || resolved.hourCycle === "h11";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Format a match date string into weekday, day/month and time parts.
+ *
+ * `options.hour12` (see resolveHour12) forces 12-hour (true) or 24-hour
+ * (false) time. It is applied through `hourCycle` ("h12" / "h23") rather than
+ * the `hour12` flag, because `hour12: false` makes some browsers print
+ * midnight as "24:00". When omitted, the locale's own default is used.
+ */
+export function formatDate(dateStr, lang = "en-US", { hour12 } = {}) {
+  if (!dateStr || dateStr === "unknown" || dateStr === "unavailable") {
+    return null;
+  }
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return null;
+  }
+
+  const weekday = d.toLocaleDateString(lang, { weekday: "short" });
+  const day = d.toLocaleDateString(lang, { day: "numeric", month: "short" });
+  const timeOptions =
+    typeof hour12 === "boolean"
+      ? { hour: hour12 ? "numeric" : "2-digit", minute: "2-digit", hourCycle: hour12 ? "h12" : "h23" }
+      : { hour: "2-digit", minute: "2-digit" };
+  const time = d.toLocaleTimeString(lang, timeOptions);
+
+  return { weekday, day, time };
+}
+
+/**
+ * Find the official or external team page URL from sensor attributes or standings.
+ * Prioritizes direct match sensor attributes (team_url / opponent_url) before scanning standings.
+ * Never falls back to competition/poule URLs.
+ */
+export function findTeamUrl({
+  isHome = true,
+  isMyTeam = isHome,
+  teamName = "",
+  entities = {},
+  opponentSensor = null,
+  selectedEntity = null,
+} = {}) {
+  const searchAttrs = (obj, keys) => {
+    if (!obj || typeof obj !== "object") return null;
+    for (const k of keys) {
+      if (obj[k]) {
+        const url = sanitizeUrl(obj[k]);
+        if (url) return url;
+      }
+    }
+    return null;
+  };
+
+  if (isMyTeam) {
+    const directTeamUrl = searchAttrs(opponentSensor?.attributes, [
+      "team_url",
+      "team_link",
+    ]);
+    if (directTeamUrl) return directTeamUrl;
+
+    const entitiesToCheck = [
+      selectedEntity,
+      entities?.nextDate,
+      entities?.lastDate,
+      entities?.rank,
+    ];
+    for (const ent of entitiesToCheck) {
+      const found = searchAttrs(ent?.attributes, ["team_url", "team_link"]);
+      if (found) return found;
+    }
+
+    const standings = entities?.rank?.attributes?.standings || selectedEntity?.attributes?.standings;
+    const foundInStandings = findUrlInStandings(teamName, standings, ["team_url", "url", "link"]);
+    if (foundInStandings) return foundInStandings;
+  } else {
+    const directOppUrl = searchAttrs(opponentSensor?.attributes, [
+      "opponent_url",
+      "opponent_team_url",
+      "opponent_link",
+    ]);
+    if (directOppUrl) return directOppUrl;
+
+    const standings = entities?.rank?.attributes?.standings || selectedEntity?.attributes?.standings;
+    const foundInStandings = findUrlInStandings(teamName, standings, ["team_url", "url", "link"]);
+    if (foundInStandings) return foundInStandings;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve a team logo for a calendar match row.
+ * Prioritizes direct match object logo, then team sensor logo (if my team),
+ * then opponent sensor logo (if matching next/last opponent),
+ * then standings table lookup, and falls back to DEFAULT_FALLBACK_LOGO.
+ */
+export function resolveCalendarTeamLogo({
+  teamName = "",
+  matchLogo = null,
+  isMyTeam = false,
+  myTeamLogo = null,
+  nextOpponentState = null,
+  nextOpponentLogo = null,
+  lastOpponentState = null,
+  lastOpponentLogo = null,
+  standings = null,
+} = {}) {
+  const safeDirect = sanitizeUrl(matchLogo);
+  if (safeDirect) {
+    return safeDirect;
+  }
+
+  if (isMyTeam && myTeamLogo && myTeamLogo !== DEFAULT_FALLBACK_LOGO) {
+    return myTeamLogo;
+  }
+
+  const targetClean = cleanForMatch(teamName);
+
+  // With no usable team name we can't match anything by name, but that must
+  // not skip the "my team" fallback below.
+  if (targetClean) {
+    const nextClean = cleanForMatch(nextOpponentState || "");
+    if (nextClean && (nextClean === targetClean || nextClean.includes(targetClean) || targetClean.includes(nextClean))) {
+      const safeOpp = sanitizeUrl(nextOpponentLogo);
+      if (safeOpp) {
+        return safeOpp;
+      }
+    }
+
+    const lastClean = cleanForMatch(lastOpponentState || "");
+    if (lastClean && (lastClean === targetClean || lastClean.includes(targetClean) || targetClean.includes(lastClean))) {
+      const safeLastOpp = sanitizeUrl(lastOpponentLogo);
+      if (safeLastOpp) {
+        return safeLastOpp;
+      }
+    }
+
+    if (Array.isArray(standings) && standings.length > 0) {
+      const foundInStandings = findUrlInStandings(teamName, standings, [
+        "team_logo_url",
+        "opponent_logo_url",
+        "logo_url",
+        "logo",
+        "team_logo",
+        "club_logo",
+        "crest",
+        "image",
+        "image_url",
+        "badge",
+      ]);
+      if (foundInStandings) {
+        return foundInStandings;
+      }
+    }
+  }
+
+  if (isMyTeam && myTeamLogo) {
+    return myTeamLogo;
+  }
+
+  return DEFAULT_FALLBACK_LOGO;
+}
+
+/**
+ * Pure view-model derivation: turns raw entity state + configuration into the
+ * flat set of structured values the template requires.
+ */
+export function computeViewModel({
+  entities = {},
+  config = {},
+  manualView = null,
+  matchIndex = null,
+  states = {},
+  lang = "fr",
+  locale = null,
+  hour12 = undefined,
+  t = (k, fallback = "") => fallback,
+  isPreview = false,
+  now = new Date(),
+} = {}) {
+  const isValidState = (s) => Boolean(s && s !== "unknown" && s !== "unavailable");
+
+  const isLive = Boolean(entities.matchInProgress && entities.matchInProgress.state === "on");
+  const lastScoreState = entities.lastScore?.state;
+  const hasLastScore = isValidState(lastScoreState);
+  const nextDateState = entities.nextDate?.state;
+  const hasNextMatch = isValidState(nextDateState);
+
+  const hasLastMatchData =
+    hasLastScore ||
+    isValidState(entities.lastOpponent?.state) ||
+    isValidState(entities.lastDate?.state);
+  const hasNextMatchData = hasNextMatch || isValidState(entities.nextOpponent?.state);
+
+  const selectedEntity = config.entity && states ? states[config.entity] : null;
+  const calendarMatches = extractCalendarMatches(entities, selectedEntity);
+  const hasCalendar = Array.isArray(calendarMatches) && calendarMatches.length > 0;
+
+  const lastPlayedIndex = hasCalendar ? findLastPlayedIndex(calendarMatches) : -1;
+  const nextMatchIndex = hasCalendar ? findNextMatchIndex(calendarMatches, now) : -1;
+
+  const defaultIsPostMatch = computeIsPostMatch({
+    defaultView: config.default_match_view || "auto",
+    manualView,
+    isLive,
+    lastDate: entities.lastDate?.state,
+    hasLastScore,
+    hasLastMatch: hasLastMatchData,
+    nextDate: nextDateState,
+    hasNextMatch,
+    now,
+  });
+
+  // Until the user steps through the carousel, the card shows the match the
+  // last/next sensors describe -- which the integration picks by date. The
+  // chevrons navigate from currentIndex, so it has to be that very match:
+  // taking the calendar's first row without a score instead made "previous"
+  // skip a past match whose result was missing, and "next" land on it.
+  // Entities without a match number or a date matching a row (an older
+  // integration) fall back to the calendar-only rule.
+  const shownIndex = (sensorId) =>
+    hasCalendar
+      ? findCalendarIndex(calendarMatches, {
+          matchNumber: entities[sensorId]?.attributes?.match_number,
+          dateStr: entities[sensorId]?.state,
+        })
+      : -1;
+  const pickIndex = (preferred, fallback) => (preferred !== -1 ? preferred : fallback);
+
+  let currentIndex;
+  if (typeof matchIndex === "number" && hasCalendar) {
+    currentIndex = Math.max(0, Math.min(matchIndex, calendarMatches.length - 1));
+  } else if (manualView === "last") {
+    currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
+  } else if (manualView === "next") {
+    currentIndex = pickIndex(
+      shownIndex("nextDate"),
+      nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1),
+    );
+  } else if (defaultIsPostMatch) {
+    currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
+  } else {
+    currentIndex = pickIndex(shownIndex("nextDate"), nextMatchIndex !== -1 ? nextMatchIndex : 0);
+  }
+
+  const isCarouselMatch = typeof matchIndex === "number" && hasCalendar && Boolean(calendarMatches[currentIndex]);
+  const currentCalMatch = isCarouselMatch ? calendarMatches[currentIndex] : null;
+
+  const isPostMatch = currentCalMatch
+    ? Boolean(currentCalMatch.is_played || currentCalMatch.score)
+    : defaultIsPostMatch;
+
+  const canToggleView = !isLive && (
+    (hasCalendar && calendarMatches.length > 1) ||
+    (hasLastMatchData && hasNextMatchData)
+  );
+
+  const canGoPrev = hasCalendar && calendarMatches.length > 1
+    ? currentIndex > 0
+    : !isPostMatch;
+
+  const canGoNext = hasCalendar && calendarMatches.length > 1
+    ? currentIndex < calendarMatches.length - 1
+    : isPostMatch;
+
+  const isGameDay = !isPostMatch && !isLive && (
+    currentCalMatch
+      ? Boolean(currentCalMatch.date && isToday(currentCalMatch.date, now))
+      : (hasNextMatch && isToday(nextDateState, now))
+  );
+
+  const officialTeamName = entities.poule?.attributes?.team || "";
+  const configuredTeamName = config.custom_team_name?.trim();
+  const teamName = configuredTeamName || officialTeamName || t("card.unknown_team", "My team");
+
+  let isHome;
+  let opponentName;
+  let opponentSearchName;
+  let teamLogoUrl;
+  let opponentLogoUrl;
+  let leftUrl;
+  let rightUrl;
+  let gymName;
+  let gymCity;
+  let gymAddress;
+  let targetDateStr;
+  let roundNumber;
+  let isStale;
+
+  const currentOpponentSensor = isPostMatch ? entities.lastOpponent : entities.nextOpponent;
+  const rawOpponent = currentOpponentSensor?.state;
+
+  if (currentCalMatch) {
+    const homeName = currentCalMatch.home_team || "";
+    const awayName = currentCalMatch.away_team || "";
+    const isOfficialHome = currentCalMatch.is_home !== undefined
+      ? currentCalMatch.is_home
+      : (cleanForMatch(homeName) === cleanForMatch(officialTeamName || teamName));
+
+    isHome = isOfficialHome;
+    opponentName = isHome ? awayName : homeName;
+    opponentSearchName = opponentName;
+
+    // The next/last opponent sensors describe the *next/last* match, not
+    // necessarily the one the carousel is showing. Resolve each side by team
+    // name (match logo -> sensor if the name matches -> standings) so a
+    // carousel row never inherits another opponent's logo.
+    const sensorAttrs = (id) => entities[id]?.attributes;
+    const myTeamSensorLogo =
+      sensorAttrs("nextOpponent")?.team_logo_url ||
+      sensorAttrs("lastOpponent")?.team_logo_url ||
+      sensorAttrs("nextDate")?.team_logo_url ||
+      sensorAttrs("lastDate")?.team_logo_url ||
+      null;
+    const standingsForLogos = entities.rank?.attributes?.standings;
+    // When the carousel is showing exactly the match the opponent sensor
+    // describes (the next one, or the last played one), that sensor's
+    // opponent logo is authoritative even if the team names are spelled
+    // differently between the calendar and the sensor.
+    const sensorIsThisMatch = isPostMatch
+      ? currentIndex === lastPlayedIndex
+      : currentIndex === nextMatchIndex;
+    const sensorOpponentLogo = sensorIsThisMatch
+      ? sanitizeUrl(currentOpponentSensor?.attributes?.opponent_logo_url)
+      : null;
+    const resolveSide = (name, matchLogo, isMyTeam) => {
+      const resolved = resolveCalendarTeamLogo({
+        teamName: name,
+        matchLogo,
+        isMyTeam,
+        myTeamLogo: myTeamSensorLogo,
+        nextOpponentState: entities.nextOpponent?.state,
+        nextOpponentLogo: sensorAttrs("nextOpponent")?.opponent_logo_url,
+        lastOpponentState: entities.lastOpponent?.state,
+        lastOpponentLogo: sensorAttrs("lastOpponent")?.opponent_logo_url,
+        standings: standingsForLogos,
+      });
+      if (resolved === DEFAULT_FALLBACK_LOGO && !isMyTeam && sensorOpponentLogo) {
+        return sensorOpponentLogo;
+      }
+      return resolved;
+    };
+
+    const homeCalLogo = resolveSide(
+      homeName,
+      currentCalMatch.home_logo || currentCalMatch.home_team_logo,
+      isHome,
+    );
+    const awayCalLogo = resolveSide(
+      awayName,
+      currentCalMatch.away_logo || currentCalMatch.away_team_logo,
+      !isHome,
+    );
+
+    teamLogoUrl = isHome ? homeCalLogo : awayCalLogo;
+    opponentLogoUrl = isHome ? awayCalLogo : homeCalLogo;
+
+    // Calendar rows carry no team URLs, so resolve each side like the logos:
+    // explicit row URL -> my team's sensor URL -> the opponent sensor URL
+    // (only when it describes this very match, or its name matches) ->
+    // standings lookup by team name.
+    const sameTeam = (a, b) => {
+      const x = cleanForMatch(a);
+      const y = cleanForMatch(b);
+      return Boolean(x && y && (x === y || x.includes(y) || y.includes(x)));
+    };
+    const resolveSideUrl = (name, rowUrl, isMyTeam) => {
+      const direct = sanitizeUrl(rowUrl);
+      if (direct) {
+        return direct;
+      }
+      if (isMyTeam) {
+        return findTeamUrl({
+          isHome: true,
+          teamName: officialTeamName || teamName,
+          entities,
+          opponentSensor: currentOpponentSensor,
+          selectedEntity,
+        });
+      }
+      if (sensorIsThisMatch) {
+        const fromSensor = sanitizeUrl(currentOpponentSensor?.attributes?.opponent_url);
+        if (fromSensor) {
+          return fromSensor;
+        }
+      }
+      for (const sensor of [entities.nextOpponent, entities.lastOpponent]) {
+        if (sameTeam(sensor?.state, name)) {
+          const u = sanitizeUrl(sensor?.attributes?.opponent_url);
+          if (u) {
+            return u;
+          }
+        }
+      }
+      return findUrlInStandings(name, standingsForLogos, ["team_url", "url", "link"]);
+    };
+
+    leftUrl = resolveSideUrl(homeName, currentCalMatch.home_url, isHome);
+    rightUrl = resolveSideUrl(awayName, currentCalMatch.away_url, !isHome);
+
+    gymName = currentCalMatch.gym_name || "";
+    gymCity = currentCalMatch.gym_city || "";
+    gymAddress = currentCalMatch.formatted_address || "";
+    targetDateStr = currentCalMatch.date || null;
+    roundNumber = String(currentCalMatch.round ?? "");
+    isStale = Boolean(currentCalMatch.is_stale);
+  } else {
+    opponentName = isValidState(rawOpponent) ? rawOpponent : t("card.unknown_opponent", "Opponent");
+    opponentSearchName = isValidState(rawOpponent) ? rawOpponent : "";
+
+    isHome = isPostMatch
+      ? (entities.lastScore?.attributes?.is_home ?? entities.lastDate?.attributes?.is_home ?? true)
+      : (entities.nextVenue?.state === "home" || entities.nextOpponent?.attributes?.is_home === true);
+
+    teamLogoUrl = currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO;
+    opponentLogoUrl = currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO;
+
+    const searchTeamName = officialTeamName || teamName;
+    const leftMatchName = isHome ? searchTeamName : opponentSearchName;
+    const rightMatchName = isHome ? opponentSearchName : searchTeamName;
+
+    leftUrl = findTeamUrl({
+      isHome,
+      teamName: leftMatchName,
+      entities,
+      opponentSensor: currentOpponentSensor,
+      selectedEntity,
+    });
+    rightUrl = findTeamUrl({
+      isHome: !isHome,
+      teamName: rightMatchName,
+      entities,
+      opponentSensor: currentOpponentSensor,
+      selectedEntity,
+    });
+
+    roundNumber = isPostMatch
+      ? (entities.lastDate?.attributes?.round || "")
+      : (entities.nextDate?.attributes?.round || "");
+
+    // The venue must belong to the match on screen: a "last match" card used
+    // to show the venue of the NEXT match (it always read the next-match
+    // sensors), e.g. a home win drawn next to an away gym.
+    if (isPostMatch) {
+      gymName = entities.lastDate?.attributes?.gym_name || "";
+      gymCity = entities.lastDate?.attributes?.gym_city || "";
+      gymAddress = entities.lastDate?.attributes?.formatted_address || "";
+    } else {
+      gymName = entities.nextLocation?.attributes?.gym_name || entities.nextOpponent?.attributes?.gym_name || "";
+      gymCity = entities.nextLocation?.attributes?.gym_city || entities.nextOpponent?.attributes?.gym_city || "";
+      gymAddress =
+        entities.nextLocation?.attributes?.formatted_address ||
+        entities.nextOpponent?.attributes?.formatted_address ||
+        "";
+    }
+    targetDateStr = isPostMatch ? entities.lastDate?.state : entities.nextDate?.state;
+    isStale = Boolean(entities.nextDate?.attributes?.is_stale);
+  }
+
+  const leftName = isHome ? teamName : opponentName;
+  const rightName = isHome ? opponentName : teamName;
+  const leftLogo = isHome ? teamLogoUrl : opponentLogoUrl;
+  const rightLogo = isHome ? opponentLogoUrl : teamLogoUrl;
+  const searchTeamName = officialTeamName || teamName;
+  const leftMatchName = isHome ? searchTeamName : opponentSearchName;
+  const rightMatchName = isHome ? opponentSearchName : searchTeamName;
+
+  const leftEntityId = isHome ? config.entity : currentOpponentSensor?.entity_id;
+  const rightEntityId = isHome ? currentOpponentSensor?.entity_id : config.entity;
+
+  const competition = entities.poule?.attributes?.competition || "";
+  const pouleName = entities.poule?.state || "";
+
+  const dateFormatted = formatDate(targetDateStr, locale || lang, { hour12 });
+  const formStreak = entities.form?.attributes?.current_streak || "";
+  const formSequence = entities.form?.state;
+  const hasValidForm = isValidState(formSequence);
+
+  const displayFormSequence = hasValidForm ? formSequence : (isPreview ? "V-V-D-V-N" : "");
+  const displayFormStreak = hasValidForm ? formStreak : (isPreview ? "2V" : "");
+  const showFormBlock = config.show_form && (hasValidForm || isPreview);
+
+  const showTitle = config.show_title !== false;
+  const configuredTitle = config.title?.trim();
+  let defaultTitle = t("card.default_title", "Next match");
+  if (isLive) {
+    defaultTitle = t("card.live_title", "Live match");
+  } else if (isPostMatch) {
+    defaultTitle = t("card.last_title", "Last match");
+  }
+  // A custom title is shown as a PREFIX in front of the dynamic status
+  // ("Next match" / "Live match" / "Last match"), the same way a custom
+  // standings_title is a prefix in front of the pool name below -- instead
+  // of replacing it outright and losing that live-status information.
+  const titleText = configuredTitle ? `${configuredTitle} • ${defaultTitle}` : defaultTitle;
+  const titleIcon = config.icon !== undefined ? config.icon : "mdi:basketball";
+  const logoSizeClass = `logo-box-${config.logo_size || "medium"}`;
+
+  // Which card(s) the person wants to see: the match card, the standings
+  // card, or both (default). Each card keeps its own title/icon below --
+  // this only decides whether it is rendered at all.
+  const displayMode = resolveDisplayMode(config);
+  const configuredStandingsTitle = config.standings_title?.trim();
+  const standingsTitle = configuredStandingsTitle || t("card.standings_title", "Standings");
+  const standingsIcon = config.standings_icon !== undefined ? config.standings_icon : "mdi:format-list-numbered";
+
+  const showRank = config.show_rank !== false;
+  const rawUserRank = entities.rank?.state;
+  const userRankNum = isValidState(rawUserRank) ? rawUserRank : null;
+  const opponentRankNum = findOpponentRank(opponentSearchName, entities.rank?.attributes?.standings);
+
+  const userRankFormatted = formatRank(userRankNum, lang);
+  const opponentRankFormatted = formatRank(opponentRankNum, lang);
+
+  let leftRank = isHome ? userRankFormatted : opponentRankFormatted;
+  let rightRank = isHome ? opponentRankFormatted : userRankFormatted;
+
+  if (isPreview && showRank) {
+    if (!leftRank) {
+      leftRank = isHome ? formatRank(2, lang) : formatRank(5, lang);
+    }
+    if (!rightRank) {
+      rightRank = isHome ? formatRank(5, lang) : formatRank(2, lang);
+    }
+  }
+
+  // A past match still waiting for its result is shown with a "result
+  // pending" badge instead of as an upcoming one. A match the integration
+  // already flags as stale keeps its existing "postponed" badge.
+  const isResultPending =
+    Boolean(currentCalMatch) &&
+    !isPostMatch &&
+    !isLive &&
+    !isStale &&
+    isPendingResult(currentCalMatch, now);
+
+  const isCalendarClickable = !isLive && !isPostMatch && !isResultPending && Boolean(targetDateStr);
+  const isLogoClickable = config.logo_click_action && config.logo_click_action !== "none";
+  const hasStandingsData = Array.isArray(entities.rank?.attributes?.standings) && entities.rank.attributes.standings.length > 0;
+  const accentColor = resolveAccentColor(config);
+
+  // Calendar rows carry "home - away"; the sensor carries "ours - theirs".
+  const sensorScore = isValidState(entities.lastScore?.state)
+    ? sensorScoreToHomeAway(entities.lastScore.state, entities.lastScore.attributes, isHome)
+    : null;
+  const displayedScore = currentCalMatch?.score || sensorScore || "-";
+  const displayedResult = currentCalMatch?.result || entities.lastResult?.state || "draw";
+  const scoreParts = splitScore(displayedScore, isHome);
+
+  return {
+    isValidState,
+    isLive,
+    lastScoreState,
+    hasLastScore,
+    nextDateState,
+    hasNextMatch,
+    hasLastMatchData,
+    hasNextMatchData,
+    canToggleView,
+    canGoPrev,
+    canGoNext,
+    currentIndex,
+    hasCalendar,
+    calendarMatches,
+    displayedScore,
+    displayedResult,
+    scoreParts,
+    isPostMatch,
+    isGameDay,
+    currentOpponentSensor,
+    officialTeamName,
+    configuredTeamName,
+    teamName,
+    rawOpponent,
+    opponentName,
+    opponentSearchName,
+    isHome,
+    teamLogoUrl,
+    opponentLogoUrl,
+    leftName,
+    rightName,
+    leftLogo,
+    rightLogo,
+    searchTeamName,
+    leftMatchName,
+    rightMatchName,
+    leftUrl,
+    rightUrl,
+    leftEntityId,
+    rightEntityId,
+    competition,
+    pouleName,
+    roundNumber,
+    gymName,
+    gymCity,
+    gymAddress,
+    targetDateStr,
+    dateFormatted,
+    formStreak,
+    formSequence,
+    hasValidForm,
+    isPreview,
+    displayFormSequence,
+    displayFormStreak,
+    showFormBlock,
+    showTitle,
+    configuredTitle,
+    titleText,
+    titleIcon,
+    displayMode,
+    standingsTitle,
+    standingsIcon,
+    logoSizeClass,
+    showRank,
+    rawUserRank,
+    userRankNum,
+    opponentRankNum,
+    userRankFormatted,
+    opponentRankFormatted,
+    leftRank,
+    rightRank,
+    isCalendarClickable,
+    isLogoClickable,
+    hasStandingsData,
+    accentColor,
+    isStale,
+    isResultPending,
+  };
+}

@@ -1,0 +1,410 @@
+import { LitElement, html, css } from "lit";
+import { CARD_VERSION } from "./version.js";
+import { DEFAULT_CONFIG } from "./config-defaults.js";
+import { resolveLang, getTranslations, translate } from "./translations.js";
+import { isValidCssColor, resolveEntities } from "./pure.js";
+
+class FFBBCardEditor extends LitElement {
+  static get properties() {
+    return {
+      hass: { attribute: false },
+      _config: { state: true },
+      _translations: { state: true },
+    };
+  }
+
+  static get styles() {
+    return css`
+      .card-version {
+        text-align: right;
+        font-size: 0.75em;
+        font-weight: 500;
+        color: var(--secondary-text-color);
+        margin-top: 16px;
+        opacity: 0.6;
+      }
+    `;
+  }
+
+  constructor() {
+    super();
+    this._translationsLang = "fr";
+    this._translations = getTranslations("fr");
+  }
+
+  setConfig(config) {
+    this._config = {
+      entity: "",
+      ...DEFAULT_CONFIG,
+      ...config,
+    };
+  }
+
+  willUpdate(changedProperties) {
+    super.willUpdate(changedProperties);
+    if (changedProperties.has("hass") && this.hass) {
+      const lang = resolveLang(this.hass);
+      if (lang !== this._translationsLang) {
+        this._translationsLang = lang;
+        this._translations = getTranslations(lang);
+      }
+    }
+  }
+
+  _t(key, fallback = "") {
+    return translate(this._translations, key, fallback);
+  }
+
+  // Helper text under the custom color field. When the typed value is not a
+  // valid CSS color the card silently uses the default orange, so say so here
+  // instead of leaving the user wondering why nothing changed.
+  _customColorHelper() {
+    const example = this._t("editor.custom_accent_color_helper", "Example: #1e88e5 or #ff6b00");
+    const value = String(this._config?.custom_accent_color ?? "").trim();
+    if (value && !isValidCssColor(value)) {
+      const warning = this._t("editor.custom_accent_color_invalid", "Not a valid color: the default orange is used.");
+      return `⚠ ${warning} ${example}`;
+    }
+    return example;
+  }
+
+  // Helper text under the entity field. When the configured entity no longer
+  // exists -- typically because it was renamed, which Home Assistant doesn't
+  // propagate to the entity ids written in dashboards -- the picker only says
+  // "Unknown entity", and the card carries on by guessing the team's other
+  // entities from the old name. That works until the name no longer gives
+  // anything away, so say what happened and which entity to pick instead.
+  _entityHelper() {
+    const base = this._t("editor.entity_helper", "Select any sensor belonging to the team");
+    const entity = String(this._config?.entity ?? "").trim();
+    const states = this.hass?.states;
+    // No entity yet (new card), or states not loaded yet: nothing to judge.
+    if (!entity || !states || Object.keys(states).length === 0) {
+      return base;
+    }
+    if (Object.prototype.hasOwnProperty.call(states, entity)) {
+      return base;
+    }
+
+    const missing = this._t(
+      "editor.entity_missing",
+      '"{entity}" no longer exists (probably renamed): select it again.',
+    ).replace("{entity}", entity);
+    const suggestion = this._suggestEntity(entity, states);
+    if (!suggestion) {
+      return `⚠ ${missing}`;
+    }
+    const hint = this._t("editor.entity_suggestion", "Suggestion: {entity}").replace("{entity}", suggestion);
+    return `⚠ ${missing} ${hint}`;
+  }
+
+  // The sensor to pick instead of a missing one: another entity of the same
+  // team, found from the old name. The pool sensor describes the whole team, so
+  // it comes first; only sensors qualify, like the picker's own filter.
+  _suggestEntity(missing, states) {
+    // Never null here: it only is without an entity or without states, and
+    // _entityHelper() has ruled both out before asking.
+    const resolved = resolveEntities(missing, states, this.hass?.entities);
+    const candidates = [resolved.poule, resolved.nextDate, ...Object.values(resolved)];
+    return (
+      candidates
+        .map((state) => state?.entity_id)
+        .find((id) => typeof id === "string" && id.startsWith("sensor.")) ?? ""
+    );
+  }
+
+  _valueChanged(ev) {
+    if (!this._config || !this.hass) {
+      return;
+    }
+    if (!ev.detail || ev.detail.value === undefined) {
+      return;
+    }
+
+    const updatedValue = { ...ev.detail.value };
+    const textFields = ["entity", "custom_team_name", "title", "icon", "custom_accent_color", "standings_title"];
+    for (const field of textFields) {
+      if (!(field in updatedValue)) {
+        updatedValue[field] = "";
+      }
+    }
+
+    const newConfig = { ...this._config, ...updatedValue };
+
+    const event = new CustomEvent("config-changed", {
+      detail: { config: newConfig },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(event);
+  }
+
+  render() {
+    if (!this.hass || !this._config) {
+      return html``;
+    }
+
+    const schema = [
+      {
+        name: "entity",
+        label: this._t("editor.entity", "FFBB team (sensor)"),
+        helper: this._entityHelper(),
+        selector: {
+          entity: {
+            filter: {
+              integration: "ffbb_tracker",
+              domain: "sensor",
+            },
+          },
+        },
+      },
+      {
+        name: "show_title",
+        label: this._t("editor.show_title", "Show title"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
+        name: "title",
+        label: this._t("editor.title", "Title"),
+        helper: this._t(
+          "editor.title_helper",
+          'Leave blank for a dynamic default title ("Next match" / "Live match" / "Last match"). If filled in, it is shown as a prefix before that dynamic title.'
+        ),
+        selector: { text: {} },
+      },
+      {
+        name: "icon",
+        label: this._t("editor.icon", "Icon"),
+        selector: { icon: {} },
+      },
+      {
+        name: "show_header",
+        label: this._t("editor.show_header", "Show header / Round"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
+        name: "logo",
+        type: "expandable",
+        title: this._t("editor.logo_section", "Logo"),
+        icon: "mdi:shield-account",
+        flatten: true,
+        schema: [
+          {
+            name: "logo_size",
+            label: this._t("editor.logo_size", "Team logo size"),
+            default: "medium",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "small", label: this._t("editor.logo_size_small", "Small") },
+                  { value: "medium", label: this._t("editor.logo_size_medium", "Medium (default)") },
+                  { value: "large", label: this._t("editor.logo_size_large", "Large") },
+                  { value: "extra_large", label: this._t("editor.logo_size_extra_large", "Extra Large") },
+                ],
+              },
+            },
+          },
+          {
+            name: "logo_click_action",
+            label: this._t("editor.logo_click_action", "Action on logo click"),
+            default: "team_url",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: this._t("editor.logo_action_none", "No action") },
+                  { value: "team_url", label: this._t("editor.logo_action_team_url", "Official FFBB team page") },
+                  { value: "more-info", label: this._t("editor.logo_action_more_info", "Detailed view (more-info)") },
+                ],
+              },
+            },
+          },
+          {
+            name: "show_watermark",
+            label: this._t("editor.show_watermark", "Transparent background logos"),
+            default: true,
+            selector: { boolean: {} },
+          },
+          {
+            name: "show_calendar_logos",
+            label: this._t("editor.show_calendar_logos", "Team logos in the calendar rows"),
+            default: true,
+            selector: { boolean: {} },
+          },
+          {
+            name: "show_standings_logos",
+            label: this._t("editor.show_standings_logos", "Team logos in standings rows (popup and standalone card)"),
+            default: true,
+            selector: { boolean: {} },
+          },
+        ],
+      },
+      {
+        name: "default_match_view",
+        label: this._t("editor.default_match_view", "Initial view"),
+        default: "auto",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "auto", label: this._t("editor.view_auto", "Last match played until D+1") },
+              { value: "next", label: this._t("editor.view_next", "Always upcoming match") },
+              { value: "last", label: this._t("editor.view_last", "Last match (upcoming match at D-1)") },
+            ],
+          },
+        },
+      },
+      {
+        name: "custom_team_name",
+        label: this._t("editor.custom_team_name", "Custom name for my team"),
+        helper: this._t("editor.custom_team_name_helper", "Leave blank to keep official FFBB team name"),
+        selector: { text: {} },
+      },
+      {
+        name: "accent_color",
+        label: this._t("editor.accent_color", "Accent color"),
+        default: "default",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "default", label: this._t("editor.accent_color_default", "Basketball orange (default)") },
+              { value: "theme", label: this._t("editor.accent_color_theme", "Home Assistant theme") },
+              { value: "custom", label: this._t("editor.accent_color_custom", "Custom color") },
+            ],
+          },
+        },
+      },
+      ...(this._config.accent_color === "custom"
+        ? [
+            {
+              name: "custom_accent_color",
+              label: this._t("editor.custom_accent_color", "Custom color code (HEX)"),
+              helper: this._customColorHelper(),
+              selector: { text: {} },
+            },
+          ]
+        : []),
+      {
+        name: "ranking",
+        type: "expandable",
+        title: this._t("editor.ranking_section", "Ranking"),
+        icon: "mdi:format-list-numbered",
+        flatten: true,
+        schema: [
+          {
+            name: "show_rank",
+            label: this._t("editor.show_rank", "Show team ranking"),
+            default: true,
+            selector: { boolean: {} },
+          },
+          ...(this._config.show_rank !== false
+            ? [
+                {
+                  name: "rank_badge_style",
+                  label: this._t("editor.rank_badge_style", "Rank badge style"),
+                  default: "outline",
+                  selector: {
+                    select: {
+                      mode: "dropdown",
+                      options: [
+                        { value: "none", label: this._t("editor.rank_badge_none", "None") },
+                        { value: "outline", label: this._t("editor.rank_badge_outline", "Outline (podium colors)") },
+                        { value: "solid", label: this._t("editor.rank_badge_solid", "Solid") },
+                      ],
+                    },
+                  },
+                },
+                {
+                  name: "standings_popup_detailed",
+                  label: this._t("editor.standings_popup_detailed", "Detailed standings in popup"),
+                  helper: this._t(
+                    "editor.standings_popup_detailed_helper",
+                    "Show the full table (same columns as the secondary standings card) instead of the simple one."
+                  ),
+                  default: false,
+                  selector: { boolean: {} },
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        name: "show_form",
+        label: this._t("editor.show_form", "Show recent form"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_venue",
+        label: this._t("editor.show_venue", "Show venue"),
+        default: true,
+        selector: { boolean: {} },
+      },
+      {
+        name: "standings_card",
+        type: "expandable",
+        title: this._t("editor.standings_card_section", "Standalone standings card"),
+        icon: "mdi:card-multiple-outline",
+        flatten: true,
+        schema: [
+          {
+            name: "display_mode",
+            label: this._t("editor.display_mode", "Cards to display"),
+            default: "match",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "match", label: this._t("editor.display_mode_match", "Match card only (default)") },
+                  { value: "standings", label: this._t("editor.display_mode_standings", "Standings card only") },
+                  { value: "both", label: this._t("editor.display_mode_both", "Match card + standings card") },
+                ],
+              },
+            },
+          },
+          ...(this._config.display_mode !== "match"
+            ? [
+                {
+                  name: "standings_title",
+                  label: this._t("editor.standings_title", "Standings card title"),
+                  helper: this._t("editor.standings_title_helper", "Leave blank for the default title"),
+                  selector: { text: {} },
+                },
+                {
+                  name: "standings_icon",
+                  label: this._t("editor.standings_icon", "Standings card icon"),
+                  selector: { icon: {} },
+                },
+                {
+                  name: "show_standings_logos",
+                  label: this._t("editor.show_standings_logos", "Team logos in standings rows (popup and standalone card)"),
+                  default: true,
+                  selector: { boolean: {} },
+                },
+              ]
+            : []),
+        ],
+      },
+    ];
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._config}
+        .schema=${schema}
+        .computeLabel=${(s) => s.label || s.title}
+        .computeHelper=${(s) => s.helper}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+      <div class="card-version">FFBB Tracker Card v${CARD_VERSION}</div>
+    `;
+  }
+}
+
+if (!customElements.get("ffbb-tracker-card-editor")) {
+  customElements.define("ffbb-tracker-card-editor", FFBBCardEditor);
+}
