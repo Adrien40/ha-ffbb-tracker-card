@@ -7,6 +7,8 @@ export const cardStyles = css`
   ha-card {
     overflow: hidden;
     position: relative;
+    container-type: inline-size;
+    --ffbb-logo-cap: max(44px, calc((100cqw - clamp(118px, 38cqw, 144px) - 76px) / 2));
   }
   /* Visually hidden but readable by screen readers -- standard "sr-only"
      recipe (not display:none/visibility:hidden, which most ATs also skip). */
@@ -120,10 +122,11 @@ export const cardStyles = css`
   }
   .match-area {
     display: grid;
-    /* The centre column has a FIXED width: with "auto" it followed its
-       content (a played match's score + badge is wider than an upcoming or
-       bye one), which moved both logos a few px between states. */
+    /* The centre column width depends only on card width (never on match text
+       content), so logos stay at the exact same x between played/upcoming/bye
+       states while still yielding space on narrow multi-column cards. */
     grid-template-columns: minmax(0, 1fr) 144px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) clamp(118px, 38cqw, 144px) minmax(0, 1fr);
     align-items: start;
     position: relative;
     z-index: 1;
@@ -366,26 +369,34 @@ export const cardStyles = css`
   .logo-box-small {
     width: 56px;
     height: 56px;
-    border-radius: 11px;
+    width: min(56px, var(--ffbb-logo-cap, 56px));
+    height: min(56px, var(--ffbb-logo-cap, 56px));
+    border-radius: 19.5%;
     padding: 4px;
   }
   .logo-box-medium {
     width: 72px;
     height: 72px;
-    border-radius: 14px;
-    padding: 6px;
+    width: min(72px, var(--ffbb-logo-cap, 72px));
+    height: min(72px, var(--ffbb-logo-cap, 72px));
+    border-radius: 19.5%;
+    padding: clamp(4px, 1.6cqw, 6px);
   }
   .logo-box-large {
     width: 104px;
     height: 104px;
-    border-radius: 20px;
-    padding: 8px;
+    width: min(104px, var(--ffbb-logo-cap, 104px));
+    height: min(104px, var(--ffbb-logo-cap, 104px));
+    border-radius: 19.5%;
+    padding: clamp(5px, 2cqw, 8px);
   }
   .logo-box-extra_large {
     width: 136px;
     height: 136px;
-    border-radius: 26px;
-    padding: 10px;
+    width: min(136px, var(--ffbb-logo-cap, 136px));
+    height: min(136px, var(--ffbb-logo-cap, 136px));
+    border-radius: 19.5%;
+    padding: clamp(5px, 2.2cqw, 10px);
   }
   .logo {
     max-width: 100%;
@@ -557,16 +568,31 @@ export const cardStyles = css`
   .footer-form.clickable:hover {
     color: var(--primary-text-color);
   }
-  .footer-form.clickable:hover .form-sequence {
+  .footer-form.clickable:hover .form-label {
     color: var(--ffbb-accent-color, #ff6b00);
   }
   .form-label {
     margin-right: 0;
+    transition: color 0.15s ease;
   }
   .form-sequence {
     font-weight: 700;
     letter-spacing: 2px;
-    transition: color 0.15s ease;
+  }
+  .form-char-win {
+    color: #2e7d32;
+    color: color-mix(in srgb, #2eae36 75%, var(--primary-text-color));
+  }
+  .form-char-loss {
+    color: #d32f2f;
+    color: color-mix(in srgb, #e53935 78%, var(--primary-text-color));
+  }
+  .form-char-draw {
+    color: var(--secondary-text-color);
+  }
+  .form-sep {
+    color: var(--secondary-text-color);
+    opacity: 0.65;
   }
   .form-streak {
     margin-left: 0;
@@ -706,7 +732,7 @@ export const cardStyles = css`
     color: var(--secondary-text-color);
   }
   .modal-body {
-    padding: 4px 16px 12px;
+    padding: 4px clamp(10px, 3.8cqw, 16px) 12px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -775,9 +801,10 @@ export const cardStyles = css`
   }
   .form-badges-container {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: clamp(5px, 2cqw, 10px);
+    flex-wrap: nowrap;
     justify-content: center;
+    width: 100%;
   }
   /* The pills reuse .badge-win/.badge-loss/.badge-draw for their colours.
      Cancel the absolute positioning those classes get for the centre badge,
@@ -797,22 +824,27 @@ export const cardStyles = css`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 8px 12px;
-    border-radius: 14px;
-    min-width: 68px;
-    min-height: 72px;
+    flex: 0 1 74px;
+    min-width: 0;
+    min-height: clamp(56px, 18cqw, 72px);
+    padding: clamp(6px, 2cqw, 8px) clamp(3px, 1.5cqw, 10px);
+    border-radius: clamp(10px, 3.5cqw, 14px);
     box-sizing: border-box;
   }
   .pill-char {
-    font-size: 2.0em;
+    font-size: clamp(1.35em, 5.2cqw, 2em);
     font-weight: 800;
     line-height: 1;
   }
   .pill-label {
-    font-size: 0.9em;
+    font-size: clamp(0.68em, 2.5cqw, 0.9em);
     font-weight: 600;
     margin-top: 4px;
     text-transform: capitalize;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .form-streak-box {
     font-size: 0.9em;

@@ -3,6 +3,7 @@ import {
   validStateOrEmpty,
   localizeFormStreak,
   localizeFormSequence,
+  buildFormTokens,
   formResultOf,
   FORM_LETTERS,
   calendarRowSides,
@@ -2251,10 +2252,14 @@ describe("v0.7.0 -- comprehensive regression suite", () => {
     expect(cleanNamesMatch(cleanForMatch("ELAN BEARNAIS"), cleanForMatch("ELAN BEARNAIS PAU - 2"))).toBe(false);
     expect(cleanNamesMatch(cleanForMatch("ANGERS"), cleanForMatch("ANGERS ANJOU - 2"))).toBe(false);
 
-    // Real category or team-1 suffix still matches
+    // Real category or team-1 suffix still matches (including clubs ending with a department number like 40)
     expect(teamNamesMatch("ELAN BEARNAIS", "ELAN BEARNAIS PAU - 1")).toBe(true);
     expect(teamNamesMatch("BC", "BC NM2")).toBe(true);
     expect(teamNamesMatch("BASKET LANDES", "BASKET LANDES U13 - 1")).toBe(true);
+    expect(teamNamesMatch("ENTENTE BASKET 40", "ENTENTE BASKET 40 - 1")).toBe(true);
+    expect(teamNamesMatch("ENTENTE BASKET 40", "ENTENTE BASKET 40 U13M - 1")).toBe(true);
+    expect(teamNamesMatch("ENTENTE BASKET 40", "ENTENTE BASKET 40 - 2")).toBe(false);
+    expect(teamNamesMatch("ENTENTE BASKET 40", "ENTENTE BASKET 401")).toBe(false);
   });
 
   it("a bye round never shows a rank badge or opponent search name from the 'Exempt' standings row", () => {
@@ -2476,5 +2481,30 @@ describe("v0.7.0 -- comprehensive regression suite", () => {
     expect(
       resolveCalendarTeamLogo({ teamName: "My Team", isMyTeam: true, myTeamLogo: "javascript:alert(1)" }),
     ).toBe(DEFAULT_FALLBACK_LOGO);
+
+    // Numeric YAML values (e.g. custom_team_name: 40, title: 2026) never throw TypeError
+    expect(cleanForMatch(40)).toBe("40");
+    expect(cleanForMatch(null)).toBe("");
+    const vmNumericYaml = computeViewModel({
+      entities: {},
+      config: { entity: "sensor.x", custom_team_name: 40, title: 2026, standings_title: 1 },
+      lang: "fr",
+    });
+    expect(vmNumericYaml.teamName).toBe("40");
+    expect(vmNumericYaml.titleText).toContain("2026");
+    expect(vmNumericYaml.standingsTitle).toBe("1");
+
+    // buildFormTokens & displayFormTokens (v0.7.2)
+    expect(buildFormTokens("D-V-N", "fr", EN)).toEqual([
+      { char: "L", result: "loss" },
+      { char: "W", result: "win" },
+      { char: "D", result: "draw" },
+    ]);
+    expect(buildFormTokens("W-D-L", "en", FR)).toEqual([
+      { char: "V", result: "win" },
+      { char: "N", result: "draw" },
+      { char: "D", result: "loss" },
+    ]);
+    expect(buildFormTokens("", "fr", FR)).toEqual([]);
   });
 });

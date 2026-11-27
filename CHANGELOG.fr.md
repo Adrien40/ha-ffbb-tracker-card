@@ -3,13 +3,27 @@
 Toutes les modifications notables du projet sont documentées dans ce fichier.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.7.2] — 2026-11-27
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### ✨ Améliorations
+- **Logos d'équipe et colonne centrale responsives :** `ha-card` utilise désormais les Container Queries CSS (`container-type: inline-size`) pour adapter automatiquement les cadres de logos (`small`, `medium`, `large`, `extra_large`) sur les cartes étroites multi-colonnes sans jamais chevaucher les chevrons `‹` / `›`, tout en conservant leur pleine taille configurée sur les cartes larges.
+- **Tuiles de la popup « Détail de la forme récente » sur une seule ligne :** les 1 à 5 tuiles restent désormais alignées sur une unique ligne fluide (`flex-wrap: nowrap` et typographie adaptative) au lieu de renvoyer la 5e tuile seule à la ligne sur les cartes étroites.
+- **Lettres de la forme colorées sur la carte :** chaque lettre de la séquence `Forme` en pied de carte est désormais colorée selon son résultat (vert pour les victoires, rouge pour les défaites, gris neutre pour les nuls, avec contraste adapté aux thèmes clair et sombre), tandis que le libellé `Forme :` et la série entre parenthèses restent gris neutre.
+
+### 🐛 Corrections
+- **Journées d'exempt (« Exempt ») dans le calendrier et la carte :** les lignes d'exempt de la popup calendrier affichent désormais le logo de repli standard (`DEFAULT_FALLBACK_LOGO`) au lieu de l'icône pause pour rester raccord avec le site FFBB et le tableau de classement ; la détection d'exempt et le blocage du clic logo reconnaissent aussi `"Exempt"` par son nom afin de ne jamais ouvrir `more-info`, même si l'attribut `is_exempt` est absent.
+- **Noms de clubs finissant par un numéro de département (`- 1`) & valeurs YAML numériques :** un club dont le nom court se termine par un nombre (ex. « ENTENTE BASKET 40 ») correspond désormais bien à son équipe première FFBB (« ENTENTE BASKET 40 - 1 »), tout en continuant d'écarter « ENTENTE BASKET 40 - 2 » et « ENTENTE BASKET 401 » ; les valeurs numériques non quotées en YAML (`custom_team_name: 40`, `title: 2026`) ne lèvent plus de `TypeError`.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.7.1] — 2026-11-27
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 
 ### 🐛 Corrections
 - **Lettres de la forme (`instanceLanguage`) :** retrait de la troncature `.slice(0, 2)` à la lecture de `hass.config.language` (seule la normalisation casse/espaces est conservée) afin que la carte sélectionne toujours exactement la même table `FORM_LETTERS` que l'intégration FFBB Tracker.
-- **Journées d'exempt (« Exempt ») dans le calendrier et la carte :** les lignes d'exempt de la popup calendrier affichent désormais le logo de repli standard (`DEFAULT_FALLBACK_LOGO`) au lieu de l'icône pause pour rester raccord avec le site FFBB et le tableau de classement ; la détection d'exempt et le blocage du clic logo reconnaissent aussi `"Exempt"` par son nom afin de ne jamais ouvrir `more-info`, même si l'attribut `is_exempt` est absent.
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 

@@ -2302,6 +2302,37 @@ describe("form letters: instance language read, card language shown", () => {
     expect(streakText).toBe("1L");
   });
 
+  it("colors each letter in .footer-form (.form-char-win / .form-char-loss / .form-char-draw) while keeping Form label and streak neutral", async () => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+    el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      config: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "US Dax" },
+        "sensor.basket_landes_prochain_match_date": { state: "2099-09-19T20:00:00" },
+        "sensor.basket_landes_forme_recente": { state: "D-V-N-V", attributes: { current_streak: "1V" } },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    const chars = [...el.shadowRoot.querySelectorAll(".footer-form .form-char")].map((n) => ({
+      text: n.textContent,
+      kind: ["form-char-win", "form-char-loss", "form-char-draw"].find((c) => n.classList.contains(c)),
+    }));
+    expect(chars).toEqual([
+      { text: "D", kind: "form-char-loss" },
+      { text: "V", kind: "form-char-win" },
+      { text: "N", kind: "form-char-draw" },
+      { text: "V", kind: "form-char-win" },
+    ]);
+    expect(el.shadowRoot.querySelectorAll(".footer-form .form-sep")).toHaveLength(3);
+    expect(el.shadowRoot.querySelector(".footer-form .form-sequence").textContent).toBe("D-V-N-V");
+  });
+
   it("an English instance's D is a draw, not a loss (whatever the card's language)", async () => {
     const english = await openForm({ cardLanguage: "en", instanceLanguage: "en", sequence: "W-D-L" });
     expect(english.pills.map((p) => `${p.char}:${p.kind}`)).toEqual(["W:badge-win", "D:badge-draw", "L:badge-loss"]);

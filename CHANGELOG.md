@@ -3,13 +3,27 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.2] — 2026-11-27
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### ✨ Enhancements
+- **Responsive team logos & centre column:** `ha-card` now uses CSS container queries (`container-type: inline-size`) so `small`, `medium`, `large`, and `extra_large` team logo boxes automatically scale down on narrow multi-column cards without overlapping the navigation chevrons, while keeping their full configured size on wider cards.
+- **Single-row form details popup:** the 1–5 match tiles in the "Recent form details" modal now stay aligned on a single responsive row (`flex-wrap: nowrap` with fluid sizing and typography) instead of wrapping the 5th tile onto a second line on narrow cards.
+- **Colour-coded form letters on the card:** each letter in the footer `Form` sequence is now individually coloured by outcome (green for wins, red for losses, neutral grey for draws, with light/dark theme contrast adaptation) while keeping the `Form:` label and active streak counter neutral.
+
+### 🐛 Fixes
+- **Bye rounds ("Exempt") in schedule & card:** schedule popup rows now display the standard fallback crest (`DEFAULT_FALLBACK_LOGO`) instead of a pause icon to stay consistent with the FFBB website and the standings table; bye detection and logo click guards now also recognise `"Exempt"` by name so clicking the bye side's logo never opens `more-info` even when `is_exempt` is omitted.
+- **Team names ending with a department number (`- 1`) & numeric YAML values:** clubs whose bare name ends with a number (e.g. `"ENTENTE BASKET 40"`) now match their FFBB first-team entry (`"ENTENTE BASKET 40 - 1"`) while still rejecting `"ENTENTE BASKET 40 - 2"` and `"ENTENTE BASKET 401"`; unquoted numeric YAML strings (`custom_team_name: 40`, `title: 2026`) no longer throw a `TypeError`.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.7.1] — 2026-11-27
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 
 ### 🐛 Fixes
 - **Form letters (`instanceLanguage`):** removed `.slice(0, 2)` truncation when reading `hass.config.language` (keeping only case/whitespace normalization) so the card always selects the exact same `FORM_LETTERS` table as the FFBB Tracker integration.
-- **Bye rounds ("Exempt") in schedule & card:** schedule popup rows now display the standard fallback crest (`DEFAULT_FALLBACK_LOGO`) instead of a pause icon to stay consistent with the FFBB website and the standings table; bye detection and logo click guards now also recognise `"Exempt"` by name so clicking the bye side's logo never opens `more-info` even when `is_exempt` is omitted.
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 

@@ -1191,6 +1191,7 @@ class FFBBCard extends LitElement {
       hasValidForm,
       isPreview,
       displayFormSequence,
+      displayFormTokens,
       displayFormStreak,
       showFormBlock,
       reserveVenueRow,
@@ -1209,7 +1210,14 @@ class FFBBCard extends LitElement {
               title=${this._t("card.view_form_details", "View form details")}
             >
               <span class="form-label">${this._t("card.form", "Form")}${this._colon()}</span>
-              <span class="form-sequence">${displayFormSequence}</span>${displayFormStreak ? html`<span class="form-streak">(${displayFormStreak})</span>` : ""}
+              <span class="form-sequence">${
+                Array.isArray(displayFormTokens) && displayFormTokens.length > 0
+                  ? displayFormTokens.map(
+                      (token, idx) =>
+                        html`${idx > 0 ? html`<span class="form-sep">-</span>` : nothing}<span class="form-char form-char-${token.result}">${token.char}</span>`
+                    )
+                  : displayFormSequence
+              }</span>${displayFormStreak ? html`<span class="form-streak">(${displayFormStreak})</span>` : ""}
               ${!hasValidForm && isPreview
                 ? html`<span class="form-preview-tag">(${this._t("card.preview_example", "example")})</span>`
                 : ""}

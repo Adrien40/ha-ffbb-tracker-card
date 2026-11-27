@@ -29,9 +29,13 @@ const RESULT_VALUES = ["win", "loss", "draw"];
 
 export const DEFAULT_FALLBACK_LOGO = "/local/community/ha-ffbb-tracker-card/brand/icon.png";
 
+function asText(s) {
+  return typeof s === "string" ? s : typeof s === "number" ? String(s) : "";
+}
+
 /** Normalize a string for fuzzy team-name matching: lowercase, diacritics removed, letters/digits only. */
 export function cleanForMatch(s) {
-  return (s || "")
+  return asText(s)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -46,12 +50,12 @@ export function cleanForMatch(s) {
  * competition phases ("Phase 2" -> "phase2") stay intact.
  */
 function cleanForTeamTokens(s) {
-  return (s || "")
+  return asText(s)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/\bphase\s*(\d+)\b/g, "phase$1")
-    .replace(/([a-z])[^a-z0-9]+(\d)/g, "$1_$2")
+    .replace(/([a-z0-9])[^a-z0-9]+(?=\d)/g, "$1_")
     .replace(/[^a-z0-9_]/g, "");
 }
 
@@ -112,8 +116,10 @@ const CATEGORY_WITH_DIGIT = /u(?:7|8|9|1\d|20|21)[mf]?|(?:nm|nf|rm|rf|dm|df|pm|p
 // no suffix ("US DAX 2" is not "US DAX 21", "BASKET 40" is not "BASKET 401").
 function isSameTeamAround(prefix, suffix, shortEndsWithDigit) {
   const before = prefix.replace(CATEGORY_WITH_DIGIT, "").replace(/_/g, "");
-  let after = suffix.replace(CATEGORY_WITH_DIGIT, "").replace(/_/g, "");
-  const loneOne = /(^|\D)1$/.test(after) && !(after === "1" && shortEndsWithDigit);
+  const afterCat = suffix.replace(CATEGORY_WITH_DIGIT, "");
+  const separatedFromShort = afterCat.startsWith("_");
+  let after = afterCat.replace(/_/g, "");
+  const loneOne = /(^|\D)1$/.test(after) && !(after === "1" && shortEndsWithDigit && !separatedFromShort);
   if (loneOne) {
     after = after.slice(0, -1);
   }
@@ -209,6 +215,25 @@ export function localizeFormStreak(streak, instanceLanguage, cardLetters) {
   }
   const result = formResultOrNull(match[2], lang);
   return result ? `${match[1]}${cardLetters[result] || match[2]}` : streak;
+}
+
+/**
+ * Parse a form sensor sequence ("D-V-V-V") into localized { char, result }
+ * tokens ("result" is "win" | "loss" | "draw") using the instance's language
+ * to interpret each raw letter and `cardLetters` to display it.
+ */
+export function buildFormTokens(sequence, instanceLanguage, cardLetters) {
+  if (typeof sequence !== "string" || !sequence.trim()) {
+    return [];
+  }
+  return sequence
+    .split("-")
+    .map((raw) => raw.trim())
+    .filter(Boolean)
+    .map((raw) => ({
+      char: localizeFormSequence(raw, instanceLanguage, cardLetters),
+      result: formResultOf(raw, instanceLanguage),
+    }));
 }
 
 /**
@@ -1520,7 +1545,7 @@ export function computeViewModel({
   );
 
   const officialTeamName = entities.poule?.attributes?.team || "";
-  const configuredTeamName = config.custom_team_name?.trim();
+  const configuredTeamName = asText(config.custom_team_name).trim();
   const teamName = configuredTeamName || officialTeamName || t("card.unknown_team", "My team");
 
   let isHome;
@@ -1775,6 +1800,9 @@ export function computeViewModel({
   const displayFormSequence = hasValidForm
     ? formSequence
     : (isPreview ? localizeFormSequence("V-V-D-V-N", "fr", cardFormLetters) : "");
+  const displayFormTokens = hasValidForm
+    ? buildFormTokens(rawFormSequence, instanceLanguage, cardFormLetters)
+    : (isPreview ? buildFormTokens("V-V-D-V-N", "fr", cardFormLetters) : []);
   const displayFormStreak = hasValidForm
     ? formStreak
     : (isPreview ? localizeFormStreak("2V", "fr", cardFormLetters) : "");
@@ -1790,7 +1818,7 @@ export function computeViewModel({
     calendarMatches.some((m) => m && (m.gym_name || m.gym_city));
 
   const showTitle = config.show_title !== false;
-  const configuredTitle = config.title?.trim();
+  const configuredTitle = asText(config.title).trim();
   let defaultTitle = t("card.default_title", "Next match");
   if (isLive) {
     defaultTitle = t("card.live_title", "Live match");
@@ -1819,7 +1847,7 @@ export function computeViewModel({
   // card, or both (default). Each card keeps its own title/icon below --
   // this only decides whether it is rendered at all.
   const displayMode = resolveDisplayMode(config);
-  const configuredStandingsTitle = config.standings_title?.trim();
+  const configuredStandingsTitle = asText(config.standings_title).trim();
   const standingsTitle = configuredStandingsTitle || t("card.standings_title", "Standings");
   const standingsIcon = config.standings_icon !== undefined ? config.standings_icon : "mdi:format-list-numbered";
 
@@ -1941,6 +1969,7 @@ export function computeViewModel({
     hasValidForm,
     isPreview,
     displayFormSequence,
+    displayFormTokens,
     displayFormStreak,
     showFormBlock,
     reserveVenueRow,

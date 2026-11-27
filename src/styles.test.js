@@ -266,6 +266,20 @@ describe("styles.js -- v0.7.0 theme, CSS fallback, and layout hardening", () => 
   it(".calendar-row reserves 42px for the round/venue pill column (fits HOME / AWAY)", () => {
     expect(declarationsFor(".calendar-row")["grid-template-columns"]).toBe("42px 1fr auto");
   });
+
+  it("v0.7.2: ha-card is an inline-size container, logos clamp to --ffbb-logo-cap, form popup stays on one line, and form letters are colored", () => {
+    expect(declarationsFor("ha-card")["container-type"]).toBe("inline-size");
+    expect(declarationsFor("ha-card")["--ffbb-logo-cap"]).toContain("100cqw");
+    for (const size of ["small", "medium", "large", "extra_large"]) {
+      expect(declarationsFor(`.logo-box-${size}`).width).toContain("--ffbb-logo-cap");
+      expect(declarationsFor(`.logo-box-${size}`).height).toContain("--ffbb-logo-cap");
+    }
+    expect(declarationsFor(".form-badges-container")["flex-wrap"]).toBe("nowrap");
+    expect(declarationsFor(".form-badge-pill")["min-width"]).toBe("0");
+    expect(declarationsFor(".form-char-win").color).toContain("#2eae36");
+    expect(declarationsFor(".form-char-loss").color).toContain("#e53935");
+    expect(declarationsFor(".form-char-draw").color).toBe("var(--secondary-text-color)");
+  });
 });
 
 // The centre column of the match area has a fixed width (so the logos stay
@@ -280,8 +294,10 @@ describe("styles.js -- the score never wraps", () => {
     expect(declarationsFor(".center-meta").flex).toBe("none");
   });
 
-  it("the centre column is fixed, not content-sized", () => {
-    expect(declarationsFor(".match-area")["grid-template-columns"]).toBe("minmax(0, 1fr) 144px minmax(0, 1fr)");
+  it("the centre column is container-sized (up to 144px), never content-sized", () => {
+    const cols = declarationsFor(".match-area")["grid-template-columns"];
+    expect(cols).toBe("minmax(0, 1fr) clamp(118px, 38cqw, 144px) minmax(0, 1fr)");
+    expect(cols).not.toMatch(/\b(auto|min-content|max-content)\b/);
   });
 });
 
