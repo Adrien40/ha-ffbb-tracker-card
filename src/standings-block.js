@@ -20,10 +20,10 @@
 
 import { html, css, nothing } from "lit";
 import {
-  cleanForMatch,
-  cleanNamesMatch,
   createTeamMatcher,
+  sanitizeUrl,
   sortStandings,
+  teamNamesMatch,
   DEFAULT_FALLBACK_LOGO,
 } from "./pure.js";
 
@@ -37,15 +37,14 @@ const INVALID_STATES = ["unknown", "unavailable"];
  * among many, not a second "me".
  */
 export function isHighlightedRow(item, teamName, isMine = null) {
+  if (isByeStanding(item)) return false;
   const name = item?.team_name || item?.name || "";
   // With the whole table at hand (`isMine`, built from every row's name), an
   // exact name wins over a look-alike: "BC LYON" is not "BC LYON 2".
   if (isMine) return Boolean(isMine(name));
-  const itemClean = cleanForMatch(name);
-  const teamClean = cleanForMatch(teamName);
   // A row without any name must never match.
-  if (!itemClean || !teamClean) return false;
-  return cleanNamesMatch(itemClean, teamClean);
+  if (!name || !teamName) return false;
+  return teamNamesMatch(name, teamName);
 }
 
 // Cell display: a missing value (null/undefined/"") is shown as "-", a real 0
@@ -104,10 +103,11 @@ export const DETAILED_COLUMNS = {
 // taller rows.
 export function renderStandingsLogo(logoUrl, show = true) {
   if (!show) return nothing;
+  const safeLogo = sanitizeUrl(logoUrl) || DEFAULT_FALLBACK_LOGO;
   return html`
     <img
       class="col-team-logo"
-      src=${logoUrl || DEFAULT_FALLBACK_LOGO}
+      src=${safeLogo}
       alt=""
       @error=${(e) => {
         if (!e.target.src.endsWith(DEFAULT_FALLBACK_LOGO)) {
@@ -255,8 +255,10 @@ export function renderStandingsBlock({
 export const standingsBlockStyles = css`
   .standings-card {
     display: block;
-    margin-top: 12px;
     overflow: hidden;
+  }
+  .standings-card.standings-compact {
+    margin-top: 12px;
   }
   .standings-card-header {
     display: flex;

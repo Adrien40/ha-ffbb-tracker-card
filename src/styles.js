@@ -29,7 +29,7 @@ export const cardStyles = css`
     font-size: 1.7em;
     font-weight: 600;
     line-height: 1.2;
-    color: var(--ha-card-header-color, --primary-text-color);
+    color: var(--ha-card-header-color, var(--primary-text-color));
   }
   .card-header ha-icon {
     --mdc-icon-size: 28px;
@@ -275,34 +275,38 @@ export const cardStyles = css`
     font-weight: 700;
     padding: 0;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: #ffffff;
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.14));
+    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.28));
+    color: var(--primary-text-color);
     line-height: 1;
     transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   }
   .rank-badge.rank-gold {
-    background: rgba(255, 215, 0, 0.12);
-    border: 1.5px solid #f1b815;
-    color: #ffd043;
+    background: rgba(241, 184, 21, 0.14);
+    border: 1.5px solid #d49809;
+    color: #b88200;
+    color: color-mix(in srgb, #c98a00 65%, var(--primary-text-color));
     box-shadow: 0 0 6px rgba(241, 184, 21, 0.25);
   }
   .rank-badge.rank-silver {
-    background: rgba(220, 227, 235, 0.12);
-    border: 1.5px solid #c0c7d0;
-    color: #e2e8f0;
-    box-shadow: 0 0 6px rgba(192, 199, 208, 0.2);
+    background: rgba(154, 166, 178, 0.16);
+    border: 1.5px solid #9aa6b2;
+    color: #6b7480;
+    color: color-mix(in srgb, #8a94a0 65%, var(--primary-text-color));
+    box-shadow: 0 0 6px rgba(154, 166, 178, 0.2);
   }
   .rank-badge.rank-bronze {
-    background: rgba(205, 127, 50, 0.12);
+    background: rgba(205, 127, 50, 0.14);
     border: 1.5px solid #cd7f32;
-    color: #e0944d;
+    color: #a8581a;
+    color: color-mix(in srgb, #c46d29 70%, var(--primary-text-color));
     box-shadow: 0 0 6px rgba(205, 127, 50, 0.2);
   }
   .rank-badge.rank-solid {
     border: none;
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.18));
+    background: color-mix(in srgb, var(--primary-text-color, #888888) 14%, transparent);
+    color: var(--primary-text-color);
   }
   .rank-badge.rank-solid.rank-gold {
     background: linear-gradient(135deg, #ffd753 0%, #d49809 50%, #f5c430 100%);
@@ -493,6 +497,7 @@ export const cardStyles = css`
   }
   .badge-gameday {
     background-color: rgba(255, 107, 0, 0.12);
+    background-color: color-mix(in srgb, var(--ffbb-accent-color, #ff6b00) 14%, transparent);
     border: 1.5px solid var(--ffbb-accent-color, #ff6b00);
     color: var(--ffbb-accent-color, #ff6b00);
     animation: gamedayPulse 2.5s infinite ease-in-out;
@@ -500,11 +505,11 @@ export const cardStyles = css`
   @keyframes gamedayPulse {
     0%, 100% {
       opacity: 1;
-      box-shadow: 0 0 0 rgba(255, 107, 0, 0);
+      box-shadow: 0 0 0 transparent;
     }
     50% {
       opacity: 0.85;
-      box-shadow: 0 0 10px rgba(255, 107, 0, 0.35);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--ffbb-accent-color, #ff6b00) 35%, transparent);
     }
   }
   .badge-win {
@@ -539,11 +544,6 @@ export const cardStyles = css`
     transform: translateX(-50%);
     margin-top: 8px;
     white-space: nowrap;
-  }
-  @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.6; }
-    100% { opacity: 1; }
   }
   .footer-form {
     margin: 10px 0 12px;
@@ -832,7 +832,7 @@ export const cardStyles = css`
   }
   .calendar-row {
     display: grid;
-    grid-template-columns: 36px 1fr auto;
+    grid-template-columns: 42px 1fr auto;
     align-items: center;
     gap: 8px;
     padding: 3px 8px;
@@ -896,11 +896,12 @@ export const cardStyles = css`
     letter-spacing: 0.5px;
   }
   .pill-dom {
-    background: rgba(46, 125, 50, 0.2);
-    color: #81c784;
+    background: rgba(46, 125, 50, 0.18);
+    color: #2e7d32;
+    color: color-mix(in srgb, #2e7d32 65%, var(--primary-text-color));
   }
   .pill-ext {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.12));
     color: var(--secondary-text-color);
   }
   .calendar-col-teams {

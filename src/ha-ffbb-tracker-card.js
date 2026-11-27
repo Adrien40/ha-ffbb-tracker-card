@@ -26,7 +26,7 @@ import {
 } from "./pure.js";
 import { resolveLang, getTranslations, translate } from "./translations.js";
 import { cardStyles } from "./styles.js";
-import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable, renderStandingsLogo, standingsRowLabel } from "./standings-block.js";
+import { renderStandingsBlock, standingsBlockStyles, renderDetailedTable, renderStandingsLogo, standingsRowLabel, isByeStanding } from "./standings-block.js";
 import "./card-editor.js";
 
 class FFBBCard extends LitElement {
@@ -312,13 +312,19 @@ class FFBBCard extends LitElement {
   // landed-on match has been played. Without one, there's only "last" vs
   // "next" to toggle between, same as before the calendar existed.
   _handleChevronClick(direction, vm) {
+    if ((direction === "prev" && vm.canGoPrev === false) || (direction === "next" && vm.canGoNext === false)) {
+      return;
+    }
     if (vm.hasCalendar && vm.calendarMatches.length > 1) {
       // By date, not by position: the list is in the official round order.
       const nextIdx = direction === "prev" ? vm.chevronPrevIndex : vm.chevronNextIndex;
       if (Number.isInteger(nextIdx) && nextIdx >= 0 && nextIdx < vm.calendarMatches.length) {
         this._matchIndex = nextIdx;
         const targetMatch = vm.calendarMatches[nextIdx];
-        this._manualView = (targetMatch.is_played || targetMatch.score) ? "last" : "next";
+        const hasTargetScore = Boolean(
+          targetMatch.score || (targetMatch.home_score != null && targetMatch.away_score != null),
+        );
+        this._manualView = (targetMatch.is_played || hasTargetScore) ? "last" : "next";
       }
     } else {
       this._setManualView(direction === "prev" ? "last" : "next");
@@ -326,8 +332,12 @@ class FFBBCard extends LitElement {
   }
 
   _selectCalendarMatch(index, isPlayed) {
-    this._matchIndex = index;
-    this._manualView = isPlayed ? "last" : "next";
+    const entities = this._config ? this._resolveEntities() : null;
+    const isLive = Boolean(entities?.matchInProgress && entities.matchInProgress.state === "on");
+    if (!isLive) {
+      this._matchIndex = index;
+      this._manualView = isPlayed ? "last" : "next";
+    }
     this._closeModal();
   }
 
@@ -367,7 +377,7 @@ class FFBBCard extends LitElement {
     if (this._activeModal === "standings") {
       const rawStandings = entities.rank?.attributes?.standings || [];
       const standings = sortStandings(rawStandings);
-      const competition = entities.poule?.attributes?.competition || "";
+      const competition = validStateOrEmpty(entities.poule?.attributes?.competition);
       const poule = validStateOrEmpty(entities.poule?.state);
       const standingNames = standings.map((item) => item.team_name || item.name || "");
       const isMyTeamRow = createTeamMatcher(standingNames, teamName);
@@ -439,8 +449,9 @@ class FFBBCard extends LitElement {
                       <tbody>
                         ${standings.map((item) => {
                           const rowName = item.team_name || item.name || "";
-                          const isOwnRow = isMyTeamRow(rowName);
-                          const isRowHighlighted = isOwnRow || isOpponentRow(rowName);
+                          const byeRow = isByeStanding(item);
+                          const isOwnRow = !byeRow && isMyTeamRow(rowName);
+                          const isRowHighlighted = isOwnRow || (!byeRow && isOpponentRow(rowName));
                           // My own row shows the name from the card config,
                           // never the opponent's -- their row keeps the
                           // official federation name.
@@ -553,7 +564,7 @@ class FFBBCard extends LitElement {
 
     if (this._activeModal === "calendar") {
       const matches = this._extractCalendarMatches(entities);
-      const competition = entities.poule?.attributes?.competition || "";
+      const competition = validStateOrEmpty(entities.poule?.attributes?.competition);
       const poule = validStateOrEmpty(entities.poule?.state);
       const calendarNames = matches.flatMap((m) => [
         m.home_team || "",
@@ -614,7 +625,7 @@ class FFBBCard extends LitElement {
                         const isBye = Boolean(m.is_exempt);
                         const score = isBye
                           ? ""
-                          : m.score || (m.home_score !== undefined ? `${m.home_score} - ${m.away_score}` : "");
+                          : m.score || (m.home_score != null && m.away_score != null ? `${m.home_score} - ${m.away_score}` : "");
                         const dateFormatted = this._formatDate(m.date || m.datetime);
                         const { isHomeMyTeam, isAwayMyTeam } = calendarRowSides(m, isMyCalendarTeam);
                         const isMyTeamInvolved = isHomeMyTeam || isAwayMyTeam;
@@ -627,8 +638,6 @@ class FFBBCard extends LitElement {
                         if (isBye) {
                           if (isHomeMyTeam !== isAwayMyTeam) {
                             byeSide = isHomeMyTeam ? "away" : "home";
-                          } else if (typeof m.is_home === "boolean") {
-                            byeSide = m.is_home ? "away" : "home";
                           } else {
                             byeSide = /^exempt/i.test(rawHome) ? "home" : "away";
                           }
@@ -951,17 +960,23 @@ class FFBBCard extends LitElement {
 
     const isSolid = this._config?.rank_badge_style === "solid";
     const solidRankClass = isSolid ? "rank-solid" : "";
+    const leftLogoClickable = Boolean(isLogoClickable && !(vm.isExempt && !vm.isHome));
+    const rightLogoClickable = Boolean(isLogoClickable && !(vm.isExempt && vm.isHome));
 
     return html`
       <div class="match-area">
         <div class="team-logo-cell cell-left">
           <div
-            class="logo-box ${logoSizeClass} ${isLogoClickable ? "clickable" : ""}"
-            @click=${() => this._handleLogoClick(leftEntityId, leftUrl, leftName)}
-            @keydown=${isLogoClickable ? this._onKeyActivate(() => this._handleLogoClick(leftEntityId, leftUrl, leftName)) : nothing}
-            role=${isLogoClickable ? "button" : nothing}
-            tabindex=${isLogoClickable ? "0" : nothing}
-            aria-label=${isLogoClickable ? this._t("card.view_team", "View {team}").replace("{team}", leftName) : nothing}
+            class="logo-box ${logoSizeClass} ${leftLogoClickable ? "clickable" : ""}"
+            @click=${() => {
+              if (!vm.isExempt || vm.isHome) {
+                this._handleLogoClick(leftEntityId, leftUrl, leftName);
+              }
+            }}
+            @keydown=${leftLogoClickable ? this._onKeyActivate(() => this._handleLogoClick(leftEntityId, leftUrl, leftName)) : nothing}
+            role=${leftLogoClickable ? "button" : nothing}
+            tabindex=${leftLogoClickable ? "0" : nothing}
+            aria-label=${leftLogoClickable ? this._t("card.view_team", "View {team}").replace("{team}", leftName) : nothing}
           >
             <img
               class="logo"
@@ -985,7 +1000,8 @@ class FFBBCard extends LitElement {
                   @click=${() => this._handleChevronClick("prev", vm)}
                   @keydown=${this._onKeyActivate(() => this._handleChevronClick("prev", vm))}
                   role="button"
-                  tabindex="0"
+                  tabindex=${vm.canGoPrev ? "0" : "-1"}
+                  aria-disabled=${!vm.canGoPrev ? "true" : nothing}
                   aria-label=${this._t("card.view_last_match", "Show last played match")}
                   title=${this._t("card.view_last_match", "Show last played match")}
                 ></ha-icon>
@@ -1075,7 +1091,8 @@ class FFBBCard extends LitElement {
                   @click=${() => this._handleChevronClick("next", vm)}
                   @keydown=${this._onKeyActivate(() => this._handleChevronClick("next", vm))}
                   role="button"
-                  tabindex="0"
+                  tabindex=${vm.canGoNext ? "0" : "-1"}
+                  aria-disabled=${!vm.canGoNext ? "true" : nothing}
                   aria-label=${this._t("card.view_next_match", "Show upcoming match")}
                   title=${this._t("card.view_next_match", "Show upcoming match")}
                 ></ha-icon>
@@ -1085,12 +1102,16 @@ class FFBBCard extends LitElement {
 
         <div class="team-logo-cell cell-right">
           <div
-            class="logo-box ${logoSizeClass} ${isLogoClickable ? "clickable" : ""}"
-            @click=${() => this._handleLogoClick(rightEntityId, rightUrl, rightName)}
-            @keydown=${isLogoClickable ? this._onKeyActivate(() => this._handleLogoClick(rightEntityId, rightUrl, rightName)) : nothing}
-            role=${isLogoClickable ? "button" : nothing}
-            tabindex=${isLogoClickable ? "0" : nothing}
-            aria-label=${isLogoClickable ? this._t("card.view_team", "View {team}").replace("{team}", rightName) : nothing}
+            class="logo-box ${logoSizeClass} ${rightLogoClickable ? "clickable" : ""}"
+            @click=${() => {
+              if (!vm.isExempt || !vm.isHome) {
+                this._handleLogoClick(rightEntityId, rightUrl, rightName);
+              }
+            }}
+            @keydown=${rightLogoClickable ? this._onKeyActivate(() => this._handleLogoClick(rightEntityId, rightUrl, rightName)) : nothing}
+            role=${rightLogoClickable ? "button" : nothing}
+            tabindex=${rightLogoClickable ? "0" : nothing}
+            aria-label=${rightLogoClickable ? this._t("card.view_team", "View {team}").replace("{team}", rightName) : nothing}
           >
             <img
               class="logo"

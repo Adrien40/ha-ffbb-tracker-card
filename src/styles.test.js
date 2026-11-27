@@ -271,6 +271,26 @@ describe("styles.js -- form popup pills", () => {
   }
 });
 
+describe("styles.js -- v0.7.0 theme, CSS fallback, and layout hardening", () => {
+  it(".card-header wraps its fallback CSS variable in var()", () => {
+    expect(declarationsFor(".card-header").color).toBe("var(--ha-card-header-color, var(--primary-text-color))");
+  });
+
+  it(".rank-badge and .rank-badge.rank-solid use theme variables instead of hardcoded white", () => {
+    expect(declarationsFor(".rank-badge").color).toBe("var(--primary-text-color)");
+    expect(declarationsFor(".rank-badge.rank-solid").color).toBe("var(--primary-text-color)");
+  });
+
+  it(".badge-gameday follows --ffbb-accent-color and dead @keyframes pulse is removed", () => {
+    expect(declarationsFor(".badge-gameday")["background-color"]).toContain("--ffbb-accent-color");
+    expect(cardStyles.cssText).not.toMatch(/@keyframes\s+pulse\b/);
+  });
+
+  it(".calendar-row reserves 42px for the round/venue pill column (fits HOME / AWAY)", () => {
+    expect(declarationsFor(".calendar-row")["grid-template-columns"]).toBe("42px 1fr auto");
+  });
+});
+
 // The centre column of the match area has a fixed width (so the logos stay
 // put from one match to the next). The score must therefore never be able to
 // wrap onto two lines when it is wider than that column.

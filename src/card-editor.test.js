@@ -372,6 +372,19 @@ describe("card-editor.js _valueChanged()", () => {
     expect(receivedConfig.title).toBe("");
     expect(receivedConfig.icon).toBe("");
     expect(receivedConfig.custom_accent_color).toBe("");
+    expect(receivedConfig.standings_title).toBe("");
+    expect(receivedConfig.standings_icon).toBe("");
+  });
+
+  it("allows clearing standings_icon when ha-icon-picker emits undefined or null", async () => {
+    const el = await mountEditor({ display_mode: "both", standings_icon: "mdi:trophy" });
+    let receivedConfig = null;
+    el.addEventListener("config-changed", (ev) => {
+      receivedConfig = ev.detail.config;
+    });
+
+    el._valueChanged({ detail: { value: { ...el._config, standings_icon: undefined } } });
+    expect(receivedConfig.standings_icon).toBe("");
   });
 
   it("does not overwrite text fields that ARE present in the event value", async () => {

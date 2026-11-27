@@ -7,6 +7,8 @@ import {
   FORM_LETTERS,
   calendarRowSides,
   cleanNamesMatch,
+  teamNamesMatch,
+  sortCalendarByRound,
   findOpponentRank,
   formatRank,
   extractCalendarMatches,
@@ -2207,5 +2209,272 @@ describe("v0.6.24 -- the card follows the live match, the end of the season, and
     const en = (key, fallback) => translate(getTranslations("en"), key, fallback);
 
     expect(build({ matchIndex: 0, t: en }).titleText).toBe("Played match");
+  });
+});
+
+describe("v0.7.0 -- comprehensive regression suite", () => {
+  const EN = { win: "W", loss: "L", draw: "D" };
+  const FR = { win: "V", loss: "D", draw: "N" };
+
+  it("matches the integration's exact language lookup (trimmed/lowercased) without slicing regional tags", () => {
+    for (const tag of ["fr", "FR", " fr "]) {
+      expect(formResultOf("D", tag)).toBe("loss");
+      expect(localizeFormSequence("D-V-V-V", tag, FR)).toBe("D-V-V-V");
+      expect(localizeFormStreak("1D", tag, FR)).toBe("1D");
+      expect(localizeFormSequence("D-V-V-V", tag, EN)).toBe("L-W-W-W");
+      expect(localizeFormStreak("1D", tag, EN)).toBe("1L");
+    }
+    // Codes outside FORM_LETTERS ("en-GB", or a hypothetical "fr-FR") fall back
+    // to FORM_LETTERS.en just like the integration does, so producer and reader
+    // never disagree on "D".
+    for (const tag of ["en", "EN", "en-GB", "fr-FR", "fr-CA"]) {
+      expect(formResultOf("D", tag)).toBe("draw");
+      expect(localizeFormSequence("W-D-L", tag, FR)).toBe("V-N-D");
+      expect(localizeFormStreak("2D", tag, FR)).toBe("2N");
+    }
+  });
+
+  it("teamNamesMatch / cleanNamesMatch never mistake city suffixes (-U, -NM, -RM...) + team numbers for categories", () => {
+    const notSame = [
+      ["ELAN BEARNAIS", "ELAN BEARNAIS PAU - 2"],
+      ["ELAN BEARNAIS", "ELAN BEARNAIS PAU - 13"],
+      ["ELAN", "ELAN PAU - 2"],
+      ["ANGERS", "ANGERS ANJOU - 2"],
+      ["US", "US PALAISEAU - 2"],
+      ["BASKET", "BASKET MILLAU - 2"],
+      ["BC", "BCNM - 2"],
+    ];
+    for (const [a, b] of notSame) {
+      expect(teamNamesMatch(a, b), `teamNamesMatch(${a}, ${b})`).toBe(false);
+      expect(teamNamesMatch(b, a), `teamNamesMatch(${b}, ${a})`).toBe(false);
+    }
+    expect(cleanNamesMatch(cleanForMatch("ELAN BEARNAIS"), cleanForMatch("ELAN BEARNAIS PAU - 2"))).toBe(false);
+    expect(cleanNamesMatch(cleanForMatch("ANGERS"), cleanForMatch("ANGERS ANJOU - 2"))).toBe(false);
+
+    // Real category or team-1 suffix still matches
+    expect(teamNamesMatch("ELAN BEARNAIS", "ELAN BEARNAIS PAU - 1")).toBe(true);
+    expect(teamNamesMatch("BC", "BC NM2")).toBe(true);
+    expect(teamNamesMatch("BASKET LANDES", "BASKET LANDES U13 - 1")).toBe(true);
+  });
+
+  it("a bye round never shows a rank badge or opponent search name from the 'Exempt' standings row", () => {
+    const vm = computeViewModel({
+      entities: {
+        poule: {
+          state: "Poule A",
+          attributes: {
+            team: "ANGERS",
+            calendar: [
+              {
+                round: 10,
+                date: "2026-11-28T19:00:00Z",
+                home_team: "Exempt",
+                away_team: "ETOILE ANGERS BASKET - 1",
+                is_home: false,
+                is_exempt: true,
+                is_played: false,
+              },
+            ],
+          },
+        },
+        nextOpponent: { state: "Exempt", attributes: { is_home: false, opponent_url: "https://x.test/exempt" } },
+        nextDate: { state: "2026-11-28T19:00:00Z", attributes: { round: 10, is_exempt: true } },
+        rank: {
+          state: "2",
+          attributes: {
+            standings: [
+              { position: 2, team_name: "ETOILE ANGERS BASKET - 1" },
+              { position: 12, team_name: "Exempt", logo_url: "https://competitions.ffbb.com/ffbb.png" },
+            ],
+          },
+        },
+      },
+      config: { entity: "sensor.x", show_rank: true },
+      lang: "fr",
+      now: new Date("2026-11-27T12:00:00Z"),
+    });
+
+    expect(vm.isExempt).toBe(true);
+    expect(vm.leftRank).toBeNull();
+    expect(vm.rightRank).toBe("2e");
+    expect(vm.opponentSearchName).toBe("");
+    expect(vm.leftUrl).toBeNull();
+    expect(vm.leftEntityId).toBeNull();
+    expect(createTeamMatcher(["ETOILE ANGERS BASKET - 1", "Exempt"], "Exempt")("Exempt")).toBe(false);
+  });
+
+  it("end of season with a postponed early round played last lands on the chronologically latest match", () => {
+    const cal = [
+      { round: 1, date: "2026-10-01T18:00:00Z", home_team: "ANGERS", away_team: "A", score: "70 - 60", is_played: true, is_home: true },
+      { round: 3, date: "2026-11-01T18:00:00Z", home_team: "ANGERS", away_team: "C", score: "80 - 70", is_played: true, is_home: true },
+      { round: 2, date: "2026-11-20T18:00:00Z", home_team: "B", away_team: "ANGERS", score: "65 - 75", is_played: true, is_home: false },
+    ];
+    const vm = computeViewModel({
+      entities: {
+        poule: { state: "Poule A", attributes: { team: "ANGERS", calendar: cal } },
+        nextDate: { state: "unknown", attributes: {} },
+        nextOpponent: { state: "unknown", attributes: {} },
+        lastDate: { state: "2026-11-20T18:00:00Z", attributes: { round: 2 } },
+        lastScore: { state: "75 - 65", attributes: { is_home: false } },
+      },
+      config: { entity: "sensor.x", default_match_view: "next" },
+      lang: "fr",
+      now: new Date("2026-11-27T12:00:00Z"),
+    });
+
+    // Sorted by round: [J1, J2 (Nov 20), J3 (Nov 1)] -> index 1 is chronologically last
+    expect(vm.calendarMatches.map((m) => m.round)).toEqual([1, 2, 3]);
+    expect(vm.currentIndex).toBe(1);
+    expect(vm.canGoNext).toBe(false);
+    expect(vm.canGoPrev).toBe(true);
+  });
+
+  it("findRecentUnplayedIndex picks the latest by date (including datetime), and respects default_match_view: 'next'", () => {
+    const sorted = sortCalendarByRound([
+      { round: 4, datetime: "2026-11-22T15:00:00Z", home_team: "ANGERS", away_team: "X", is_played: false },
+      { round: 10, date: "2026-11-21T20:00:00Z", home_team: "ANGERS", away_team: "Y", is_played: false },
+    ]);
+    expect(findRecentUnplayedIndex(sorted, new Date("2026-11-22T20:00:00Z"))).toBe(0); // J4 (Nov 22) over J10 (Nov 21)
+
+    const cal = [
+      { round: 1, date: "2026-11-21T18:00:00Z", home_team: "ANGERS", away_team: "X", is_home: true, is_played: false },
+      { round: 2, date: "2026-11-28T18:00:00Z", home_team: "ANGERS", away_team: "Y", is_home: true, is_played: false },
+    ];
+    const vmNext = computeViewModel({
+      entities: {
+        poule: { state: "Poule A", attributes: { team: "ANGERS", calendar: cal } },
+        nextDate: { state: "2026-11-28T18:00:00Z", attributes: { round: 2 } },
+        nextOpponent: { state: "Y", attributes: { is_home: true } },
+      },
+      config: { entity: "sensor.x", default_match_view: "next" },
+      lang: "fr",
+      now: new Date("2026-11-22T10:00:00Z"),
+    });
+    expect(vmNext.opponentName).toBe("Y");
+    expect(vmNext.currentIndex).toBe(1);
+  });
+
+  it("keeps isResultPending true past D+2 even before any carousel navigation", () => {
+    const pendingRow = {
+      round: 1,
+      date: "2026-11-20T18:00:00Z",
+      home_team: "ANGERS",
+      away_team: "X",
+      is_home: true,
+      is_played: false,
+    };
+    const vm = computeViewModel({
+      entities: {
+        poule: { state: "Poule A", attributes: { team: "ANGERS", calendar: [pendingRow] } },
+        nextDate: { state: "2026-11-20T18:00:00Z", attributes: { round: 1 } },
+        nextOpponent: { state: "X", attributes: { is_home: true } },
+      },
+      config: { entity: "sensor.x" },
+      lang: "fr",
+      now: new Date("2026-11-25T12:00:00Z"), // D+5
+    });
+    expect(vm.isResultPending).toBe(true);
+    expect(vm.isCalendarClickable).toBe(false);
+
+    const upcomingRow = {
+      round: 2,
+      date: "2026-11-28T18:00:00Z",
+      home_team: "ANGERS",
+      away_team: "Y",
+      is_home: true,
+      is_played: false,
+    };
+    const vmMovedOn = computeViewModel({
+      entities: {
+        poule: { state: "Poule A", attributes: { team: "ANGERS", calendar: [pendingRow, upcomingRow] } },
+        nextDate: { state: "2026-11-28T18:00:00Z", attributes: { round: 2 } },
+        nextOpponent: { state: "Y", attributes: { is_home: true } },
+      },
+      config: { entity: "sensor.x" },
+      lang: "fr",
+      now: new Date("2026-11-25T12:00:00Z"),
+    });
+    expect(vmMovedOn.isResultPending).toBe(false);
+    expect(vmMovedOn.isCalendarClickable).toBe(true);
+  });
+
+  it("carousel detects isHome via calendarRowSides when is_home is missing or null, and reads home_score/away_score", () => {
+    const vm = computeViewModel({
+      entities: {
+        poule: {
+          state: "Poule A",
+          attributes: {
+            team: "ANGERS",
+            calendar: [
+              {
+                round: 1,
+                date: "2026-11-10T20:00:00Z",
+                home_team: "ETOILE ANGERS BASKET - 1",
+                away_team: "CHOLET",
+                home_score: 75,
+                away_score: 68,
+                is_home: null,
+              },
+            ],
+          },
+        },
+      },
+      config: { entity: "sensor.x" },
+      matchIndex: 0,
+      lang: "fr",
+    });
+    expect(vm.isHome).toBe(true);
+    expect(vm.isPostMatch).toBe(true);
+    expect(vm.displayedScore).toBe("75 - 68");
+  });
+
+  it("sensorDescribesShownMatch trusts lastDate over a scoreless played row", () => {
+    const cal = [
+      { round: 1, match_number: "m1", date: "2026-11-01T18:00:00Z", home_team: "ANGERS", away_team: "A", score: "80 - 60", is_played: true, is_home: true },
+      { round: 2, match_number: "m2", date: "2026-11-08T18:00:00Z", home_team: "B", away_team: "ANGERS", score: null, is_played: true, is_home: false },
+    ];
+    const vmForfeit = computeViewModel({
+      entities: {
+        poule: { state: "Poule A", attributes: { team: "ANGERS", calendar: cal } },
+        lastDate: { state: "2026-11-01T18:00:00Z", attributes: { match_number: "m1" } },
+        lastScore: { state: "80 - 60", attributes: { is_home: true } },
+        lastResult: { state: "win", attributes: {} },
+      },
+      config: { entity: "sensor.x" },
+      matchIndex: 1,
+      lang: "fr",
+    });
+    expect(vmForfeit.displayedScore).toBe("-");
+    expect(vmForfeit.displayedResult).toBeNull();
+  });
+
+  it("resolveEntities fallback handles binary_sensor.* with an unknown suffix", () => {
+    const states = {
+      "binary_sensor.my_team_custom": { state: "on", attributes: {} },
+      "sensor.my_team_classement": { state: "3", attributes: {} },
+      "binary_sensor.my_team_match_en_cours": { state: "on", attributes: {} },
+    };
+    const resolved = resolveEntities("binary_sensor.my_team_custom", states);
+    expect(resolved.rank?.state).toBe("3");
+    expect(resolved.matchInProgress?.state).toBe("on");
+  });
+
+  it("formatDate tolerates malformed locale tags, findOpponentRank reads rank, and resolveCalendarTeamLogo sanitizes myTeamLogo", () => {
+    const formatted = formatDate("2026-11-20T20:00:00Z", "fr_FR", { hour12: false });
+    expect(formatted).not.toBeNull();
+    expect(formatted.time).toBeTruthy();
+
+    expect(
+      findOpponentRank("AS Dax", [{ team_name: "AS Dax", rank: 4 }]),
+    ).toBe(4);
+    expect(
+      findOpponentRank("AS Dax", [{ team_name: "AS Dax", rank: 3, team_url: "https://x.test/dax" }], {
+        opponentUrl: "https://x.test/dax",
+      }),
+    ).toBe(3);
+
+    expect(
+      resolveCalendarTeamLogo({ teamName: "My Team", isMyTeam: true, myTeamLogo: "javascript:alert(1)" }),
+    ).toBe(DEFAULT_FALLBACK_LOGO);
   });
 });

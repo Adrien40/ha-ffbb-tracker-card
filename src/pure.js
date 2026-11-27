@@ -39,6 +39,23 @@ export function cleanForMatch(s) {
 }
 
 /**
+ * Normalize a raw team name while keeping an underscore between a word and a
+ * separated number ("PAU - 2" -> "pau_2", "PAU - 13" -> "pau_13") so a trailing
+ * letter of the club/city cannot fuse with a team number to mimic a category
+ * such as "U2" or "U13", while real categories ("U13", "U13M", "NM3") and
+ * competition phases ("Phase 2" -> "phase2") stay intact.
+ */
+function cleanForTeamTokens(s) {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\bphase\s*(\d+)\b/g, "phase$1")
+    .replace(/([a-z])[^a-z0-9]+(\d)/g, "$1_$2")
+    .replace(/[^a-z0-9_]/g, "");
+}
+
+/**
  * Loose team-name comparison on two already-cleaned names (cleanForMatch).
  * Equal names match. A name merely contained in another also matches (spelling
  * variants), unless the extra part holds a digit other than a lone "1" (the FFBB's
@@ -53,7 +70,7 @@ export function cleanNamesMatch(x, y) {
     return true;
   }
   const [short, long] = x.length <= y.length ? [x, y] : [y, x];
-  const shortEndsWithDigit = /\d$/.test(short);
+  const shortEndsWithDigit = /\d$/.test(short.replace(/_/g, ""));
   // The short name can occur more than once in the long one: any occurrence
   // that leaves nothing but harmless words around it is enough.
   for (let from = long.indexOf(short); from !== -1; from = long.indexOf(short, from + 1)) {
@@ -64,10 +81,27 @@ export function cleanNamesMatch(x, y) {
   return false;
 }
 
-// FFBB categories that carry a digit: U13, U13M, U15F, NM3, NF2, RM2, DM2...
-// and a phase of the competition ("- Phase 2"). They name a competition, not
-// another team of the club.
-const CATEGORY_WITH_DIGIT = /u\d{1,2}[mf]?|(?:nm|nf|rm|rf|dm|df|pm|pf)\d|phase\d+/g;
+/**
+ * Loose comparison on two raw (uncleaned) team names, preserving word/number
+ * boundaries before running cleanNamesMatch so "ELAN PAU - 2", "ELAN PAU - 13"
+ * or "BCNM - 2" never fuse into "U2", "U13" or "NM2".
+ */
+export function teamNamesMatch(rawX, rawY) {
+  const cleanX = cleanForMatch(rawX);
+  const cleanY = cleanForMatch(rawY);
+  if (!cleanX || !cleanY) {
+    return false;
+  }
+  if (cleanX === cleanY) {
+    return true;
+  }
+  return cleanNamesMatch(cleanForTeamTokens(rawX), cleanForTeamTokens(rawY));
+}
+
+// FFBB youth categories (U7 to U21, never U1..U6) and senior divisions carrying
+// a digit (NM3, NF2, RM2, DM2...) plus competition phases ("- Phase 2"). They
+// name a competition, not another team of the club.
+const CATEGORY_WITH_DIGIT = /u(?:7|8|9|1\d|20|21)[mf]?|(?:nm|nf|rm|rf|dm|df|pm|pf)\d|phase\d+/g;
 
 // What surrounds a name found inside a longer one decides whether both are the
 // same team. FFBB writes the first team of a club as "BC LYON - 1": that
@@ -77,8 +111,8 @@ const CATEGORY_WITH_DIGIT = /u\d{1,2}[mf]?|(?:nm|nf|rm|rf|dm|df|pm|pf)\d|phase\d
 // BASKET 11" are not "BC LYON" / "ANGERS". A "1" that ends a longer number is
 // no suffix ("US DAX 2" is not "US DAX 21", "BASKET 40" is not "BASKET 401").
 function isSameTeamAround(prefix, suffix, shortEndsWithDigit) {
-  const before = prefix.replace(CATEGORY_WITH_DIGIT, "");
-  let after = suffix.replace(CATEGORY_WITH_DIGIT, "");
+  const before = prefix.replace(CATEGORY_WITH_DIGIT, "").replace(/_/g, "");
+  let after = suffix.replace(CATEGORY_WITH_DIGIT, "").replace(/_/g, "");
   const loneOne = /(^|\D)1$/.test(after) && !(after === "1" && shortEndsWithDigit);
   if (loneOne) {
     after = after.slice(0, -1);
@@ -103,15 +137,21 @@ export const FORM_LETTERS = {
   en: { win: "W", loss: "L", draw: "D" },
 };
 
+function normalizeInstanceLang(instanceLanguage) {
+  return String(instanceLanguage ?? "").trim().toLowerCase();
+}
+
 function formResultOrNull(char, instanceLanguage) {
   const c = String(char ?? "").trim().toUpperCase();
   if (!c) {
     return null;
   }
-  if (instanceLanguage) {
+  const lang = normalizeInstanceLang(instanceLanguage);
+  if (lang) {
     // "D" is a loss in French but a draw in English: only the instance's own
-    // table can tell.
-    const table = FORM_LETTERS[instanceLanguage] || FORM_LETTERS.en;
+    // table can tell. Match the integration's exact language key (trimmed and
+    // lowercased) so both sides always pick the same table.
+    const table = FORM_LETTERS[lang] || FORM_LETTERS.en;
     const hit = Object.keys(table).find((result) => table[result] === c);
     if (hit) {
       return hit;
@@ -128,7 +168,7 @@ function formResultOrNull(char, instanceLanguage) {
   }
   if (c === "D") {
     // Instance language unknown: the card's historical reading.
-    return instanceLanguage ? null : "loss";
+    return lang ? null : "loss";
   }
   return null;
 }
@@ -144,13 +184,14 @@ export function formResultOf(char, instanceLanguage) {
  * instance language the letters cannot be read reliably: left as they are.
  */
 export function localizeFormSequence(sequence, instanceLanguage, cardLetters) {
-  if (!instanceLanguage || typeof sequence !== "string" || !cardLetters) {
+  const lang = normalizeInstanceLang(instanceLanguage);
+  if (!lang || typeof sequence !== "string" || !cardLetters) {
     return sequence;
   }
   return sequence
     .split("-")
     .map((token) => {
-      const result = formResultOrNull(token, instanceLanguage);
+      const result = formResultOrNull(token, lang);
       return result ? cardLetters[result] || token : token;
     })
     .join("-");
@@ -158,14 +199,15 @@ export function localizeFormSequence(sequence, instanceLanguage, cardLetters) {
 
 /** Same for the current streak: "1D" becomes "1L". */
 export function localizeFormStreak(streak, instanceLanguage, cardLetters) {
-  if (!instanceLanguage || typeof streak !== "string" || !cardLetters) {
+  const lang = normalizeInstanceLang(instanceLanguage);
+  if (!lang || typeof streak !== "string" || !cardLetters) {
     return streak;
   }
   const match = /^(\d+)\s*([A-Za-z])$/.exec(streak.trim());
   if (!match) {
     return streak;
   }
-  const result = formResultOrNull(match[2], instanceLanguage);
+  const result = formResultOrNull(match[2], lang);
   return result ? `${match[1]}${cardLetters[result] || match[2]}` : streak;
 }
 
@@ -296,8 +338,9 @@ function resolveBySlug(selected, states) {
   }
   if (prefixes.length === 0) {
     // No known entity name in it: assume the last word is the entity name.
-    const prefix = selected.substring(0, selected.lastIndexOf("_") + 1);
-    prefixes.push([prefix, prefix.replace("sensor.", "binary_sensor.")]);
+    const lastUnderscore = objectId.lastIndexOf("_");
+    const name = lastUnderscore > 0 ? objectId.slice(0, lastUnderscore) : objectId;
+    prefixes.push([`sensor.${name}_`, `binary_sensor.${name}_`]);
   }
 
   let best = null;
@@ -324,16 +367,25 @@ function resolveBySlug(selected, states) {
  * exactly does it fall back to substring matching, in either direction.
  * Empty / "-" names never match.
  */
+function isByeTeamName(name) {
+  const raw = String(name ?? "").trim().toLowerCase();
+  return raw === "exempt" || raw === "n/a";
+}
+
 export function createTeamMatcher(names, targetName) {
   const targetClean = cleanForMatch(targetName || "");
-  if (!targetClean) {
+  if (!targetClean || isByeTeamName(targetName)) {
     return () => false;
   }
   const hasExact = (Array.isArray(names) ? names : []).some((n) => {
+    if (isByeTeamName(n)) return false;
     const c = cleanForMatch(n || "");
     return Boolean(c) && c === targetClean;
   });
   return (name) => {
+    if (isByeTeamName(name)) {
+      return false;
+    }
     const c = cleanForMatch(name || "");
     if (!c) {
       return false;
@@ -341,7 +393,7 @@ export function createTeamMatcher(names, targetName) {
     if (hasExact) {
       return c === targetClean;
     }
-    return cleanNamesMatch(c, targetClean);
+    return teamNamesMatch(name, targetName);
   };
 }
 
@@ -366,15 +418,15 @@ export function findOpponentRank(opponentName, standings, { opponentUrl = null }
     const wanted = normalizeTeamUrl(opponentUrl);
     const byUrl = wanted
       ? standings.find((item) => {
-          if (!item) return false;
+          if (!item || isByeTeamName(item.team_name || item.name)) return false;
           return [item.team_url, item.url, item.link].some((u) => normalizeTeamUrl(u) === wanted);
         })
       : null;
     if (byUrl) {
-      return byUrl.position;
+      return byUrl.position ?? byUrl.rank;
     }
   }
-  if (!opponentName || !Array.isArray(standings)) {
+  if (!opponentName || isByeTeamName(opponentName) || !Array.isArray(standings)) {
     return null;
   }
   const oppClean = cleanForMatch(opponentName);
@@ -385,6 +437,7 @@ export function findOpponentRank(opponentName, standings, { opponentUrl = null }
   let found = standings.find((item) => {
     if (!item) return false;
     const team = item.team_name || item.name;
+    if (isByeTeamName(team)) return false;
     const itemClean = cleanForMatch(team);
     return Boolean(itemClean && itemClean === oppClean);
   });
@@ -393,8 +446,8 @@ export function findOpponentRank(opponentName, standings, { opponentUrl = null }
     found = standings.find((item) => {
       if (!item) return false;
       const team = item.team_name || item.name;
-      const itemClean = cleanForMatch(team);
-      return cleanNamesMatch(itemClean, oppClean);
+      if (isByeTeamName(team)) return false;
+      return teamNamesMatch(team, opponentName);
     });
   }
 
@@ -409,7 +462,9 @@ export function findOpponentRank(opponentName, standings, { opponentUrl = null }
     if (base && base !== oppClean) {
       const sameClub = standings.filter((item) => {
         if (!item) return false;
-        const itemClean = cleanForMatch(item.team_name || item.name);
+        const team = item.team_name || item.name;
+        if (isByeTeamName(team)) return false;
+        const itemClean = cleanForMatch(team);
         return Boolean(itemClean) && itemClean.startsWith(base);
       });
       if (sameClub.length === 1 && cleanForMatch(sameClub[0].team_name || sameClub[0].name) === base) {
@@ -418,7 +473,7 @@ export function findOpponentRank(opponentName, standings, { opponentUrl = null }
     }
   }
 
-  return found ? found.position : null;
+  return found ? (found.position ?? found.rank) : null;
 }
 
 /**
@@ -520,7 +575,7 @@ export function sensorScoreToHomeAway(state, attributes, isHome) {
  * urlKeys resolves to a safe URL (see sanitizeUrl).
  */
 export function findUrlInStandings(teamName, standings, urlKeys) {
-  if (!Array.isArray(standings)) {
+  if (!Array.isArray(standings) || isByeTeamName(teamName)) {
     return null;
   }
   const targetClean = cleanForMatch(teamName);
@@ -529,14 +584,17 @@ export function findUrlInStandings(teamName, standings, urlKeys) {
   }
 
   let match = standings.find((item) => {
-    const itemClean = cleanForMatch(item?.team_name || item?.name || "");
+    const raw = item?.team_name || item?.name || "";
+    if (isByeTeamName(raw)) return false;
+    const itemClean = cleanForMatch(raw);
     return Boolean(itemClean && itemClean === targetClean);
   });
 
   if (!match) {
     match = standings.find((item) => {
-      const itemClean = cleanForMatch(item?.team_name || item?.name || "");
-        return cleanNamesMatch(itemClean, targetClean);
+      const raw = item?.team_name || item?.name || "";
+      if (isByeTeamName(raw)) return false;
+      return teamNamesMatch(raw, teamName);
     });
   }
 
@@ -715,8 +773,18 @@ export function resolveGraceHours(entities) {
     : PENDING_RESULT_GRACE_HOURS;
 }
 
+// A calendar row has a score when `score` is non-empty or both numeric side scores exist.
+const formatRowScore = (match) => {
+  if (!match) return "";
+  if (match.score) return String(match.score);
+  if (match.home_score != null && match.away_score != null) {
+    return `${match.home_score} - ${match.away_score}`;
+  }
+  return "";
+};
+
 // A calendar row has a result when it is flagged as played or carries a score.
-const hasResult = (match) => Boolean(match && (match.is_played || match.score));
+const hasResult = (match) => Boolean(match && (match.is_played || formatRowScore(match)));
 
 // Start time of a calendar row in ms, NaN when it has no usable date.
 const matchTime = (match) => Date.parse(match?.date ?? match?.datetime);
@@ -762,14 +830,44 @@ export function findRecentUnplayedIndex(matches, now = new Date()) {
   if (!Array.isArray(matches)) {
     return -1;
   }
-  for (let i = matches.length - 1; i >= 0; i--) {
+  let best = -1;
+  let bestTime = -Infinity;
+  for (let i = 0; i < matches.length; i++) {
     const m = matches[i];
+    const d = m?.date ?? m?.datetime;
     // No is_exempt check on purpose: see the note above.
-    if (m && !hasResult(m) && m.date && isWithinDPlusOne(m.date, now)) {
-      return i;
+    if (m && !hasResult(m) && d && isWithinDPlusOne(d, now)) {
+      const t = matchTime(m);
+      const time = Number.isFinite(t) ? t : -Infinity;
+      if (best === -1 || time >= bestTime) {
+        best = i;
+        bestTime = time;
+      }
     }
   }
-  return -1;
+  return best;
+}
+
+/**
+ * Index of the chronologically latest row in `matches` (falling back to the
+ * last slot when no row carries a usable date). Needed because
+ * `sortCalendarByRound` orders rows by round (J1..Jn), so a postponed early
+ * round played after the final round sits earlier in the array.
+ */
+function findLatestCalendarIndex(matches) {
+  if (!Array.isArray(matches) || matches.length === 0) {
+    return 0;
+  }
+  let best = -1;
+  let bestTime = -Infinity;
+  for (let i = 0; i < matches.length; i++) {
+    const t = matchTime(matches[i]);
+    if (Number.isFinite(t) && (best === -1 || t >= bestTime)) {
+      best = i;
+      bestTime = t;
+    }
+  }
+  return best !== -1 ? best : matches.length - 1;
 }
 
 /**
@@ -1100,15 +1198,22 @@ export function formatDate(dateStr, lang = "en-US", { hour12 } = {}) {
     return null;
   }
 
-  const weekday = d.toLocaleDateString(lang, { weekday: "short" });
-  const day = d.toLocaleDateString(lang, { day: "numeric", month: "short" });
   const timeOptions =
     typeof hour12 === "boolean"
       ? { hour: hour12 ? "numeric" : "2-digit", minute: "2-digit", hourCycle: hour12 ? "h12" : "h23" }
       : { hour: "2-digit", minute: "2-digit" };
-  const time = d.toLocaleTimeString(lang, timeOptions);
 
-  return { weekday, day, time };
+  const formatWith = (locale) => ({
+    weekday: d.toLocaleDateString(locale, { weekday: "short" }),
+    day: d.toLocaleDateString(locale, { day: "numeric", month: "short" }),
+    time: d.toLocaleTimeString(locale, timeOptions),
+  });
+
+  try {
+    return formatWith(lang || "en-US");
+  } catch {
+    return formatWith("en-US");
+  }
 }
 
 /**
@@ -1194,25 +1299,25 @@ export function resolveCalendarTeamLogo({
     return safeDirect;
   }
 
-  if (isMyTeam && myTeamLogo && myTeamLogo !== DEFAULT_FALLBACK_LOGO) {
-    return myTeamLogo;
+  const safeMyTeamLogo = sanitizeUrl(myTeamLogo);
+  if (isMyTeam && safeMyTeamLogo && safeMyTeamLogo !== DEFAULT_FALLBACK_LOGO) {
+    return safeMyTeamLogo;
   }
 
   const targetClean = cleanForMatch(teamName);
 
   // With no usable team name we can't match anything by name, but that must
-  // not skip the "my team" fallback below.
-  if (targetClean) {
-    const nextClean = cleanForMatch(nextOpponentState || "");
-    if (nextClean && cleanNamesMatch(nextClean, targetClean)) {
+  // not skip the "my team" fallback below. A bye slot ("Exempt") never
+  // resolves an opponent logo from sensors or standings.
+  if (targetClean && !isByeTeamName(teamName)) {
+    if (nextOpponentState && !isByeTeamName(nextOpponentState) && teamNamesMatch(nextOpponentState, teamName)) {
       const safeOpp = sanitizeUrl(nextOpponentLogo);
       if (safeOpp) {
         return safeOpp;
       }
     }
 
-    const lastClean = cleanForMatch(lastOpponentState || "");
-    if (lastClean && cleanNamesMatch(lastClean, targetClean)) {
+    if (lastOpponentState && !isByeTeamName(lastOpponentState) && teamNamesMatch(lastOpponentState, teamName)) {
       const safeLastOpp = sanitizeUrl(lastOpponentLogo);
       if (safeLastOpp) {
         return safeLastOpp;
@@ -1238,8 +1343,8 @@ export function resolveCalendarTeamLogo({
     }
   }
 
-  if (isMyTeam && myTeamLogo) {
-    return myTeamLogo;
+  if (isMyTeam && safeMyTeamLogo) {
+    return safeMyTeamLogo;
   }
 
   return DEFAULT_FALLBACK_LOGO;
@@ -1318,9 +1423,15 @@ export function computeViewModel({
   });
 
   // An unplayed match keeps the screen for two days after its planned date
-  // (postponed or just without a score), unless a result is being shown.
+  // (postponed or just without a score), unless a result is being shown or the
+  // user explicitly requested "next" (via config or manual toggle).
   const recentUnplayedIndex =
-    hasCalendar && !isLive && !defaultIsPostMatch && typeof matchIndex !== "number"
+    hasCalendar &&
+    !isLive &&
+    !defaultIsPostMatch &&
+    manualView === null &&
+    config.default_match_view !== "next" &&
+    typeof matchIndex !== "number"
       ? findRecentUnplayedIndex(calendarMatches, now)
       : -1;
   // During a live match the card shows THAT match (the title, the badge and the
@@ -1348,33 +1459,32 @@ export function computeViewModel({
         })
       : -1;
   const pickIndex = (preferred, fallback) => (preferred !== -1 ? preferred : fallback);
+  const shownLastIndex = shownIndex("lastDate");
+  const shownNextIndex = shownIndex("nextDate");
+  const lastSensorIndex = pickIndex(shownLastIndex, lastPlayedIndex);
+  const nextSensorIndex = pickIndex(shownNextIndex, nextMatchIndex);
+  const endOfSeasonIndex = hasCalendar ? findLatestCalendarIndex(calendarMatches) : 0;
 
   let currentIndex;
   if (typeof effectiveMatchIndex === "number" && hasCalendar) {
     currentIndex = Math.max(0, Math.min(effectiveMatchIndex, calendarMatches.length - 1));
   } else if (manualView === "last") {
-    currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
+    currentIndex = lastSensorIndex !== -1 ? lastSensorIndex : 0;
   } else if (manualView === "next") {
-    currentIndex = pickIndex(
-      shownIndex("nextDate"),
-      nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1),
-    );
+    currentIndex = nextSensorIndex !== -1 ? nextSensorIndex : endOfSeasonIndex;
   } else if (defaultIsPostMatch) {
-    currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
+    currentIndex = lastSensorIndex !== -1 ? lastSensorIndex : 0;
   } else {
-    // Nothing left to play: stay at the end of the season, like the "next"
-    // toggle does, so "previous" still has somewhere to go.
-    currentIndex = pickIndex(
-      shownIndex("nextDate"),
-      nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1),
-    );
+    // Nothing left to play: stay at the chronological end of the season, like
+    // the "next" toggle does, so "previous" still has somewhere to go.
+    currentIndex = nextSensorIndex !== -1 ? nextSensorIndex : endOfSeasonIndex;
   }
 
   const isCarouselMatch = typeof effectiveMatchIndex === "number" && hasCalendar && Boolean(calendarMatches[currentIndex]);
   const currentCalMatch = isCarouselMatch ? calendarMatches[currentIndex] : null;
 
   const isPostMatch = currentCalMatch
-    ? Boolean(currentCalMatch.is_played || currentCalMatch.score)
+    ? hasResult(currentCalMatch)
     : defaultIsPostMatch;
 
   const canToggleView = !isLive && (
@@ -1430,11 +1540,10 @@ export function computeViewModel({
   if (currentCalMatch) {
     const homeName = currentCalMatch.home_team || "";
     const awayName = currentCalMatch.away_team || "";
-    const isOfficialHome = currentCalMatch.is_home !== undefined
-      ? currentCalMatch.is_home
-      : (cleanForMatch(homeName) === cleanForMatch(officialTeamName || teamName));
+    const rowTeamMatcher = createTeamMatcher([homeName, awayName], officialTeamName || teamName);
+    const { isHomeMyTeam } = calendarRowSides(currentCalMatch, rowTeamMatcher);
 
-    isHome = isOfficialHome;
+    isHome = isHomeMyTeam;
     opponentName = isHome ? awayName : homeName;
     opponentSearchName = opponentName;
 
@@ -1455,8 +1564,8 @@ export function computeViewModel({
     // opponent logo is authoritative even if the team names are spelled
     // differently between the calendar and the sensor.
     const sensorIsThisMatch = isPostMatch
-      ? currentIndex === lastPlayedIndex
-      : currentIndex === nextMatchIndex;
+      ? currentIndex === lastSensorIndex
+      : currentIndex === nextSensorIndex;
     const sensorOpponentLogo = sensorIsThisMatch
       ? sanitizeUrl(currentOpponentSensor?.attributes?.opponent_logo_url)
       : null;
@@ -1472,7 +1581,7 @@ export function computeViewModel({
         lastOpponentLogo: sensorAttrs("lastOpponent")?.opponent_logo_url,
         standings: standingsForLogos,
       });
-      if (resolved === DEFAULT_FALLBACK_LOGO && !isMyTeam && sensorOpponentLogo) {
+      if (resolved === DEFAULT_FALLBACK_LOGO && !isMyTeam && !isByeTeamName(name) && sensorOpponentLogo) {
         return sensorOpponentLogo;
       }
       return resolved;
@@ -1496,12 +1605,11 @@ export function computeViewModel({
     // explicit row URL -> my team's sensor URL -> the opponent sensor URL
     // (only when it describes this very match, or its name matches) ->
     // standings lookup by team name.
-    const sameTeam = (a, b) => {
-      const x = cleanForMatch(a);
-      const y = cleanForMatch(b);
-      return cleanNamesMatch(x, y);
-    };
+    const sameTeam = (a, b) => !isByeTeamName(a) && !isByeTeamName(b) && teamNamesMatch(a, b);
     const resolveSideUrl = (name, rowUrl, isMyTeam) => {
+      if (!isMyTeam && isByeTeamName(name)) {
+        return null;
+      }
       const direct = sanitizeUrl(rowUrl);
       if (direct) {
         return direct;
@@ -1546,7 +1654,7 @@ export function computeViewModel({
     gymName = currentCalMatch.gym_name || "";
     gymCity = currentCalMatch.gym_city || "";
     gymAddress = currentCalMatch.formatted_address || "";
-    targetDateStr = currentCalMatch.date || null;
+    targetDateStr = currentCalMatch.date ?? currentCalMatch.datetime ?? null;
     roundNumber = String(currentCalMatch.round ?? "");
     isStale = Boolean(currentCalMatch.is_stale);
     isExempt = Boolean(currentCalMatch.is_exempt);
@@ -1558,8 +1666,8 @@ export function computeViewModel({
       ? (entities.lastScore?.attributes?.is_home ?? entities.lastDate?.attributes?.is_home ?? true)
       : (entities.nextVenue?.state === "home" || entities.nextOpponent?.attributes?.is_home === true);
 
-    teamLogoUrl = currentOpponentSensor?.attributes?.team_logo_url || DEFAULT_FALLBACK_LOGO;
-    opponentLogoUrl = currentOpponentSensor?.attributes?.opponent_logo_url || DEFAULT_FALLBACK_LOGO;
+    teamLogoUrl = sanitizeUrl(currentOpponentSensor?.attributes?.team_logo_url) || DEFAULT_FALLBACK_LOGO;
+    opponentLogoUrl = sanitizeUrl(currentOpponentSensor?.attributes?.opponent_logo_url) || DEFAULT_FALLBACK_LOGO;
 
     const searchTeamName = officialTeamName || teamName;
     const leftMatchName = isHome ? searchTeamName : opponentSearchName;
@@ -1610,9 +1718,17 @@ export function computeViewModel({
   }
 
   // A bye round has no opposing team: show a translated "Exempt" instead of
-  // the integration's placeholder name.
+  // the integration's placeholder name, and strip any rank/link/entity tied to
+  // the placeholder opponent.
   if (isExempt) {
     opponentName = t("card.exempt", "Bye");
+    opponentSearchName = "";
+    opponentDirectUrl = null;
+    if (isHome) {
+      rightUrl = null;
+    } else {
+      leftUrl = null;
+    }
   }
 
   const leftName = isHome ? teamName : opponentName;
@@ -1623,8 +1739,9 @@ export function computeViewModel({
   const leftMatchName = isHome ? searchTeamName : opponentSearchName;
   const rightMatchName = isHome ? opponentSearchName : searchTeamName;
 
-  const leftEntityId = isHome ? config.entity : currentOpponentSensor?.entity_id;
-  const rightEntityId = isHome ? currentOpponentSensor?.entity_id : config.entity;
+  const opponentEntityId = isExempt ? null : currentOpponentSensor?.entity_id;
+  const leftEntityId = isHome ? config.entity : opponentEntityId;
+  const rightEntityId = isHome ? opponentEntityId : config.entity;
 
   const competition = validStateOrEmpty(entities.poule?.attributes?.competition);
   const pouleName = validStateOrEmpty(entities.poule?.state);
@@ -1702,9 +1819,11 @@ export function computeViewModel({
   const showRank = config.show_rank !== false;
   const rawUserRank = entities.rank?.state;
   const userRankNum = isValidState(rawUserRank) ? rawUserRank : null;
-  const opponentRankNum = findOpponentRank(opponentSearchName, entities.rank?.attributes?.standings, {
-    opponentUrl: isExempt ? null : opponentDirectUrl,
-  });
+  const opponentRankNum = isExempt
+    ? null
+    : findOpponentRank(opponentSearchName, entities.rank?.attributes?.standings, {
+        opponentUrl: opponentDirectUrl,
+      });
 
   const userRankFormatted = formatRank(userRankNum, lang);
   const opponentRankFormatted = formatRank(opponentRankNum, lang);
@@ -1713,24 +1832,29 @@ export function computeViewModel({
   let rightRank = isHome ? opponentRankFormatted : userRankFormatted;
 
   if (isPreview && showRank) {
-    if (!leftRank) {
+    if (!leftRank && (isHome || !isExempt)) {
       leftRank = isHome ? formatRank(2, lang) : formatRank(5, lang);
     }
-    if (!rightRank) {
+    if (!rightRank && (!isHome || !isExempt)) {
       rightRank = isHome ? formatRank(5, lang) : formatRank(2, lang);
     }
   }
 
   // A past match still waiting for its result is shown with a "result
-  // pending" badge instead of as an upcoming one. A match the integration
-  // already flags as stale keeps its existing "postponed" badge.
+  // pending" badge instead of as an upcoming one (including past D+2 before
+  // any carousel navigation, when nextDate still points to that calendar row).
+  // A match the integration already flags as stale keeps its existing
+  // "postponed" badge.
+  const pendingCandidate =
+    currentCalMatch ||
+    (!isPostMatch && shownNextIndex !== -1 ? calendarMatches[shownNextIndex] : null);
   const isResultPending =
-    Boolean(currentCalMatch) &&
+    Boolean(pendingCandidate) &&
     !isPostMatch &&
     !isLive &&
     !isStale &&
     !isExempt &&
-    isPendingResult(currentCalMatch, now, graceHours);
+    isPendingResult(pendingCandidate, now, graceHours);
 
   const isCalendarClickable = !isLive && !isPostMatch && !isResultPending && !isExempt && Boolean(targetDateStr);
   const isLogoClickable = config.logo_click_action && config.logo_click_action !== "none";
@@ -1740,14 +1864,14 @@ export function computeViewModel({
   // Calendar rows carry "home - away"; the sensor carries "ours - theirs".
   // The last score / last result sensors describe the LAST played match. They
   // are only trusted when no calendar row is shown (legacy setups) or when the
-  // row on screen is exactly that match, never for another match of the
-  // carousel.
+  // row on screen is the exact match those sensors describe, never for another
+  // match of the carousel.
   const sensorDescribesShownMatch =
-    !currentCalMatch || (isPostMatch && currentIndex === lastPlayedIndex);
+    !currentCalMatch || (isPostMatch && currentIndex === lastSensorIndex);
   const sensorScore = sensorDescribesShownMatch && isValidState(entities.lastScore?.state)
     ? sensorScoreToHomeAway(entities.lastScore.state, entities.lastScore.attributes, isHome)
     : null;
-  const displayedScore = currentCalMatch?.score || sensorScore || "-";
+  const displayedScore = formatRowScore(currentCalMatch) || sensorScore || "-";
   const asResult = (v) => (RESULT_VALUES.includes(v) ? v : null);
   const displayedResult =
     asResult(currentCalMatch?.result) ||

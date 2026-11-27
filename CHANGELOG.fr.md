@@ -3,7 +3,32 @@
 Toutes les modifications notables du projet sont documentées dans ce fichier.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
-## [0.6.24] — 2026-11-25
+## [0.7.1] — 2026-11-27
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Corrections
+- **Lettres de la forme (`instanceLanguage`) :** retrait de la troncature `.slice(0, 2)` à la lecture de `hass.config.language` (seule la normalisation casse/espaces est conservée) afin que la carte sélectionne toujours exactement la même table `FORM_LETTERS` que l'intégration FFBB Tracker.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+## [0.7.0] — 2026-11-27
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Corrections
+- **Lettres de la forme (`fr-FR`, `en-GB`…) :** les codes de langue régionaux ou en majuscules de l'instance Home Assistant sont désormais normalisés avant de lire la table de forme ; une instance en français (`fr-FR`, `fr-BE`…) ne transforme plus les défaites (`D`) en matchs nuls (`N`).
+- **Reconnaissance des noms d'équipe :** les frontières entre mots et numéros sont préservées pour que les noms de clubs ou de villes finissant par `-U`, `-NM`, `-RM`… suivis d'un numéro d'équipe (par exemple « ELAN BEARNAIS PAU - 2 », « ELAN BEARNAIS PAU - 13 », « ANGERS ANJOU - 2 », « BCNM - 2 ») ne soient plus pris pour des catégories (`U2`, `U13`, `NM2`) ni confondus avec l'équipe première.
+- **Pastilles de classement en thème clair et sombre :** les badges de rang utilisent désormais les variables de thème Home Assistant et des teintes podium contrastées au lieu du blanc sur blanc codé en dur, restant lisibles en thème clair comme en thème sombre.
+- **Journées d'exempt (« Exempt ») :** quand le classement comporte une ligne « Exempt », une journée d'exempt n'affiche plus de faux rang sous « Exempt », ne surligne plus la ligne « Exempt » dans la popup du classement et désactive le clic sur le logo du côté exempt.
+- **Éditeur visuel :** effacer l'icône de la carte classement (`standings_icon`) enregistre bien une icône vide au lieu de remettre l'icône par défaut.
+- **Navigation de saison & calendrier trié par journée :** en fin de saison avec « Toujours le prochain match » (ou la bascule manuelle « suivant »), la carte se place sur le dernier match chronologique même lorsqu'une journée en retard a été jouée après la dernière journée ; `findRecentUnplayedIndex` retient le match non joué le plus récent par date (`datetime` inclus) et respecte `default_match_view: "next"` ainsi que la bascule manuelle.
+- **Résultats en attente & cohérence du carrousel :** le badge « Résultat en attente » reste affiché au-delà de J+2 avant toute navigation ; la détection domicile/extérieur du carrousel sans booléen `is_home` réutilise `calendarRowSides` ; les replis de score, résultat, logo et lien vérifient la ligne exacte décrite par `lastDate`/`nextDate` et acceptent `home_score`/`away_score` sans jamais afficher `"null - null"`.
+- **Popups, CSS, accessibilité & robustesse :** les sous-titres de compétition `"unknown"` / `"unavailable"` sont masqués dans les popups de classement et de calendrier ; les chevrons désactivés exposent `aria-disabled="true"` et `tabindex="-1"` ; la carte classement seule (`display_mode: "standings"`) n'ajoute plus `12px` de marge haute inutile ; la colonne journée/lieu du calendrier accueille confortablement `"HOME"` / `"AWAY"` (`42px`) ; `.card-header` corrige son repli `var()` ; `.badge-gameday` suit `--ffbb-accent-color` ; `resolveEntities` gère les `binary_sensor.*` au suffixe inconnu ; `findOpponentRank` accepte `rank` ; `formatDate` tolère une locale malformée ; et tous les chemins d'URL de logos passent par `sanitizeUrl`.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+## [0.6.24] — 2026-11-26
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 

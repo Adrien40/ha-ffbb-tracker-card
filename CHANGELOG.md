@@ -3,7 +3,32 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.6.24] — 2026-11-25
+## [0.7.1] — 2026-11-27
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Fixes
+- **Form letters (`instanceLanguage`):** removed `.slice(0, 2)` truncation when reading `hass.config.language` (keeping only case/whitespace normalization) so the card always selects the exact same `FORM_LETTERS` table as the FFBB Tracker integration.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+## [0.7.0] — 2026-11-27
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Fixes
+- **Form letters (`fr-FR`, `en-GB`…):** regional or uppercase Home Assistant instance language tags are now normalized before reading the form table, so a French instance (`fr-FR`, `fr-BE`…) no longer turns losses (`D`) into draws (`N`).
+- **Team name matching:** word and number boundaries are preserved so club or city names ending in `-U`, `-NM`, `-RM`… followed by a team number (for example "ELAN BEARNAIS PAU - 2", "ELAN BEARNAIS PAU - 13", "ANGERS ANJOU - 2", "BCNM - 2") are no longer mistaken for youth or senior categories (`U2`, `U13`, `NM2`) and merged with the first team.
+- **Light & dark theme rank badges:** rank pills now use Home Assistant theme text/surface variables and contrast-adapted podium colours instead of hardcoded white-on-white styles, staying clearly readable in both light and dark themes.
+- **Bye rounds ("Exempt"):** when the standings include an "Exempt" row, a bye week no longer shows a fake rank badge under "Exempt", no longer highlights the "Exempt" line in the standings popup, and disables logo clicks on the bye slot.
+- **Visual editor:** clearing `standings_icon` now properly saves an empty icon instead of reverting to the default one.
+- **Season navigation & round-sorted schedules:** at the end of the season with "Always upcoming match" (or the manual "next" toggle), the card now lands on the chronologically latest match even when a postponed early round was played after the last round; `findRecentUnplayedIndex` picks the latest unplayed match by date (including `datetime`) and respects `default_match_view: "next"` and manual toggles.
+- **Pending results & carousel consistency:** the "Result pending" badge remains visible past D+2 before any chevron navigation; carousel home/away detection without an explicit boolean `is_home` now uses `calendarRowSides`; score, result, logo and URL fallbacks check the exact row described by `lastDate`/`nextDate` and support `home_score`/`away_score` pairs without rendering `"null - null"`.
+- **Popups, CSS, accessibility & hardening:** `"unknown"` / `"unavailable"` competition subtitles are hidden in the standings and schedule popups; disabled chevrons expose `aria-disabled="true"` and `tabindex="-1"`; standalone standings cards (`display_mode: "standings"`) no longer carry an extra `12px` top margin; the schedule round/venue column fits `"HOME"` / `"AWAY"` (`42px`); `.card-header` fixes its `var()` fallback; `.badge-gameday` follows `--ffbb-accent-color`; `resolveEntities` handles unknown `binary_sensor.*` suffixes; `findOpponentRank` falls back to `rank`; `formatDate` tolerates malformed locale tags; and all remaining logo URL paths pass through `sanitizeUrl`.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+## [0.6.24] — 2026-11-26
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 

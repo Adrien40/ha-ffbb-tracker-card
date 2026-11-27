@@ -8,7 +8,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render } from "lit";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { renderStandingsBlock, standingsBlockStyles, isHighlightedRow, renderDetailedTable, DETAILED_COLUMNS } from "./standings-block.js";
+import { renderStandingsBlock, standingsBlockStyles, isHighlightedRow, renderDetailedTable, renderStandingsLogo, DETAILED_COLUMNS } from "./standings-block.js";
 import { cardStyles } from "./styles.js";
 import { DEFAULT_FALLBACK_LOGO } from "./pure.js";
 import "./ha-ffbb-tracker-card.js";
@@ -161,8 +161,9 @@ describe("standings-block.js styles -- no scrollbar", () => {
     expect(match, "expected a compound .standings-table.standings-table-detailed selector").not.toBeNull();
   });
 
-  it("keeps a gap between the match card and the standings card", () => {
-    expect(css).toMatch(/\.standings-card\s*{[^}]*margin-top:\s*\d+px/);
+  it("keeps a gap between the match card and the standings card in 'both' mode, without pushing down a standalone standings card", () => {
+    expect(css).toMatch(/\.standings-card\.standings-compact\s*{[^}]*margin-top:\s*\d+px/);
+    expect(css).not.toMatch(/\.standings-card\s*{[^}]*margin-top:/);
   });
 
   it("the team logo is small enough to add to a row without growing it (18px, measured safe against both the popup and detailed table's ~19px of already-reserved text height)", () => {
@@ -797,5 +798,19 @@ describe("bye (EXEMPT) line of the standings", () => {
     expect(standingsRowLabel({ team_name: "N/A" }, t)).toBe("Exempt");
     expect(standingsRowLabel({ team_name: "MAGESCQ BASKET" }, t)).toBe("MAGESCQ BASKET");
     expect(standingsRowLabel({}, t)).toBe("-");
+  });
+
+  it("never highlights the bye line and sanitizes standings row logos", () => {
+    expect(isHighlightedRow({ team_name: "Exempt" }, "Exempt")).toBe(false);
+    expect(isHighlightedRow({ team_name: "N/A" }, "N/A")).toBe(false);
+    expect(isHighlightedRow({ team_name: "ELAN BEARNAIS PAU - 2" }, "ELAN BEARNAIS")).toBe(false);
+
+    const unsafeHost = document.createElement("div");
+    render(renderStandingsLogo("javascript:alert(1)", true), unsafeHost);
+    expect(unsafeHost.querySelector("img").getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
+
+    const relHost = document.createElement("div");
+    render(renderStandingsLogo("/assets/crest.png", true), relHost);
+    expect(relHost.querySelector("img").getAttribute("src")).toBe("https://competitions.ffbb.com/assets/crest.png");
   });
 });

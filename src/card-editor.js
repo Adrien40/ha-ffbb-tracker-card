@@ -122,9 +122,17 @@ class FFBBCardEditor extends LitElement {
     }
 
     const updatedValue = { ...ev.detail.value };
-    const textFields = ["entity", "custom_team_name", "title", "icon", "custom_accent_color", "standings_title"];
+    const textFields = [
+      "entity",
+      "custom_team_name",
+      "title",
+      "icon",
+      "custom_accent_color",
+      "standings_title",
+      "standings_icon",
+    ];
     for (const field of textFields) {
-      if (!(field in updatedValue)) {
+      if (!(field in updatedValue) || updatedValue[field] === undefined || updatedValue[field] === null) {
         updatedValue[field] = "";
       }
     }

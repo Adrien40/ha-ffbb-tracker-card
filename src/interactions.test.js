@@ -3060,4 +3060,102 @@ describe("targeted coverage: rare branches", () => {
       document.body.removeChild(el);
     });
   });
+
+  describe("v0.7.0 modal, accessibility, and live-match guards", () => {
+    afterEach(() => {
+      document.body.innerHTML = "";
+    });
+
+    it("hides unknown/unavailable competition subtitles in popups and avoids 'null - null' scores", async () => {
+      const Card = customElements.get("ffbb-tracker-card");
+      const el = new Card();
+      el.setConfig({ entity: "sensor.t_poule" });
+      el.hass = {
+        locale: { language: "fr-FR" },
+        states: {
+          "sensor.t_poule": {
+            state: "Poule A",
+            attributes: {
+              team: "ANGERS",
+              competition: "unavailable",
+              calendar: [
+                {
+                  round: 1,
+                  date: "2099-01-10T20:00:00Z",
+                  home_team: "ANGERS",
+                  away_team: "NANTES",
+                  home_score: null,
+                  away_score: null,
+                  is_home: true,
+                  is_played: false,
+                },
+              ],
+            },
+          },
+          "sensor.t_classement": {
+            state: "1",
+            attributes: { standings: [{ position: 1, team_name: "ANGERS" }] },
+          },
+        },
+      };
+      document.body.appendChild(el);
+      await el.updateComplete;
+
+      el._openModal("calendar");
+      await el.updateComplete;
+      expect(el.shadowRoot.querySelector(".modal-subtitle")).toBeNull();
+      expect(el.shadowRoot.textContent).not.toContain("null - null");
+
+      el._openModal("standings");
+      await el.updateComplete;
+      expect(el.shadowRoot.querySelector(".modal-subtitle")).toBeNull();
+    });
+
+    it("disabled nav chevrons have tabindex='-1' and aria-disabled='true', and _selectCalendarMatch ignores clicks while live", async () => {
+      const Card = customElements.get("ffbb-tracker-card");
+      const el = new Card();
+      el.setConfig({ entity: "sensor.t_poule" });
+      el.hass = {
+        locale: { language: "fr-FR" },
+        states: {
+          "sensor.t_poule": {
+            state: "Poule A",
+            attributes: {
+              team: "ANGERS",
+              calendar: [
+                { round: 1, date: "2099-01-10T20:00:00Z", home_team: "ANGERS", away_team: "A", is_home: true },
+                { round: 2, date: "2099-01-17T20:00:00Z", home_team: "ANGERS", away_team: "B", is_home: true },
+              ],
+            },
+          },
+          "sensor.t_prochain_match_date": { state: "2099-01-10T20:00:00Z", attributes: { round: 1 } },
+          "sensor.t_prochain_match_adversaire": { state: "A", attributes: { is_home: true } },
+          "binary_sensor.t_match_en_cours": { state: "off" },
+        },
+      };
+      document.body.appendChild(el);
+      await el.updateComplete;
+
+      const leftChevron = el.shadowRoot.querySelector(".nav-chevron-left");
+      const rightChevron = el.shadowRoot.querySelector(".nav-chevron-right");
+      expect(leftChevron.getAttribute("tabindex")).toBe("-1");
+      expect(leftChevron.getAttribute("aria-disabled")).toBe("true");
+      expect(rightChevron.getAttribute("tabindex")).toBe("0");
+      expect(rightChevron.getAttribute("aria-disabled")).toBeNull();
+
+      // Switch to live: selecting a calendar row closes the modal without storing a latent _matchIndex
+      el.hass = {
+        ...el.hass,
+        states: {
+          ...el.hass.states,
+          "binary_sensor.t_match_en_cours": { state: "on" },
+        },
+      };
+      await el.updateComplete;
+      el._openModal("calendar");
+      el._selectCalendarMatch(1, false);
+      expect(el._activeModal).toBeNull();
+      expect(el._matchIndex).toBeNull();
+    });
+  });
 });
