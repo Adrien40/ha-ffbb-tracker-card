@@ -53,17 +53,37 @@ export function cleanNamesMatch(x, y) {
     return true;
   }
   const [short, long] = x.length <= y.length ? [x, y] : [y, x];
-  if (!long.includes(short)) {
-    return false;
+  const shortEndsWithDigit = /\d$/.test(short);
+  // The short name can occur more than once in the long one: any occurrence
+  // that leaves nothing but harmless words around it is enough.
+  for (let from = long.indexOf(short); from !== -1; from = long.indexOf(short, from + 1)) {
+    if (isSameTeamAround(long.slice(0, from), long.slice(from + short.length), shortEndsWithDigit)) {
+      return true;
+    }
   }
-  // FFBB writes the first team of a club as "BC LYON - 1": that trailing lone
-  // "1" is the same team as the bare name, whatever else the longer name adds
-  // ("ANGERS" is "ETOILE ANGERS BASKET - 1"). Any other number is a different
-  // team: "BC LYON 2", "BC LYON 12" or "ANGERS BASKET 11" are not "BC LYON" /
-  // "ANGERS". A "1" that ends a longer number ("11", "21") is no suffix.
-  const extra = long.replace(short, "");
-  const withoutSuffix = /(^|\D)1$/.test(extra) ? extra.slice(0, -1) : extra;
-  return !/\d/.test(withoutSuffix);
+  return false;
+}
+
+// FFBB categories that carry a digit: U13, U13M, U15F, NM3, NF2, RM2, DM2...
+// and a phase of the competition ("- Phase 2"). They name a competition, not
+// another team of the club.
+const CATEGORY_WITH_DIGIT = /u\d{1,2}[mf]?|(?:nm|nf|rm|rf|dm|df|pm|pf)\d|phase\d+/g;
+
+// What surrounds a name found inside a longer one decides whether both are the
+// same team. FFBB writes the first team of a club as "BC LYON - 1": that
+// trailing lone "1" is the bare name ("ANGERS" is "ETOILE ANGERS BASKET - 1"),
+// and a category ("BASKET LANDES U13", "UJSBP U13M") is no other team either.
+// Any other number is a different team: "BC LYON 2", "BC LYON 12" or "ANGERS
+// BASKET 11" are not "BC LYON" / "ANGERS". A "1" that ends a longer number is
+// no suffix ("US DAX 2" is not "US DAX 21", "BASKET 40" is not "BASKET 401").
+function isSameTeamAround(prefix, suffix, shortEndsWithDigit) {
+  const before = prefix.replace(CATEGORY_WITH_DIGIT, "");
+  let after = suffix.replace(CATEGORY_WITH_DIGIT, "");
+  const loneOne = /(^|\D)1$/.test(after) && !(after === "1" && shortEndsWithDigit);
+  if (loneOne) {
+    after = after.slice(0, -1);
+  }
+  return !/\d/.test(before) && !/\d/.test(after);
 }
 
 /**
@@ -71,6 +91,12 @@ export function cleanNamesMatch(x, y) {
  * Assistant INSTANCE (the integration writes them with `hass.config.language`,
  * English for any language it has no table for). Mirrors `_FORM_LETTERS` in the
  * integration's sensor.py.
+ *
+ * The two languages differ ON PURPOSE, and this was checked on a real English
+ * instance: a win is "W", a loss is "L" and a DRAW is "D" (in French a win is
+ * "V", a loss is "D" for "défaite" and a draw is "N" for "nul"). So the letter
+ * "D" means "loss" in French and "draw" in English: it can only be read with
+ * the language of the instance, never on its own.
  */
 export const FORM_LETTERS = {
   fr: { win: "V", loss: "D", draw: "N" },
@@ -919,6 +945,11 @@ export function computeIsPostMatch({
 // that is the card's original, single-card behaviour.
 export const DISPLAY_MODES = ["match", "standings", "both"];
 
+/** A sensor value, or "" when it is empty, "unknown" or "unavailable". */
+export function validStateOrEmpty(value) {
+  return value && value !== "unknown" && value !== "unavailable" ? value : "";
+}
+
 export function resolveDisplayMode(config) {
   return DISPLAY_MODES.includes(config?.display_mode) ? config.display_mode : "match";
 }
@@ -1292,8 +1323,11 @@ export function computeViewModel({
     hasCalendar && !isLive && !defaultIsPostMatch && typeof matchIndex !== "number"
       ? findRecentUnplayedIndex(calendarMatches, now)
       : -1;
+  // During a live match the card shows THAT match (the title, the badge and the
+  // timer say so, and the toggle chevrons are hidden): a carousel selection
+  // made before kick-off, or from the calendar popup, must not replace it.
   const effectiveMatchIndex =
-    typeof matchIndex === "number"
+    typeof matchIndex === "number" && !isLive
       ? matchIndex
       : recentUnplayedIndex !== -1
         ? recentUnplayedIndex
@@ -1328,7 +1362,12 @@ export function computeViewModel({
   } else if (defaultIsPostMatch) {
     currentIndex = pickIndex(shownIndex("lastDate"), lastPlayedIndex !== -1 ? lastPlayedIndex : 0);
   } else {
-    currentIndex = pickIndex(shownIndex("nextDate"), nextMatchIndex !== -1 ? nextMatchIndex : 0);
+    // Nothing left to play: stay at the end of the season, like the "next"
+    // toggle does, so "previous" still has somewhere to go.
+    currentIndex = pickIndex(
+      shownIndex("nextDate"),
+      nextMatchIndex !== -1 ? nextMatchIndex : Math.max(0, calendarMatches.length - 1),
+    );
   }
 
   const isCarouselMatch = typeof effectiveMatchIndex === "number" && hasCalendar && Boolean(calendarMatches[currentIndex]);
@@ -1587,8 +1626,8 @@ export function computeViewModel({
   const leftEntityId = isHome ? config.entity : currentOpponentSensor?.entity_id;
   const rightEntityId = isHome ? currentOpponentSensor?.entity_id : config.entity;
 
-  const competition = entities.poule?.attributes?.competition || "";
-  const pouleName = entities.poule?.state || "";
+  const competition = validStateOrEmpty(entities.poule?.attributes?.competition);
+  const pouleName = validStateOrEmpty(entities.poule?.state);
 
   const dateFormatted = formatDate(targetDateStr, locale || lang, { hour12 });
   // The sensor writes its letters in the instance's language; show them in the
@@ -1632,7 +1671,13 @@ export function computeViewModel({
   if (isLive) {
     defaultTitle = t("card.live_title", "Live match");
   } else if (isPostMatch) {
-    defaultTitle = t("card.last_title", "Last match");
+    // Only the most recent played match is "the last match"; any older one
+    // browsed with the chevrons is just a played match.
+    const isOlderPlayedMatch =
+      Boolean(currentCalMatch) && lastPlayedIndex !== -1 && currentIndex !== lastPlayedIndex;
+    defaultTitle = isOlderPlayedMatch
+      ? t("card.played_title", "Played match")
+      : t("card.last_title", "Last match");
   } else if (isExempt) {
     defaultTitle = t("card.exempt_title", "Bye week");
   } else if (isStale) {

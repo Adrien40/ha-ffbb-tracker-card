@@ -74,6 +74,7 @@
     "no_calendar": "Aucun calendrier de rencontres disponible.",
     "no_form": "Aucune forme récente disponible.",
     "live_title": "Match en direct",
+    "played_title": "Match joué",
     "last_title": "Dernier match",
     "kickoff": "Coup d'envoi",
     "calendar_details": "Match FFBB\u00a0: {home} vs {away}"

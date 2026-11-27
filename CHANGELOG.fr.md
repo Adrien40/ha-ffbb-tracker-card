@@ -3,6 +3,21 @@
 Toutes les modifications notables du projet sont documentées dans ce fichier.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.24] — 2026-11-25
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Corrections
+- **Dernier match :** seul le match joué le plus récent s'appelle « Dernier match ». Un match joué plus ancien, parcouru avec les chevrons, devient « Match joué ».
+- **Noms d'équipe :** une catégorie après le nom du club (« BASKET LANDES U13 », « UJSBP U13M », « … NM3 ») ne cache plus ton équipe, et un nombre qui prolonge simplement un autre (« US DAX 2 » / « US DAX 21 », « BC LYON 1 » / « BC LYON 11 », « BASKET 40 » / « BASKET 401 ») n'est plus pris pour la même équipe.
+- **Classement (tableau détaillé) :** « BC LYON » ne surligne plus, et ne prend plus le nom personnalisé de « BC LYON 2 » ; un nom court comme « ANGERS » est retrouvé dans « ETOILE ANGERS BASKET - 1 », comme dans le tableau simple.
+- **Match en direct :** un match sélectionné avant le coup d'envoi, ou depuis la popup du calendrier, ne remplace plus le match en direct (le titre disait « Match en direct » sur le mauvais match).
+- **Fin de saison** avec « Toujours le prochain match » : la carte reste en fin de saison, donc le chevron « précédent » fonctionne encore.
+- **En-tête :** « unknown » et « unavailable » ne s'affichent plus comme compétition ou poule, et une poule sans compétition n'a plus de « • » orphelin.
+- **Éditeur :** changer l'entité ou la vue par défaut oublie le match et la bascule des réglages précédents ; passer en mode classement seul ferme une popup de match ouverte ; une configuration vide donne le message d'erreur explicite.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.6.23] — 2026-11-26
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

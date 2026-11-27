@@ -19,7 +19,13 @@
 // position and team columns stay pinned on the left).
 
 import { html, css, nothing } from "lit";
-import { cleanForMatch, sortStandings, DEFAULT_FALLBACK_LOGO } from "./pure.js";
+import {
+  cleanForMatch,
+  cleanNamesMatch,
+  createTeamMatcher,
+  sortStandings,
+  DEFAULT_FALLBACK_LOGO,
+} from "./pure.js";
 
 const INVALID_STATES = ["unknown", "unavailable"];
 
@@ -30,12 +36,16 @@ const INVALID_STATES = ["unknown", "unavailable"];
  * this table shows the whole pool, and the opponent is just one more row
  * among many, not a second "me".
  */
-export function isHighlightedRow(item, teamName) {
-  const itemClean = cleanForMatch(item?.team_name || item?.name || "");
+export function isHighlightedRow(item, teamName, isMine = null) {
+  const name = item?.team_name || item?.name || "";
+  // With the whole table at hand (`isMine`, built from every row's name), an
+  // exact name wins over a look-alike: "BC LYON" is not "BC LYON 2".
+  if (isMine) return Boolean(isMine(name));
+  const itemClean = cleanForMatch(name);
   const teamClean = cleanForMatch(teamName);
-  // A row without any name must never match (`"x".includes("")` is true).
+  // A row without any name must never match.
   if (!itemClean || !teamClean) return false;
-  return itemClean.includes(teamClean) || teamClean.includes(itemClean);
+  return cleanNamesMatch(itemClean, teamClean);
 }
 
 // Cell display: a missing value (null/undefined/"") is shown as "-", a real 0
@@ -129,6 +139,10 @@ export function standingsRowLabel(item, t) {
 // the user turns on "standings_popup_detailed" -- one table implementation,
 // used in two places, instead of a second copy that could drift.
 export function renderDetailedTable({ rows, teamName, displayTeamName, t, showLogos = true }) {
+  const isMine = createTeamMatcher(
+    (Array.isArray(rows) ? rows : []).map((r) => r?.team_name || r?.name || ""),
+    teamName,
+  );
   const { matches, singles, penalties, points } = DETAILED_COLUMNS;
   const label = (col) => t(`card.${col.key}`, col.fb);
   const title = (col) => t(`card.${col.full}`, col.fullFb);
@@ -161,7 +175,7 @@ export function renderDetailedTable({ rows, teamName, displayTeamName, t, showLo
         </thead>
         <tbody>
           ${rows.map((item) => {
-            const highlighted = isHighlightedRow(item, teamName);
+            const highlighted = isHighlightedRow(item, teamName, isMine);
             // On my own row, show the name I picked in the card config
             // instead of the federation's official name -- everywhere
             // else the real, official team name is kept so the table

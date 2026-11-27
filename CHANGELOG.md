@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.24] — 2026-11-25
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Fixes
+- **Last match:** only the most recent played match is called "Last match". An older played match, browsed with the chevrons, is now a "Played match".
+- **Team names:** a category after the club name ("BASKET LANDES U13", "UJSBP U13M", "… NM3") no longer hides your team, and a number that only extends a longer one ("US DAX 2" / "US DAX 21", "BC LYON 1" / "BC LYON 11", "BASKET 40" / "BASKET 401") is no longer taken for the same team.
+- **Standings (detailed table):** "BC LYON" no longer highlights, and takes the custom name of, "BC LYON 2" as well; a short name such as "ANGERS" is found in "ETOILE ANGERS BASKET - 1", like in the simple table.
+- **Live match:** a match selected before kick-off, or from the calendar popup, no longer replaces the live match (the title said "Live match" on the wrong match).
+- **End of the season** with "Always the next match": the card stays at the end of the season, so the "previous" chevron still works.
+- **Header:** "unknown" and "unavailable" are no longer shown as the competition or the pool, and a pool without a competition has no orphan "•".
+- **Editor:** changing the entity, or the default view, forgets the match and the toggle of the previous settings; switching to the standings-only mode closes an open match popup; an empty configuration gives the explicit error message.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.6.23] — 2026-11-26
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

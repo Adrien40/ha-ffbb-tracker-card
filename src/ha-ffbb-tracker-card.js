@@ -6,6 +6,8 @@ import {
   computeViewModel,
   calendarRowSides,
   createTeamMatcher,
+  validStateOrEmpty,
+  resolveDisplayMode,
   formResultOf,
   localizeFormSequence,
   localizeFormStreak,
@@ -81,13 +83,27 @@ class FFBBCard extends LitElement {
   }
 
   setConfig(config) {
-    if (!config.entity) {
+    if (!config || !config.entity) {
       throw new Error("Please define an entity from the FFBB Tracker integration.");
     }
-    this._config = {
+    const next = {
       ...DEFAULT_CONFIG,
       ...config,
     };
+    // The visual editor calls setConfig again on the SAME card element for every
+    // change: what the person had navigated to (a match, the "next"/"last"
+    // toggle, an open popup) belongs to the previous settings.
+    const previous = this._config;
+    if (previous) {
+      if (previous.entity !== next.entity || previous.default_match_view !== next.default_match_view) {
+        this._matchIndex = null;
+        this._manualView = null;
+      }
+      if (previous.entity !== next.entity || resolveDisplayMode(next) === "standings") {
+        this._activeModal = null;
+      }
+    }
+    this._config = next;
     this._warnIfInvalidAccentColor();
   }
 
@@ -352,7 +368,7 @@ class FFBBCard extends LitElement {
       const rawStandings = entities.rank?.attributes?.standings || [];
       const standings = sortStandings(rawStandings);
       const competition = entities.poule?.attributes?.competition || "";
-      const poule = entities.poule?.state || "";
+      const poule = validStateOrEmpty(entities.poule?.state);
       const standingNames = standings.map((item) => item.team_name || item.name || "");
       const isMyTeamRow = createTeamMatcher(standingNames, teamName);
       const isOpponentRow = createTeamMatcher(standingNames, opponentName);
@@ -538,7 +554,7 @@ class FFBBCard extends LitElement {
     if (this._activeModal === "calendar") {
       const matches = this._extractCalendarMatches(entities);
       const competition = entities.poule?.attributes?.competition || "";
-      const poule = entities.poule?.state || "";
+      const poule = validStateOrEmpty(entities.poule?.state);
       const calendarNames = matches.flatMap((m) => [
         m.home_team || "",
         m.away_team || "",
@@ -882,7 +898,9 @@ class FFBBCard extends LitElement {
                 ? html`
                     <div class="header-main">
                       <span class="competition">${competition}</span>
-                      ${pouleName ? html`<span class="poule">• ${pouleName}</span>` : ""}
+                      ${pouleName
+                        ? html`<span class="poule">${competition ? "• " : ""}${pouleName}</span>`
+                        : ""}
                     </div>
                   `
                 : ""}

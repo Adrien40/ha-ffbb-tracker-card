@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
+  validStateOrEmpty,
   localizeFormStreak,
   localizeFormSequence,
   formResultOf,
@@ -2032,5 +2033,179 @@ describe("computeViewModel -- the opponent's rank follows its team page address"
   it("shows the rank of the right team of a club that has several teams in the standings", () => {
     const vm = computeViewModel({ entities, config: {}, lang: "fr" });
     expect(vm.rightRank).toBe("2e");
+  });
+});
+
+describe("v0.6.24 -- team names: categories are not teams, a longer number is", () => {
+  const same = (a, b) => cleanNamesMatch(cleanForMatch(a), cleanForMatch(b));
+
+  it.each([
+    // The FFBB writes a category after the club name: still the same team.
+    ["BASKET LANDES", "BASKET LANDES U13"],
+    ["BASKET LANDES", "BASKET LANDES NM3"],
+    ["UJSBP", "UJSBP U13M"],
+    ["UJSBP", "UJSBP - U13M - Phase 2"],
+    ["BASKET LANDES", "U15F BASKET LANDES"],
+    // The first team of a club, and a shorter name inside a longer one.
+    ["BC LYON", "BC LYON - 1"],
+    ["BC LYON", "BC LYON 1"],
+    ["ANGERS", "ETOILE ANGERS BASKET - 1"],
+    ["ANGERS", "ETOILE ANGERS BASKET"],
+  ])("%s and %s are the same team", (a, b) => {
+    expect(same(a, b)).toBe(true);
+    expect(same(b, a)).toBe(true);
+  });
+
+  it.each([
+    // Another team of the same club.
+    ["BC LYON", "BC LYON 2"],
+    ["BC LYON", "BC LYON - 2"],
+    ["BC LYON", "BC LYON 12"],
+    ["ANGERS", "ETOILE ANGERS BASKET - 2"],
+    // A "1" that only ends a longer number is no first-team suffix.
+    ["US DAX 2", "US DAX 21"],
+    ["BC LYON 1", "BC LYON 11"],
+    ["BASKET 40", "BASKET 401"],
+    ["ANGERS", "ETOILE ANGERS BASKET 11"],
+    // A category does not hide a team number.
+    ["BASKET LANDES", "BASKET LANDES U13 2"],
+  ])("%s and %s are NOT the same team", (a, b) => {
+    expect(same(a, b)).toBe(false);
+    expect(same(b, a)).toBe(false);
+  });
+
+  it("a name found twice in the long one is judged on any occurrence", () => {
+    expect(same("DAX", "DAX BASKET DAX - 1")).toBe(true);
+  });
+
+  it("createTeamMatcher keeps an exact name ahead of its look-alike", () => {
+    const isMine = createTeamMatcher(["BC LYON", "BC LYON 2", "BC LYON U13"], "BC LYON");
+    expect(isMine("BC LYON")).toBe(true);
+    expect(isMine("BC LYON 2")).toBe(false);
+  });
+});
+
+describe("v0.6.24 -- the card follows the live match, the end of the season, and ignores unknown states", () => {
+  const NOW = new Date("2026-11-25T12:00:00Z");
+  const ROWS = [
+    { home_team: "Mon équipe", away_team: "A", score: "80 - 60", is_played: true, result: "win", is_home: true, date: "2026-11-10T18:00:00+00:00", round: 1, match_number: "1" },
+    { home_team: "B", away_team: "Mon équipe", score: "50 - 55", is_played: true, result: "win", is_home: false, date: "2026-11-17T18:00:00+00:00", round: 2, match_number: "2" },
+    { home_team: "Mon équipe", away_team: "C", score: null, is_played: false, is_home: true, date: "2026-11-25T11:00:00+00:00", round: 3, match_number: "3" },
+  ];
+  const CONFIG = {
+    entity: "sensor.x",
+    show_title: true,
+    show_header: true,
+    show_form: true,
+    show_venue: true,
+  };
+  const fr = (key, fallback) => translate(getTranslations("fr"), key, fallback);
+
+  function build({ calendar = ROWS, entities = {}, config = {}, matchIndex = null, manualView = null, t = fr } = {}) {
+    return computeViewModel({
+      entities: {
+        poule: { state: "Poule B", attributes: { team: "Mon équipe", competition: "Nationale", calendar } },
+        nextDate: { state: "2026-11-25T11:00:00+00:00", attributes: { match_number: "3" } },
+        lastDate: { state: "2026-11-17T18:00:00+00:00", attributes: { match_number: "2" } },
+        lastScore: { state: "55 - 50", attributes: {} },
+        lastResult: { state: "win", attributes: {} },
+        nextOpponent: { state: "C", attributes: {} },
+        matchInProgress: { state: "off", attributes: {} },
+        ...entities,
+      },
+      config: { ...CONFIG, ...config },
+      matchIndex,
+      manualView,
+      now: NOW,
+      lang: "fr",
+      t,
+    });
+  }
+
+  it("a match selected before kick-off no longer replaces the live match", () => {
+    const live = { matchInProgress: { state: "on", attributes: {} } };
+
+    const selected = build({ entities: live, matchIndex: 0 });
+    const untouched = build({ entities: live });
+
+    expect(selected.isLive).toBe(true);
+    expect(selected.titleText).toBe("Match en direct");
+    expect(selected.currentIndex).toBe(untouched.currentIndex);
+    expect(selected.currentIndex).toBe(2);
+    expect(selected.displayedScore).toBe(untouched.displayedScore);
+  });
+
+  it("outside a live match a selected match is still shown", () => {
+    const vm = build({ matchIndex: 0 });
+
+    expect(vm.isLive).toBe(false);
+    expect(vm.currentIndex).toBe(0);
+    expect(vm.titleText).toBe("Match joué");
+  });
+
+  it("end of season with default_match_view next: stays at the end, 'previous' still works", () => {
+    const allPlayed = ROWS.map((r, i) => (i === 2 ? { ...r, score: "70 - 60", is_played: true, result: "win" } : r));
+    const gone = { nextDate: { state: "unknown", attributes: {} }, nextOpponent: { state: "unknown", attributes: {} } };
+
+    const vm = build({ calendar: allPlayed, entities: gone, config: { default_match_view: "next" } });
+    const toggled = build({ calendar: allPlayed, entities: gone, manualView: "next" });
+
+    expect(vm.currentIndex).toBe(2);
+    expect(vm.currentIndex).toBe(toggled.currentIndex);
+    expect(vm.canGoPrev).toBe(true);
+  });
+
+  it("'unknown' and 'unavailable' are never shown as the competition or the pool", () => {
+    const vm = build({
+      entities: { poule: { state: "unavailable", attributes: { competition: "unknown", team: "Mon équipe", calendar: ROWS } } },
+    });
+
+    expect(vm.competition).toBe("");
+    expect(vm.pouleName).toBe("");
+  });
+
+  it("a real pool without a competition keeps its name", () => {
+    const vm = build({
+      entities: { poule: { state: "Poule B", attributes: { team: "Mon équipe", calendar: ROWS } } },
+    });
+
+    expect(vm.competition).toBe("");
+    expect(vm.pouleName).toBe("Poule B");
+  });
+
+  it("validStateOrEmpty keeps real values and drops empty or unavailable ones", () => {
+    expect(validStateOrEmpty("Poule B")).toBe("Poule B");
+    expect(validStateOrEmpty("unknown")).toBe("");
+    expect(validStateOrEmpty("unavailable")).toBe("");
+    expect(validStateOrEmpty("")).toBe("");
+    expect(validStateOrEmpty(undefined)).toBe("");
+  });
+
+  it("only the most recent played match is the 'Last match'; an older one is a 'Played match'", () => {
+    // Index 1 (round 2, 17 Nov) is the most recent played match; index 0 is older.
+    const last = build({ matchIndex: 1 });
+    const older = build({ matchIndex: 0 });
+
+    expect(last.titleText).toBe("Dernier match");
+    expect(older.titleText).toBe("Match joué");
+  });
+
+  it("without any navigation the card still says 'Last match' for the last played match", () => {
+    const afterTheSeason = build({
+      calendar: ROWS.map((r, i) => (i === 2 ? { ...r, score: "70 - 60", is_played: true, result: "win" } : r)),
+      entities: {
+        nextDate: { state: "unknown", attributes: {} },
+        nextOpponent: { state: "unknown", attributes: {} },
+        lastDate: { state: "2026-11-25T11:00:00+00:00", attributes: { match_number: "3" } },
+      },
+    });
+
+    expect(afterTheSeason.titleText).toBe("Dernier match");
+  });
+
+  it("the English title for an older played match", () => {
+    const en = (key, fallback) => translate(getTranslations("en"), key, fallback);
+
+    expect(build({ matchIndex: 0, t: en }).titleText).toBe("Played match");
   });
 });

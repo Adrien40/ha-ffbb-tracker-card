@@ -18,6 +18,95 @@ function makeCard(config = { entity: "sensor.my_team_next_match" }) {
   return el;
 }
 
+describe("setConfig(): a bad config, and what the visual editor must not leave behind", () => {
+  const MESSAGE = "Please define an entity from the FFBB Tracker integration.";
+
+  it.each([null, undefined, {}, { entity: "" }])("rejects %j with the explicit message, not a raw TypeError", (config) => {
+    const Card = customElements.get("ffbb-tracker-card");
+    const el = new Card();
+
+    expect(() => el.setConfig(config)).toThrow(MESSAGE);
+  });
+
+  function navigated() {
+    const el = makeCard({ entity: "sensor.a_next_match", default_match_view: "auto" });
+    el._matchIndex = 3;
+    el._manualView = "last";
+    el._activeModal = "calendar";
+    return el;
+  }
+
+  it("changing the entity forgets the match, the toggle and the open popup of the previous team", () => {
+    const el = navigated();
+
+    el.setConfig({ entity: "sensor.b_next_match", default_match_view: "auto" });
+
+    expect(el._matchIndex).toBeNull();
+    expect(el._manualView).toBeNull();
+    expect(el._activeModal).toBeNull();
+  });
+
+  it("changing default_match_view forgets the match and the toggle, but keeps the popup", () => {
+    const el = navigated();
+
+    el.setConfig({ entity: "sensor.a_next_match", default_match_view: "next" });
+
+    expect(el._matchIndex).toBeNull();
+    expect(el._manualView).toBeNull();
+    expect(el._activeModal).toBe("calendar");
+  });
+
+  it("an unrelated change (a colour) keeps the navigation as it is", () => {
+    const el = navigated();
+
+    el.setConfig({ entity: "sensor.a_next_match", default_match_view: "auto", logo_size: "large" });
+
+    expect(el._matchIndex).toBe(3);
+    expect(el._manualView).toBe("last");
+    expect(el._activeModal).toBe("calendar");
+  });
+
+  it("switching to the standings-only mode closes a popup of the match card", () => {
+    const el = navigated();
+
+    el.setConfig({ entity: "sensor.a_next_match", default_match_view: "auto", display_mode: "standings" });
+
+    expect(el._activeModal).toBeNull();
+    expect(el._matchIndex).toBe(3);
+  });
+});
+
+describe("the header with a missing competition or pool", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  async function header(poule) {
+    const el = makeCard({ entity: "sensor.basket_landes_prochain_match_adversaire", show_header: true });
+    el.hass = {
+      language: "fr",
+      locale: { language: "fr" },
+      states: {
+        "sensor.basket_landes_prochain_match_adversaire": { state: "US Dax", attributes: {} },
+        "sensor.basket_landes_prochain_match_date": { state: "2099-09-19T20:00:00", attributes: {} },
+        "sensor.basket_landes_poule": { state: poule.state, attributes: poule.attributes },
+      },
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    return el.shadowRoot.querySelector(".header-main")?.textContent.replace(/\s+/g, " ").trim() ?? null;
+  }
+
+  it("'unavailable' is not shown, and neither is a bullet with nothing before it", async () => {
+    expect(await header({ state: "unavailable", attributes: { competition: "unknown" } })).toBeNull();
+    expect(await header({ state: "Poule B", attributes: {} })).toBe("Poule B");
+  });
+
+  it("a competition and a pool keep their bullet", async () => {
+    expect(await header({ state: "Poule B", attributes: { competition: "Nationale" } })).toBe("Nationale • Poule B");
+  });
+});
+
 describe("_getRankClass()", () => {
   const el = makeCard();
 

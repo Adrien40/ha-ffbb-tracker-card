@@ -668,6 +668,53 @@ describe("targeted coverage: rare branches", () => {
     expect(rows.map((r) => r.querySelector(".pos-cell").textContent.trim())).toEqual(["1", "2", "-"]);
   });
 
+  it("renderDetailedTable(): 'BC LYON' highlights, and is renamed on, its own row only -- not 'BC LYON 2'", () => {
+    const host = document.createElement("div");
+    render(
+      renderDetailedTable({
+        rows: [
+          { position: 1, team_name: "BC LYON" },
+          { position: 2, team_name: "BC LYON 2" },
+          { position: 3, team_name: "AS AUTRE" },
+        ],
+        teamName: "BC LYON",
+        displayTeamName: "Mon équipe",
+        t,
+      }),
+      host
+    );
+    const rows = [...host.querySelectorAll("tbody tr")];
+
+    expect(rows.map((r) => r.classList.contains("highlight-row"))).toEqual([true, false, false]);
+    expect(rows.map((r) => r.querySelector(".col-team").textContent.trim())).toEqual(["Mon équipe", "BC LYON 2", "AS AUTRE"]);
+  });
+
+  it("renderDetailedTable(): a short team name is found in the longer one the FFBB writes ('ANGERS' / 'ETOILE ANGERS BASKET - 1')", () => {
+    const host = document.createElement("div");
+    render(
+      renderDetailedTable({
+        rows: [
+          { position: 1, team_name: "TOURS METROPOLE BASKET" },
+          { position: 2, team_name: "ETOILE ANGERS BASKET - 1" },
+        ],
+        teamName: "ANGERS",
+        t,
+      }),
+      host
+    );
+    const rows = [...host.querySelectorAll("tbody tr")];
+
+    expect(rows.map((r) => r.classList.contains("highlight-row"))).toEqual([false, true]);
+  });
+
+  it("isHighlightedRow(): called alone it also tells 'BC LYON' from 'BC LYON 2', and still finds a category or a first-team suffix", () => {
+    expect(isHighlightedRow({ team_name: "BC LYON 2" }, "BC LYON")).toBe(false);
+    expect(isHighlightedRow({ team_name: "BC LYON - 1" }, "BC LYON")).toBe(true);
+    expect(isHighlightedRow({ team_name: "BASKET LANDES U13" }, "BASKET LANDES")).toBe(true);
+    expect(isHighlightedRow({ team_name: "" }, "BC LYON")).toBe(false);
+    expect(isHighlightedRow({ team_name: "BC LYON" }, "")).toBe(false);
+  });
+
   it("renderDetailedTable(): each row's logo uses that row's own logo_url, from the FFBB Tracker integration's standings data", () => {
     const host = document.createElement("div");
     render(

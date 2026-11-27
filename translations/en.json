@@ -74,6 +74,7 @@
     "no_calendar": "No schedule available.",
     "no_form": "No recent form data available.",
     "live_title": "Live match",
+    "played_title": "Played match",
     "last_title": "Last match",
     "kickoff": "Kick-off",
     "calendar_details": "FFBB match: {home} vs {away}"
