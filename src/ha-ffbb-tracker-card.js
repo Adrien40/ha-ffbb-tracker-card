@@ -15,6 +15,7 @@ import {
   extractCalendarMatches,
   findNextMatchIndex,
   formatDate,
+  isByeTeamName,
   isPendingResult,
   isValidCssColor,
   resolveCalendarTeamLogo,
@@ -206,6 +207,9 @@ class FFBBCard extends LitElement {
   }
 
   _handleLogoClick(entityId, teamUrl, teamName) {
+    if (isByeTeamName(teamName) || teamName === this._t("card.exempt", "Bye")) {
+      return;
+    }
     const action = this._config.logo_click_action || "team_url";
     if (action === "team_url") {
       if (teamUrl) {
@@ -622,7 +626,7 @@ class FFBBCard extends LitElement {
                       ${matches.map((m, index) => {
                         const rawHome = m.home_team || "-";
                         const rawAway = m.away_team || "-";
-                        const isBye = Boolean(m.is_exempt);
+                        const isBye = Boolean(m.is_exempt) || isByeTeamName(m.home_team) || isByeTeamName(m.away_team);
                         const score = isBye
                           ? ""
                           : m.score || (m.home_score != null && m.away_score != null ? `${m.home_score} - ${m.away_score}` : "");
@@ -632,14 +636,14 @@ class FFBBCard extends LitElement {
                         const isPlayed = Boolean(m.is_played || score);
                         // On a bye round the integration sends the federation's
                         // raw "Exempt" as the opponent's name. Show the same
-                        // translated label as the card's own bye view instead,
-                        // and give that side neither a logo nor a venue badge.
+                        // translated label and fallback crest as the card's own
+                        // bye view and standings table, with no venue badge.
                         let byeSide = null;
                         if (isBye) {
                           if (isHomeMyTeam !== isAwayMyTeam) {
                             byeSide = isHomeMyTeam ? "away" : "home";
                           } else {
-                            byeSide = /^exempt/i.test(rawHome) ? "home" : "away";
+                            byeSide = isByeTeamName(rawHome) || /^exempt/i.test(rawHome) ? "home" : "away";
                           }
                         }
                         const byeLabel = this._t("card.exempt", "Bye");
@@ -648,29 +652,33 @@ class FFBBCard extends LitElement {
                         const isNextMatch = index === nextMatchIndex;
                         const isPending = isPendingResult(m, now, graceHours);
 
-                        const homeLogo = resolveCalendarTeamLogo({
-                          teamName: home,
-                          matchLogo: m.home_logo || m.home_team_logo,
-                          isMyTeam: isHomeMyTeam,
-                          myTeamLogo,
-                          nextOpponentState: entities.nextOpponent?.state,
-                          nextOpponentLogo: entities.nextOpponent?.attributes?.opponent_logo_url,
-                          lastOpponentState: entities.lastOpponent?.state,
-                          lastOpponentLogo: entities.lastOpponent?.attributes?.opponent_logo_url,
-                          standings,
-                        });
+                        const homeLogo = byeSide === "home"
+                          ? DEFAULT_FALLBACK_LOGO
+                          : resolveCalendarTeamLogo({
+                              teamName: home,
+                              matchLogo: m.home_logo || m.home_team_logo,
+                              isMyTeam: isHomeMyTeam,
+                              myTeamLogo,
+                              nextOpponentState: entities.nextOpponent?.state,
+                              nextOpponentLogo: entities.nextOpponent?.attributes?.opponent_logo_url,
+                              lastOpponentState: entities.lastOpponent?.state,
+                              lastOpponentLogo: entities.lastOpponent?.attributes?.opponent_logo_url,
+                              standings,
+                            });
 
-                        const awayLogo = resolveCalendarTeamLogo({
-                          teamName: away,
-                          matchLogo: m.away_logo || m.away_team_logo,
-                          isMyTeam: isAwayMyTeam,
-                          myTeamLogo,
-                          nextOpponentState: entities.nextOpponent?.state,
-                          nextOpponentLogo: entities.nextOpponent?.attributes?.opponent_logo_url,
-                          lastOpponentState: entities.lastOpponent?.state,
-                          lastOpponentLogo: entities.lastOpponent?.attributes?.opponent_logo_url,
-                          standings,
-                        });
+                        const awayLogo = byeSide === "away"
+                          ? DEFAULT_FALLBACK_LOGO
+                          : resolveCalendarTeamLogo({
+                              teamName: away,
+                              matchLogo: m.away_logo || m.away_team_logo,
+                              isMyTeam: isAwayMyTeam,
+                              myTeamLogo,
+                              nextOpponentState: entities.nextOpponent?.state,
+                              nextOpponentLogo: entities.nextOpponent?.attributes?.opponent_logo_url,
+                              lastOpponentState: entities.lastOpponent?.state,
+                              lastOpponentLogo: entities.lastOpponent?.attributes?.opponent_logo_url,
+                              standings,
+                            });
 
                         let venueBadge = "";
                         if (isBye) {
@@ -698,9 +706,7 @@ class FFBBCard extends LitElement {
                             </div>
                             <div class="calendar-col-teams">
                               <div class="cal-team-line">
-                                ${this._config.show_calendar_logos !== false && byeSide === "home"
-                                  ? html`<span class="cal-bye-icon" aria-hidden="true"><ha-icon icon="mdi:pause-circle-outline"></ha-icon></span>`
-                                  : this._config.show_calendar_logos !== false
+                                ${this._config.show_calendar_logos !== false
                                   ? html`
                                       <img
                                         class="cal-mini-logo"
@@ -717,9 +723,7 @@ class FFBBCard extends LitElement {
                                 <span class="cal-team ${isHomeMyTeam ? "my-team-text" : ""} ${byeSide === "home" ? "bye-text" : ""}">${isHomeMyTeam && displayTeamName ? displayTeamName : home}</span>
                               </div>
                               <div class="cal-team-line">
-                                ${this._config.show_calendar_logos !== false && byeSide === "away"
-                                  ? html`<span class="cal-bye-icon" aria-hidden="true"><ha-icon icon="mdi:pause-circle-outline"></ha-icon></span>`
-                                  : this._config.show_calendar_logos !== false
+                                ${this._config.show_calendar_logos !== false
                                   ? html`
                                       <img
                                         class="cal-mini-logo"
@@ -960,8 +964,11 @@ class FFBBCard extends LitElement {
 
     const isSolid = this._config?.rank_badge_style === "solid";
     const solidRankClass = isSolid ? "rank-solid" : "";
-    const leftLogoClickable = Boolean(isLogoClickable && !(vm.isExempt && !vm.isHome));
-    const rightLogoClickable = Boolean(isLogoClickable && !(vm.isExempt && vm.isHome));
+    const byeLabel = this._t("card.exempt", "Bye");
+    const leftIsBye = (vm.isExempt && !vm.isHome) || isByeTeamName(leftName) || leftName === byeLabel;
+    const rightIsBye = (vm.isExempt && vm.isHome) || isByeTeamName(rightName) || rightName === byeLabel;
+    const leftLogoClickable = Boolean(isLogoClickable && !leftIsBye);
+    const rightLogoClickable = Boolean(isLogoClickable && !rightIsBye);
 
     return html`
       <div class="match-area">
@@ -969,7 +976,7 @@ class FFBBCard extends LitElement {
           <div
             class="logo-box ${logoSizeClass} ${leftLogoClickable ? "clickable" : ""}"
             @click=${() => {
-              if (!vm.isExempt || vm.isHome) {
+              if (leftLogoClickable) {
                 this._handleLogoClick(leftEntityId, leftUrl, leftName);
               }
             }}
@@ -1104,7 +1111,7 @@ class FFBBCard extends LitElement {
           <div
             class="logo-box ${logoSizeClass} ${rightLogoClickable ? "clickable" : ""}"
             @click=${() => {
-              if (!vm.isExempt || !vm.isHome) {
+              if (rightLogoClickable) {
                 this._handleLogoClick(rightEntityId, rightUrl, rightName);
               }
             }}

@@ -1381,32 +1381,29 @@ describe("calendar modal: bye round row", () => {
     expect(teams[1].classList.contains("bye-text")).toBe(true);
   });
 
-  it("has no venue badge, no opponent logo, no time and no 'Pending' badge", async () => {
+  it("has no venue badge, no time and no 'Pending' badge, and shows mini-logos on both lines", async () => {
     const el = await openModal("en");
     const row = el.shadowRoot.querySelectorAll(".calendar-row")[1];
 
     expect(row.querySelector(".cal-venue-pill")).toBeNull();
     expect(row.querySelector(".cal-pending")).toBeNull();
-    // Only our own team keeps a mini logo.
-    expect(row.querySelectorAll(".cal-mini-logo").length).toBe(1);
+    expect(row.querySelectorAll(".cal-mini-logo").length).toBe(2);
     expect(row.querySelector(".cal-time").textContent.trim()).toBe("-");
   });
 
-  it("replaces the opponent's logo with a pause icon of the same footprint", async () => {
+  it("uses the fallback crest logo on the bye side instead of a special pause icon", async () => {
     const el = await openModal("en");
     const row = el.shadowRoot.querySelectorAll(".calendar-row")[1];
     const lines = row.querySelectorAll(".cal-team-line");
 
     expect(lines.length).toBe(2);
-    const icon = row.querySelector(".cal-bye-icon ha-icon");
-    expect(icon.getAttribute("icon")).toBe("mdi:pause-circle-outline");
-    // Both team lines start with one element of the logo's size: the bye line
-    // with the icon, the other with our logo -- same structure, same height.
-    expect(lines[0].firstElementChild.classList.contains("cal-bye-icon")).toBe(true);
+    expect(row.querySelector(".cal-bye-icon")).toBeNull();
+    expect(lines[0].firstElementChild.classList.contains("cal-mini-logo")).toBe(true);
+    expect(lines[0].firstElementChild.getAttribute("src")).toBe(DEFAULT_FALLBACK_LOGO);
     expect(lines[1].firstElementChild.classList.contains("cal-mini-logo")).toBe(true);
   });
 
-  it("shows neither the icon nor the logos when calendar logos are turned off", async () => {
+  it("shows no logos on bye or regular rows when calendar logos are turned off", async () => {
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
     el.setConfig({ entity: ENTITY, show_calendar_logos: false });
@@ -1440,13 +1437,31 @@ describe("calendar modal: bye round row", () => {
     expect(rows[2].classList.contains("bye-row")).toBe(false);
   });
 
-  it("stays selectable: clicking the row opens the bye view of the card", async () => {
-    const el = await openModal("en");
+  it("stays selectable: clicking the row opens the bye view of the card, where the bye logo is not clickable", async () => {
+    const el = await openModal("fr", [
+      CALENDAR[0],
+      { ...BYE_ROW, is_exempt: undefined }, // even without explicit is_exempt flag
+      CALENDAR[2],
+    ]);
     el.shadowRoot.querySelectorAll(".calendar-row")[1].click();
     await el.updateComplete;
 
     expect(el._matchIndex).toBe(1);
     expect(el._activeModal).toBeNull();
+
+    const moreInfoSpy = vi.fn();
+    el.addEventListener("hass-more-info", moreInfoSpy);
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
+
+    const [leftLogoBox, rightLogoBox] = el.shadowRoot.querySelectorAll(".logo-box");
+    expect(leftLogoBox.classList.contains("clickable")).toBe(false);
+    expect(rightLogoBox.classList.contains("clickable")).toBe(true);
+
+    leftLogoBox.click();
+    el._handleLogoClick("sensor.basket_landes_prochain_match_adversaire", null, "Exempt");
+    expect(moreInfoSpy).not.toHaveBeenCalled();
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
   });
 });
 

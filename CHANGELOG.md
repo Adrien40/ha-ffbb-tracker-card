@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### 🐛 Fixes
 - **Form letters (`instanceLanguage`):** removed `.slice(0, 2)` truncation when reading `hass.config.language` (keeping only case/whitespace normalization) so the card always selects the exact same `FORM_LETTERS` table as the FFBB Tracker integration.
+- **Bye rounds ("Exempt") in schedule & card:** schedule popup rows now display the standard fallback crest (`DEFAULT_FALLBACK_LOGO`) instead of a pause icon to stay consistent with the FFBB website and the standings table; bye detection and logo click guards now also recognise `"Exempt"` by name so clicking the bye side's logo never opens `more-info` even when `is_exempt` is omitted.
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 

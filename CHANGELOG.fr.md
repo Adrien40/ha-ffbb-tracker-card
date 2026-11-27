@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ### 🐛 Corrections
 - **Lettres de la forme (`instanceLanguage`) :** retrait de la troncature `.slice(0, 2)` à la lecture de `hass.config.language` (seule la normalisation casse/espaces est conservée) afin que la carte sélectionne toujours exactement la même table `FORM_LETTERS` que l'intégration FFBB Tracker.
+- **Journées d'exempt (« Exempt ») dans le calendrier et la carte :** les lignes d'exempt de la popup calendrier affichent désormais le logo de repli standard (`DEFAULT_FALLBACK_LOGO`) au lieu de l'icône pause pour rester raccord avec le site FFBB et le tableau de classement ; la détection d'exempt et le blocage du clic logo reconnaissent aussi `"Exempt"` par son nom afin de ne jamais ouvrir `more-info`, même si l'attribut `is_exempt` est absent.
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 

@@ -150,35 +150,12 @@ describe("styles.js -- calendar modal rows: bigger logos and date/time", () => {
   });
 });
 
-describe("styles.js -- calendar modal: a bye row is exactly as tall as any other row", () => {
-  // The pause icon takes the place of the opponent's logo, so it must have the
-  // very same box as .cal-mini-logo, or the bye row ends up shorter.
-  it(".cal-bye-icon has the same width and height as .cal-mini-logo", () => {
+describe("styles.js -- calendar modal: a bye row is styled like any other row with the fallback crest", () => {
+  it("uses .cal-mini-logo directly (no special .cal-bye-icon disc)", () => {
+    expect(declarationsFor(".cal-bye-icon").width).toBeUndefined();
     const logo = declarationsFor(".cal-mini-logo");
-    const icon = declarationsFor(".cal-bye-icon");
-
-    expect(icon.width).toBe(logo.width);
-    expect(icon.height).toBe(logo.height);
-    expect(icon["border-radius"]).toBe(logo["border-radius"]);
-    expect(icon["flex-shrink"]).toBe("0");
-  });
-
-  it("the pause icon is white on a solid disc, so it reads in light and dark themes", () => {
-    const icon = declarationsFor(".cal-bye-icon");
-
-    expect(icon.color).toBe("#ffffff");
-    expect(icon.background).toMatch(/^#[0-9a-f]{6}$/i);
-  });
-
-  it("the disc is dark enough for the white icon to be clearly readable (WCAG 4.5:1)", () => {
-    const hex = declarationsFor(".cal-bye-icon").background.slice(1);
-    const channel = (i) => {
-      const v = parseInt(hex.slice(i, i + 2), 16) / 255;
-      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-    };
-    const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
-
-    expect(1.05 / (luminance + 0.05)).toBeGreaterThanOrEqual(4.5);
+    expect(logo.width).toBe("22px");
+    expect(logo.height).toBe("22px");
   });
 
   it("the bye label is semi-bold and in the normal text colour, not faded or italic", () => {

@@ -224,10 +224,17 @@ export function calendarRowSides(row, matchesMyTeam) {
   if (typeof row?.is_home === "boolean") {
     return { isHomeMyTeam: row.is_home, isAwayMyTeam: !row.is_home };
   }
-  return {
-    isHomeMyTeam: Boolean(matchesMyTeam(row?.home_team || "")),
-    isAwayMyTeam: Boolean(matchesMyTeam(row?.away_team || "")),
-  };
+  const homeMatch = Boolean(matchesMyTeam(row?.home_team || ""));
+  const awayMatch = Boolean(matchesMyTeam(row?.away_team || ""));
+  if (!homeMatch && !awayMatch) {
+    if (isByeTeamName(row?.home_team) && !isByeTeamName(row?.away_team)) {
+      return { isHomeMyTeam: false, isAwayMyTeam: true };
+    }
+    if (isByeTeamName(row?.away_team) && !isByeTeamName(row?.home_team)) {
+      return { isHomeMyTeam: true, isAwayMyTeam: false };
+    }
+  }
+  return { isHomeMyTeam: homeMatch, isAwayMyTeam: awayMatch };
 }
 
 /**
@@ -367,7 +374,7 @@ function resolveBySlug(selected, states) {
  * exactly does it fall back to substring matching, in either direction.
  * Empty / "-" names never match.
  */
-function isByeTeamName(name) {
+export function isByeTeamName(name) {
   const raw = String(name ?? "").trim().toLowerCase();
   return raw === "exempt" || raw === "n/a";
 }
@@ -1657,7 +1664,7 @@ export function computeViewModel({
     targetDateStr = currentCalMatch.date ?? currentCalMatch.datetime ?? null;
     roundNumber = String(currentCalMatch.round ?? "");
     isStale = Boolean(currentCalMatch.is_stale);
-    isExempt = Boolean(currentCalMatch.is_exempt);
+    isExempt = Boolean(currentCalMatch.is_exempt) || isByeTeamName(opponentName);
   } else {
     opponentName = isValidState(rawOpponent) ? rawOpponent : t("card.unknown_opponent", "Opponent");
     opponentSearchName = isValidState(rawOpponent) ? rawOpponent : "";
@@ -1714,7 +1721,7 @@ export function computeViewModel({
     }
     targetDateStr = isPostMatch ? entities.lastDate?.state : entities.nextDate?.state;
     isStale = Boolean(entities.nextDate?.attributes?.is_stale);
-    isExempt = !isPostMatch && Boolean(entities.nextDate?.attributes?.is_exempt);
+    isExempt = !isPostMatch && (Boolean(entities.nextDate?.attributes?.is_exempt) || isByeTeamName(rawOpponent));
   }
 
   // A bye round has no opposing team: show a translated "Exempt" instead of

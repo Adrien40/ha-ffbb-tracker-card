@@ -870,19 +870,6 @@ export const cardStyles = css`
     color: var(--secondary-text-color);
     line-height: 1;
   }
-  .cal-bye-icon {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #37474f;
-    color: #ffffff;
-    --mdc-icon-size: 16px;
-  }
   .cal-team.bye-text {
     font-weight: 600;
     color: var(--primary-text-color);
