@@ -583,11 +583,11 @@ export const cardStyles = css`
   }
   .form-sequence {
     font-weight: 700;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     transition: color 0.15s ease;
   }
   .form-streak {
-    margin-left: 0;
+    margin-left: 0.25em;
     opacity: 0.85;
   }
   .form-preview-tag {

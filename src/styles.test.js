@@ -278,7 +278,8 @@ describe("styles.js -- v0.7.0 theme, CSS fallback, and layout hardening", () => 
     expect(declarationsFor(".form-badges-container")["flex-wrap"]).toBe("nowrap");
     expect(declarationsFor(".form-badge-pill")["min-width"]).toBe("0");
     expect(declarationsFor(".footer-form").display).toBeUndefined();
-    expect(declarationsFor(".form-sequence")["letter-spacing"]).toBe("2px");
+    expect(declarationsFor(".form-sequence")["letter-spacing"]).toBe("3px");
+    expect(declarationsFor(".form-streak")["margin-left"]).toBe("0.25em");
     expect(declarationsFor(".form-char")).toEqual({});
     expect(declarationsFor(".form-char-win")).toEqual({});
   });

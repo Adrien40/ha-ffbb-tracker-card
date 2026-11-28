@@ -3,6 +3,15 @@
 Toutes les modifications notables du projet sont documentées dans ce fichier.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.7.5] — 2026-11-28
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### ✨ Améliorations
+- **Espacement du bloc Forme :** les lettres de la séquence `Forme` sont un peu plus espacées (`3px` au lieu de `2px`) et un petit écart sépare désormais la séquence de la série entre parenthèses (`D-V-V-V (1V)`).
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.7.4] — 2026-11-28
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

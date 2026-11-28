@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.5] — 2026-11-28
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### ✨ Enhancements
+- **Footer form spacing:** letters of the `Form` sequence are spaced slightly wider (`3px` instead of `2px`) and a small gap now separates the sequence from the streak in parentheses (`D-V-V-V (1V)`).
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.7.4] — 2026-11-28
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
