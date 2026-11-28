@@ -7,10 +7,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 
-### ✨ Améliorations
-- **Mini-pastilles colorées pour la forme en pied de carte :** remplacement des lettres avec tirets (`D-V-V-V`) dans `.footer-form` par de petites pastilles arrondies (`19×19px`, lettre blanche en gras sur fond vert `#2e7d32` / rouge `#c62828` / gris neutre `#616161`), cohérentes avec la popup « Détail de la forme récente » et lisibles sur les thèmes clair et sombre.
-- **Survol du bloc Forme :** au survol, le libellé `Forme :` prend la couleur d'accent et les pastilles s'éclaircissent légèrement (les lettres gardant leur propre couleur de résultat).
-
 ### 🐛 Corrections
 - **Codes de langue régionaux de l'instance (`fr-FR`, `fr-BE`, `fr-CA`, `en-GB`…) :** `normalizeInstanceLang` extrait désormais le sous-tag primaire BCP-47 pour rester aligné sur `ha-ffbb-tracker` 1.1.0+, évitant qu'une instance régionale française ne lise les défaites (`D`) comme des nuls (`N`).
 - **Repli des Container Queries pour anciens navigateurs :** `--ffbb-logo-cap` est désormais protégé par `@supports (width: 1cqw)` et des valeurs statiques de repli précèdent chaque `clamp(...cqw...)`, évitant le repli sur `auto` sur les navigateurs d'avant 2022.

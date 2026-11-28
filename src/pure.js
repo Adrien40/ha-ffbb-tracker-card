@@ -220,25 +220,6 @@ export function localizeFormStreak(streak, instanceLanguage, cardLetters) {
 }
 
 /**
- * Parse a form sensor sequence ("D-V-V-V") into localized { char, result }
- * tokens ("result" is "win" | "loss" | "draw") using the instance's language
- * to interpret each raw letter and `cardLetters` to display it.
- */
-export function buildFormTokens(sequence, instanceLanguage, cardLetters) {
-  if (typeof sequence !== "string" || !sequence.trim()) {
-    return [];
-  }
-  return sequence
-    .split("-")
-    .map((raw) => raw.trim())
-    .filter(Boolean)
-    .map((raw) => ({
-      char: localizeFormSequence(raw, instanceLanguage, cardLetters),
-      result: formResultOf(raw, instanceLanguage),
-    }));
-}
-
-/**
  * Which side of a season-schedule row is our team.
  *
  * The integration tells it for every row (`is_home`), which is exact whatever
@@ -1802,9 +1783,6 @@ export function computeViewModel({
   const displayFormSequence = hasValidForm
     ? formSequence
     : (isPreview ? localizeFormSequence("V-V-D-V-N", "fr", cardFormLetters) : "");
-  const displayFormTokens = hasValidForm
-    ? buildFormTokens(rawFormSequence, instanceLanguage, cardFormLetters)
-    : (isPreview ? buildFormTokens("V-V-D-V-N", "fr", cardFormLetters) : []);
   const displayFormStreak = hasValidForm
     ? formStreak
     : (isPreview ? localizeFormStreak("2V", "fr", cardFormLetters) : "");
@@ -1971,7 +1949,6 @@ export function computeViewModel({
     hasValidForm,
     isPreview,
     displayFormSequence,
-    displayFormTokens,
     displayFormStreak,
     showFormBlock,
     reserveVenueRow,

@@ -7,10 +7,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
 
-### ✨ Enhancements
-- **Compact colour mini-badges for footer form:** replaced the dashed text letters (`D-V-V-V`) in `.footer-form` with crisp rounded mini-badges (`19×19px`, white bold letter over green `#2e7d32` / red `#c62828` / neutral grey `#616161`), matching the "Recent form details" modal palette while staying readable on both dark and light Home Assistant themes.
-- **Form block hover:** hovering now tints the `Form:` label with the accent colour and slightly brightens the badges (the letters keep their own result colour).
-
 ### 🐛 Fixes
 - **Regional instance language tags (`fr-FR`, `fr-BE`, `fr-CA`, `en-GB`…):** `normalizeInstanceLang` now extracts the primary BCP-47 subtag to match `ha-ffbb-tracker` 1.1.0+, ensuring French regional instances never read losses (`D`) as draws (`N`).
 - **Container-query fallback for older browsers:** guarded `--ffbb-logo-cap` inside `@supports (width: 1cqw)` and added static fallback values before `clamp(...cqw...)` rules so pre-2022 browsers without CSS container queries never resolve `min(..., var(--ffbb-logo-cap))` to `auto`.

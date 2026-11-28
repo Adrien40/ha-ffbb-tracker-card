@@ -3,7 +3,6 @@ import {
   validStateOrEmpty,
   localizeFormStreak,
   localizeFormSequence,
-  buildFormTokens,
   formResultOf,
   FORM_LETTERS,
   isByeTeamName,
@@ -2498,18 +2497,5 @@ describe("v0.7.0 -- comprehensive regression suite", () => {
     expect(vmNumericYaml.teamName).toBe("40");
     expect(vmNumericYaml.titleText).toContain("2026");
     expect(vmNumericYaml.standingsTitle).toBe("1");
-
-    // buildFormTokens & displayFormTokens (v0.7.2)
-    expect(buildFormTokens("D-V-N", "fr", EN)).toEqual([
-      { char: "L", result: "loss" },
-      { char: "W", result: "win" },
-      { char: "D", result: "draw" },
-    ]);
-    expect(buildFormTokens("W-D-L", "en", FR)).toEqual([
-      { char: "V", result: "win" },
-      { char: "N", result: "draw" },
-      { char: "D", result: "loss" },
-    ]);
-    expect(buildFormTokens("", "fr", FR)).toEqual([]);
   });
 });

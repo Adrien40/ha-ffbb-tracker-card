@@ -565,11 +565,6 @@ export const cardStyles = css`
   }
   .footer-form {
     margin: 10px 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px;
     text-align: center;
     font-size: 0.95em;
     color: var(--secondary-text-color);
@@ -580,45 +575,16 @@ export const cardStyles = css`
   .footer-form.clickable:hover {
     color: var(--primary-text-color);
   }
-  .footer-form.clickable:hover .form-label {
+  .footer-form.clickable:hover .form-sequence {
     color: var(--ffbb-accent-color, #ff6b00);
-  }
-  .footer-form.clickable:hover .form-char {
-    filter: brightness(1.12);
   }
   .form-label {
     margin-right: 0;
-    transition: color 0.15s ease;
   }
   .form-sequence {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
     font-weight: 700;
-  }
-  .form-char {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 19px;
-    height: 19px;
-    padding: 0 3px;
-    box-sizing: border-box;
-    border-radius: 5px;
-    font-size: 0.78em;
-    font-weight: 800;
-    line-height: 1;
-    color: #ffffff;
-    transition: filter 0.15s ease;
-  }
-  .form-char-win {
-    background-color: #2e7d32;
-  }
-  .form-char-loss {
-    background-color: #c62828;
-  }
-  .form-char-draw {
-    background-color: #616161;
+    letter-spacing: 2px;
+    transition: color 0.15s ease;
   }
   .form-streak {
     margin-left: 0;
