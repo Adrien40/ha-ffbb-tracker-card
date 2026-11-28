@@ -2272,6 +2272,10 @@ describe("form letters: instance language read, card language shown", () => {
     document.body.appendChild(el);
     await el.updateComplete;
     const header = el.shadowRoot.querySelector(".footer-form").textContent.replace(/\s+/g, " ").trim();
+    const footerChars = [...el.shadowRoot.querySelectorAll(".footer-form .form-char")].map((n) => ({
+      text: n.textContent,
+      kind: ["form-char-win", "form-char-loss", "form-char-draw"].find((c) => n.classList.contains(c)),
+    }));
     el.shadowRoot.querySelector(".footer-form").click();
     await el.updateComplete;
     const pills = [...el.shadowRoot.querySelectorAll(".form-badge-pill")].map((pill) => ({
@@ -2280,18 +2284,18 @@ describe("form letters: instance language read, card language shown", () => {
       kind: ["badge-win", "badge-loss", "badge-draw"].find((c) => pill.classList.contains(c)),
     }));
     const streakText = el.shadowRoot.querySelector(".streak-val")?.textContent.trim();
-    return { header, pills, streakText };
+    return { header, footerChars, pills, streakText };
   }
 
   it("English card over a French instance: D-V-V-V (1D) is shown L-W-W-W (1L), in the block and in the popup", async () => {
-    const { header, pills, streakText } = await openForm({
+    const { header, footerChars, pills, streakText } = await openForm({
       cardLanguage: "en",
       instanceLanguage: "fr",
       sequence: "D-V-V-V",
       streak: "1D",
     });
 
-    expect(header).toContain("L-W-W-W");
+    expect(footerChars.map((c) => c.text).join("")).toBe("LWWW");
     expect(header).toContain("(1L)");
     expect(pills.map((p) => `${p.char}:${p.label}:${p.kind}`)).toEqual([
       "L:Loss:badge-loss",
@@ -2302,7 +2306,7 @@ describe("form letters: instance language read, card language shown", () => {
     expect(streakText).toBe("1L");
   });
 
-  it("colors each letter in .footer-form (.form-char-win / .form-char-loss / .form-char-draw) while keeping Form label and streak neutral", async () => {
+  it("renders each letter in .footer-form as a coloured mini-badge (.form-char-win / .form-char-loss / .form-char-draw) with no dash separators", async () => {
     const Card = customElements.get("ffbb-tracker-card");
     const el = new Card();
     el.setConfig({ entity: "sensor.basket_landes_prochain_match_adversaire" });
@@ -2329,8 +2333,8 @@ describe("form letters: instance language read, card language shown", () => {
       { text: "N", kind: "form-char-draw" },
       { text: "V", kind: "form-char-win" },
     ]);
-    expect(el.shadowRoot.querySelectorAll(".footer-form .form-sep")).toHaveLength(3);
-    expect(el.shadowRoot.querySelector(".footer-form .form-sequence").textContent).toBe("D-V-N-V");
+    expect(el.shadowRoot.querySelectorAll(".footer-form .form-sep")).toHaveLength(0);
+    expect(el.shadowRoot.querySelector(".footer-form .form-sequence").textContent).toBe("DVNV");
   });
 
   it("an English instance's D is a draw, not a loss (whatever the card's language)", async () => {
@@ -2342,14 +2346,32 @@ describe("form letters: instance language read, card language shown", () => {
   });
 
   it("French card over a French instance is unchanged: D-V-V-V (1D)", async () => {
-    const { header, pills } = await openForm({
+    const { header, footerChars, pills } = await openForm({
       cardLanguage: "fr",
       instanceLanguage: "fr",
       sequence: "D-V-V-V",
       streak: "1D",
     });
 
-    expect(header).toContain("D-V-V-V");
+    expect(footerChars.map((c) => c.text).join("")).toBe("DVVV");
+    expect(header).toContain("(1D)");
+    expect(pills.map((p) => p.kind)).toEqual(["badge-loss", "badge-win", "badge-win", "badge-win"]);
+  });
+
+  it("regional French instance (fr-FR) keeps D as a loss in footer mini-badges and modal pills", async () => {
+    const { header, footerChars, pills } = await openForm({
+      cardLanguage: "fr-FR",
+      instanceLanguage: "fr-FR",
+      sequence: "D-V-V-V",
+      streak: "1D",
+    });
+
+    expect(footerChars).toEqual([
+      { text: "D", kind: "form-char-loss" },
+      { text: "V", kind: "form-char-win" },
+      { text: "V", kind: "form-char-win" },
+      { text: "V", kind: "form-char-win" },
+    ]);
     expect(header).toContain("(1D)");
     expect(pills.map((p) => p.kind)).toEqual(["badge-loss", "badge-win", "badge-win", "badge-win"]);
   });

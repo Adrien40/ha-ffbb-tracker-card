@@ -6,6 +6,7 @@ import {
   buildFormTokens,
   formResultOf,
   FORM_LETTERS,
+  isByeTeamName,
   calendarRowSides,
   cleanNamesMatch,
   teamNamesMatch,
@@ -2217,18 +2218,16 @@ describe("v0.7.0 -- comprehensive regression suite", () => {
   const EN = { win: "W", loss: "L", draw: "D" };
   const FR = { win: "V", loss: "D", draw: "N" };
 
-  it("matches the integration's exact language lookup (trimmed/lowercased) without slicing regional tags", () => {
-    for (const tag of ["fr", "FR", " fr "]) {
+  it("normalizes regional and uppercase language tags to their primary BCP-47 subtag like ha-ffbb-tracker v1.1.0+", () => {
+    for (const tag of ["fr", "FR", " fr ", "fr-FR", "fr-BE", "fr-CA", "fr_CH"]) {
       expect(formResultOf("D", tag)).toBe("loss");
       expect(localizeFormSequence("D-V-V-V", tag, FR)).toBe("D-V-V-V");
       expect(localizeFormStreak("1D", tag, FR)).toBe("1D");
       expect(localizeFormSequence("D-V-V-V", tag, EN)).toBe("L-W-W-W");
       expect(localizeFormStreak("1D", tag, EN)).toBe("1L");
     }
-    // Codes outside FORM_LETTERS ("en-GB", or a hypothetical "fr-FR") fall back
-    // to FORM_LETTERS.en just like the integration does, so producer and reader
-    // never disagree on "D".
-    for (const tag of ["en", "EN", "en-GB", "fr-FR", "fr-CA"]) {
+    // Codes outside FORM_LETTERS fall back to FORM_LETTERS.en just like the integration does.
+    for (const tag of ["en", "EN", "en-GB", "en-US", "de-DE"]) {
       expect(formResultOf("D", tag)).toBe("draw");
       expect(localizeFormSequence("W-D-L", tag, FR)).toBe("V-N-D");
       expect(localizeFormStreak("2D", tag, FR)).toBe("2N");
@@ -2306,6 +2305,12 @@ describe("v0.7.0 -- comprehensive regression suite", () => {
     expect(vm.leftUrl).toBeNull();
     expect(vm.leftEntityId).toBeNull();
     expect(createTeamMatcher(["ETOILE ANGERS BASKET - 1", "Exempt"], "Exempt")("Exempt")).toBe(false);
+    for (const byeName of ["Exempt", "EXEMPT", "Exempt 1", "Exempt 2", "Exempt - 2", "N/A", " n/a "]) {
+      expect(isByeTeamName(byeName)).toBe(true);
+    }
+    for (const teamName of ["Exemption", "BC Exempt", "", null]) {
+      expect(isByeTeamName(teamName)).toBe(false);
+    }
   });
 
   it("end of season with a postponed early round played last lands on the chronologically latest match", () => {

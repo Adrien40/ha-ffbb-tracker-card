@@ -8,7 +8,11 @@ export const cardStyles = css`
     overflow: hidden;
     position: relative;
     container-type: inline-size;
-    --ffbb-logo-cap: max(44px, calc((100cqw - clamp(118px, 38cqw, 144px) - 76px) / 2));
+  }
+  @supports (width: 1cqw) {
+    ha-card {
+      --ffbb-logo-cap: max(44px, calc((100cqw - clamp(118px, 38cqw, 144px) - 76px) / 2));
+    }
   }
   /* Visually hidden but readable by screen readers -- standard "sr-only"
      recipe (not display:none/visibility:hidden, which most ATs also skip). */
@@ -380,6 +384,7 @@ export const cardStyles = css`
     width: min(72px, var(--ffbb-logo-cap, 72px));
     height: min(72px, var(--ffbb-logo-cap, 72px));
     border-radius: 19.5%;
+    padding: 6px;
     padding: clamp(4px, 1.6cqw, 6px);
   }
   .logo-box-large {
@@ -388,6 +393,7 @@ export const cardStyles = css`
     width: min(104px, var(--ffbb-logo-cap, 104px));
     height: min(104px, var(--ffbb-logo-cap, 104px));
     border-radius: 19.5%;
+    padding: 8px;
     padding: clamp(5px, 2cqw, 8px);
   }
   .logo-box-extra_large {
@@ -396,6 +402,7 @@ export const cardStyles = css`
     width: min(136px, var(--ffbb-logo-cap, 136px));
     height: min(136px, var(--ffbb-logo-cap, 136px));
     border-radius: 19.5%;
+    padding: 10px;
     padding: clamp(5px, 2.2cqw, 10px);
   }
   .logo {
@@ -558,6 +565,11 @@ export const cardStyles = css`
   }
   .footer-form {
     margin: 10px 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
     text-align: center;
     font-size: 0.95em;
     color: var(--secondary-text-color);
@@ -571,28 +583,42 @@ export const cardStyles = css`
   .footer-form.clickable:hover .form-label {
     color: var(--ffbb-accent-color, #ff6b00);
   }
+  .footer-form.clickable:hover .form-char {
+    filter: brightness(1.12);
+  }
   .form-label {
     margin-right: 0;
     transition: color 0.15s ease;
   }
   .form-sequence {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-weight: 700;
-    letter-spacing: 2px;
+  }
+  .form-char {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 3px;
+    box-sizing: border-box;
+    border-radius: 5px;
+    font-size: 0.78em;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    transition: filter 0.15s ease;
   }
   .form-char-win {
-    color: #2e7d32;
-    color: color-mix(in srgb, #2eae36 75%, var(--primary-text-color));
+    background-color: #2e7d32;
   }
   .form-char-loss {
-    color: #d32f2f;
-    color: color-mix(in srgb, #e53935 78%, var(--primary-text-color));
+    background-color: #c62828;
   }
   .form-char-draw {
-    color: var(--secondary-text-color);
-  }
-  .form-sep {
-    color: var(--secondary-text-color);
-    opacity: 0.65;
+    background-color: #616161;
   }
   .form-streak {
     margin-left: 0;
@@ -732,6 +758,7 @@ export const cardStyles = css`
     color: var(--secondary-text-color);
   }
   .modal-body {
+    padding: 4px 16px 12px;
     padding: 4px clamp(10px, 3.8cqw, 16px) 12px;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -801,6 +828,7 @@ export const cardStyles = css`
   }
   .form-badges-container {
     display: flex;
+    gap: 10px;
     gap: clamp(5px, 2cqw, 10px);
     flex-wrap: nowrap;
     justify-content: center;
@@ -826,17 +854,22 @@ export const cardStyles = css`
     justify-content: center;
     flex: 0 1 74px;
     min-width: 0;
+    min-height: 72px;
     min-height: clamp(56px, 18cqw, 72px);
+    padding: 8px 10px;
     padding: clamp(6px, 2cqw, 8px) clamp(3px, 1.5cqw, 10px);
+    border-radius: 14px;
     border-radius: clamp(10px, 3.5cqw, 14px);
     box-sizing: border-box;
   }
   .pill-char {
+    font-size: 2em;
     font-size: clamp(1.35em, 5.2cqw, 2em);
     font-weight: 800;
     line-height: 1;
   }
   .pill-label {
+    font-size: 0.9em;
     font-size: clamp(0.68em, 2.5cqw, 0.9em);
     font-weight: 600;
     margin-top: 4px;

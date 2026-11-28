@@ -643,7 +643,7 @@ class FFBBCard extends LitElement {
                           if (isHomeMyTeam !== isAwayMyTeam) {
                             byeSide = isHomeMyTeam ? "away" : "home";
                           } else {
-                            byeSide = isByeTeamName(rawHome) || /^exempt/i.test(rawHome) ? "home" : "away";
+                            byeSide = isByeTeamName(rawHome) ? "home" : "away";
                           }
                         }
                         const byeLabel = this._t("card.exempt", "Bye");
@@ -1213,11 +1213,12 @@ class FFBBCard extends LitElement {
               <span class="form-sequence">${
                 Array.isArray(displayFormTokens) && displayFormTokens.length > 0
                   ? displayFormTokens.map(
-                      (token, idx) =>
-                        html`${idx > 0 ? html`<span class="form-sep">-</span>` : nothing}<span class="form-char form-char-${token.result}">${token.char}</span>`
+                      (token) =>
+                        html`<span class="form-char form-char-${token.result}">${token.char}</span>`
                     )
                   : displayFormSequence
-              }</span>${displayFormStreak ? html`<span class="form-streak">(${displayFormStreak})</span>` : ""}
+              }</span>
+              ${displayFormStreak ? html`<span class="form-streak">(${displayFormStreak})</span>` : ""}
               ${!hasValidForm && isPreview
                 ? html`<span class="form-preview-tag">(${this._t("card.preview_example", "example")})</span>`
                 : ""}

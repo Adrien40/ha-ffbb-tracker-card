@@ -789,6 +789,9 @@ describe("bye (EXEMPT) line of the standings", () => {
     expect(isByeStanding({ team_name: "N/A" })).toBe(true);
     expect(isByeStanding({ team_name: "Exempt" })).toBe(true);
     expect(isByeStanding({ team_name: " EXEMPT " })).toBe(true);
+    expect(isByeStanding({ team_name: "Exempt 2" })).toBe(true);
+    expect(isByeStanding({ team_name: "Exempt - 2" })).toBe(true);
+    expect(isByeStanding({ team_name: "Exemption" })).toBe(false);
     expect(isByeStanding({ team_name: "MAGESCQ BASKET" })).toBe(false);
     expect(isByeStanding({})).toBe(false);
   });

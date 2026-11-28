@@ -144,7 +144,8 @@ export const FORM_LETTERS = {
 };
 
 function normalizeInstanceLang(instanceLanguage) {
-  return String(instanceLanguage ?? "").trim().toLowerCase();
+  const raw = String(instanceLanguage ?? "").trim().toLowerCase();
+  return raw ? raw.replace(/_/g, "-").split("-")[0] : "";
 }
 
 function formResultOrNull(char, instanceLanguage) {
@@ -155,8 +156,9 @@ function formResultOrNull(char, instanceLanguage) {
   const lang = normalizeInstanceLang(instanceLanguage);
   if (lang) {
     // "D" is a loss in French but a draw in English: only the instance's own
-    // table can tell. Match the integration's exact language key (trimmed and
-    // lowercased) so both sides always pick the same table.
+    // table can tell. ha-ffbb-tracker v1.1.0+ normalizes `hass.config.language`
+    // to its primary BCP-47 subtag (e.g. `fr-FR`, `fr-BE`, `fr-CA` -> `fr`), so
+    // extracting the primary subtag here guarantees both sides pick the same table.
     const table = FORM_LETTERS[lang] || FORM_LETTERS.en;
     const hit = Object.keys(table).find((result) => table[result] === c);
     if (hit) {
@@ -401,7 +403,7 @@ function resolveBySlug(selected, states) {
  */
 export function isByeTeamName(name) {
   const raw = String(name ?? "").trim().toLowerCase();
-  return raw === "exempt" || raw === "n/a";
+  return raw === "n/a" || /^exempt(?:[\s-]+\d+)?$/.test(raw);
 }
 
 export function createTeamMatcher(names, targetName) {

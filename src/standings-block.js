@@ -21,6 +21,7 @@
 import { html, css, nothing } from "lit";
 import {
   createTeamMatcher,
+  isByeTeamName,
   sanitizeUrl,
   sortStandings,
   teamNamesMatch,
@@ -124,8 +125,7 @@ export function renderStandingsLogo(logoUrl, show = true) {
  * names it "Exempt"; older versions of it wrote "N/A" for it.
  */
 export function isByeStanding(item) {
-  const name = String(item?.team_name ?? item?.name ?? "").trim().toLowerCase();
-  return name === "n/a" || name === "exempt";
+  return isByeTeamName(item?.team_name ?? item?.name);
 }
 
 /** Label of a standings row: the translated bye label for the bye line, the team name otherwise. */

@@ -267,18 +267,24 @@ describe("styles.js -- v0.7.0 theme, CSS fallback, and layout hardening", () => 
     expect(declarationsFor(".calendar-row")["grid-template-columns"]).toBe("42px 1fr auto");
   });
 
-  it("v0.7.2: ha-card is an inline-size container, logos clamp to --ffbb-logo-cap, form popup stays on one line, and form letters are colored", () => {
+  it("v0.7.2 / v0.7.3: ha-card uses @supports-guarded --ffbb-logo-cap, form popup stays on one line, and footer form renders compact mini-badges", () => {
     expect(declarationsFor("ha-card")["container-type"]).toBe("inline-size");
     expect(declarationsFor("ha-card")["--ffbb-logo-cap"]).toContain("100cqw");
+    expect(cardStyles.cssText).toMatch(/@supports\s*\(width:\s*1cqw\)\s*\{\s*ha-card\s*\{[^}]*--ffbb-logo-cap/);
     for (const size of ["small", "medium", "large", "extra_large"]) {
       expect(declarationsFor(`.logo-box-${size}`).width).toContain("--ffbb-logo-cap");
       expect(declarationsFor(`.logo-box-${size}`).height).toContain("--ffbb-logo-cap");
     }
     expect(declarationsFor(".form-badges-container")["flex-wrap"]).toBe("nowrap");
     expect(declarationsFor(".form-badge-pill")["min-width"]).toBe("0");
-    expect(declarationsFor(".form-char-win").color).toContain("#2eae36");
-    expect(declarationsFor(".form-char-loss").color).toContain("#e53935");
-    expect(declarationsFor(".form-char-draw").color).toBe("var(--secondary-text-color)");
+    expect(declarationsFor(".footer-form").display).toBe("flex");
+    expect(declarationsFor(".form-sequence").display).toBe("inline-flex");
+    expect(declarationsFor(".form-char").color).toBe("#ffffff");
+    expect(declarationsFor(".form-char")["border-radius"]).toBe("5px");
+    expect(declarationsFor(".form-char-win")["background-color"]).toBe("#2e7d32");
+    expect(declarationsFor(".form-char-loss")["background-color"]).toBe("#c62828");
+    expect(declarationsFor(".form-char-draw")["background-color"]).toBe("#616161");
+    expect(declarationsFor(".form-sep").color).toBeUndefined();
   });
 });
 
