@@ -3,6 +3,15 @@
 Toutes les modifications notables du projet sont documentées dans ce fichier.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.7.4] — 2026-11-28
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Corrections
+- **Bloc Forme du pied de carte revenu en texte simple :** la séquence `Forme` s'affiche de nouveau en texte séparé par des tirets (`D-V-V-V`), avec son espacement de lettres d'origine et la couleur d'accent au survol, comme avant la 0.7.2. Les lettres colorées (0.7.2) et les mini-pastilles colorées (0.7.3) sont supprimées ; la popup « Détail de la forme récente » conserve ses pastilles colorées.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.7.3] — 2026-11-28
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀

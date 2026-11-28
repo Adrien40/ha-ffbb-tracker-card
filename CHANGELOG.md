@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.4] — 2026-11-28
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
+### 🐛 Fixes
+- **Footer form block back to plain text:** the `Form` sequence in the card footer is displayed again as dash-separated text (`D-V-V-V`) with its original letter spacing and accent-colour hover, as before 0.7.2. The per-letter colours (0.7.2) and the coloured mini-badges (0.7.3) are removed; the "Recent form details" popup keeps its coloured pills.
+
+🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
+
 ## [0.7.3] — 2026-11-28
 
 🏀🏀🏀🏀🏀🏀🏀🏀🏀🏀
